@@ -1,6 +1,10 @@
 package configulator
 
-import "github.com/spf13/pflag"
+import (
+	"context"
+
+	"github.com/spf13/pflag"
+)
 
 // EnvironmentVariableOptions contains the options for loading configuration from environment variables.
 type EnvironmentVariableOptions struct {
@@ -37,6 +41,14 @@ type FileOptions struct {
 func (c *Configulator[C]) WithFile(opts *FileOptions) *Configulator[C] {
 	c.fileOptions = opts
 	return c
+}
+
+type ctxKey uint8
+
+const configKey ctxKey = iota
+
+func (c *Configulator[C]) WithContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, configKey, c)
 }
 
 // PFlagOptions contains the options for loading configuration from pflags.

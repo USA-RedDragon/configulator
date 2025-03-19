@@ -1,6 +1,7 @@
 package configulator
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -31,9 +32,9 @@ type Configulator[C Config] struct {
 	arraySeparator string
 }
 
-// NewConfigulator creates a new Configulator.
+// New creates a new Configulator.
 // The defaults are the default configuration values.
-func NewConfigulator[C Config]() *Configulator[C] {
+func New[C Config]() *Configulator[C] {
 	c := &Configulator[C]{
 		arraySeparator: ",",
 	}
@@ -93,4 +94,12 @@ func (c *Configulator[C]) Default() (C, error) {
 		return zero, fmt.Errorf("failed to get defaults")
 	}
 	return config, nil
+}
+
+func FromContext[C Config](ctx context.Context) (*Configulator[C], error) {
+	c, ok := ctx.Value(configKey).(*Configulator[C])
+	if !ok {
+		return nil, fmt.Errorf("failed to get config from context")
+	}
+	return c, nil
 }

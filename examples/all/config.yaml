@@ -3,4 +3,3 @@ http:
   port: 12
   sub:
     subfield: 12
-  stuff: [test, test2]

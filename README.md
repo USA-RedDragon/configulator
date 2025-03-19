@@ -5,7 +5,7 @@ A simple configuration manager for use in my apps
 ## Features
 
 - Supports configuration from:
-  - ~~YAML files~~ (TODO)
+  - YAML or JSON files
   - Environment variables
   - Command line arguments (`spf13/pflag`)
 

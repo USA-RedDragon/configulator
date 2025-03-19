@@ -1,6 +1,7 @@
 package configulator
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -52,7 +53,15 @@ func (c *Configulator[C]) Load() (*C, error) {
 		}
 		err = c.loadFromFile()
 		if err != nil {
-			return c.cfg, fmt.Errorf("failed to load from file: %w", err)
+			if errors.Is(err, ErrConfigFileNotFound) {
+				if c.fileOptions.ErrorIfNotFound {
+					return c.cfg, fmt.Errorf("failed to load from file: %w", err)
+				}
+				// file not found but not required
+				// continue loading from environment and flags
+			} else {
+				return c.cfg, fmt.Errorf("failed to load from file: %w", err)
+			}
 		}
 	}
 	if c.envOptions != nil {

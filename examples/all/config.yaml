@@ -1,0 +1,6 @@
+http:
+  host: 127.0.0.1
+  port: 12
+  sub:
+    subfield: 12
+  stuff: [test, test2]

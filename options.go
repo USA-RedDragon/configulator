@@ -25,19 +25,12 @@ func (c *Configulator[C]) WithArraySeparator(sep string) *Configulator[C] {
 // FileFormat are the valid formats of the config file.
 type FileFormat int
 
-const (
-	// JSON represents the JSON file format.
-	JSON FileFormat = iota
-	// YAML represents the YAML file format.
-	YAML
-)
-
 // FileOptions contains the options for loading configuration from files.
 type FileOptions struct {
 	// Paths is the list of paths to search for the configuration file.
 	Paths []string
-	// Formats is the list of valid formats for the configuration file.
-	Formats []FileFormat
+	// ErrorIfNotFound indicates if an error should be returned if no config file is found.
+	ErrorIfNotFound bool
 }
 
 // WithFile sets the options for loading configuration from files.

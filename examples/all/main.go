@@ -73,11 +73,9 @@ func main() {
 			Separator: "_",
 		}).
 		WithFile(&configulator.FileOptions{
-			Paths: []string{"/etc/myapp/config.json"},
-			Formats: []configulator.FileFormat{
-				configulator.JSON,
-				configulator.YAML,
-			},
+			Paths:           []string{"config.yaml"},
+			Format:          configulator.YAML,
+			ErrorIfNotFound: true,
 		}).
 		WithPFlags(cmd.Flags(), nil).
 		WithArraySeparator(",")

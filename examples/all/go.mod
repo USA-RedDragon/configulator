@@ -1,11 +1,9 @@
-module github.com/USA-RedDragon/examples/all
+module github.com/USA-RedDragon/configulator/examples/all
 
 go 1.24.0
 
-replace github.com/USA-RedDragon/configulator => ../..
-
 require (
-	github.com/USA-RedDragon/configulator v0.0.0-20250319195019-22039f9767ea
+	github.com/USA-RedDragon/configulator v0.0.0-20250319225302-598ef9f9ae7a
 	github.com/spf13/cobra v1.9.1
 )
 

@@ -1,3 +1,5 @@
+github.com/USA-RedDragon/configulator v0.0.0-20250319225302-598ef9f9ae7a h1:6QpVZYsvdXGpSkkLaglibgELDaWkZKyxPK9PAy6wz0Y=
+github.com/USA-RedDragon/configulator v0.0.0-20250319225302-598ef9f9ae7a/go.mod h1:8h544uq6JQLQphjOaGC+9mM4UwezMQWR8Cu8oA/j0Lk=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/goccy/go-yaml v1.16.0 h1:d7m1G7A0t+logajVtklHfDYJs2Et9g3gHwdBNNFou0w=
 github.com/goccy/go-yaml v1.16.0/go.mod h1:XBurs7gK8ATbW4ZPGKgcbrY1Br56PdM69F7LkFRi1kA=

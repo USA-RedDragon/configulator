@@ -59,8 +59,7 @@ func main() {
 			Separator: "_",
 		}).
 		WithFile(&configulator.FileOptions{
-			Paths:           []string{"config.yaml"},
-			ErrorIfNotFound: true,
+			Paths: []string{"config.yaml"},
 		}).
 		WithPFlags(cmd.Flags(), nil).
 		WithArraySeparator(",")

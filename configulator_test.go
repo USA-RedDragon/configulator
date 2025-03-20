@@ -84,6 +84,83 @@ type subTestConfig struct {
 	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
 }
 
+type nonDefaultsTestConfig struct {
+	Bool           bool                     `name:"bool" description:"bool"`
+	Int            int                      `name:"int" description:"int"`
+	Int8           int8                     `name:"int8" description:"int8"`
+	Int16          int16                    `name:"int16" description:"int16"`
+	Int32          int32                    `name:"int32" description:"int32"`
+	Int64          int64                    `name:"int64" description:"int64"`
+	Uint           uint                     `name:"uint" description:"uint"`
+	Uint8          uint8                    `name:"uint8" description:"uint8"`
+	Uint16         uint16                   `name:"uint16" description:"uint16"`
+	Uint32         uint32                   `name:"uint32" description:"uint32"`
+	Uint64         uint64                   `name:"uint64" description:"uint64"`
+	Float32        float32                  `name:"float32" description:"float32"`
+	Float64        float64                  `name:"float64" description:"float64"`
+	String         string                   `name:"string" description:"string"`
+	Any            any                      `name:"any" description:"any"`
+	SubTestConfig  subNonDefaultsTestConfig `name:"subTestConfig" description:"subTestConfig"`
+	Unexported     int
+	StringArray    []string  `name:"stringArray" description:"array"`
+	BoolArray      []bool    `name:"boolArray" description:"bool array"`
+	IntArray       []int     `name:"intArray" description:"int array"`
+	Int8Array      []int8    `name:"int8Array" description:"int8 array"`
+	Int16Array     []int16   `name:"int16Array" description:"int16 array"`
+	Int32Array     []int32   `name:"int32Array" description:"int32 array"`
+	Int64Array     []int64   `name:"int64Array" description:"int64 array"`
+	UintArray      []uint    `name:"uintArray" description:"uint array"`
+	Uint8Array     []uint8   `name:"uint8Array" description:"uint8 array"`
+	Uint16Array    []uint16  `name:"uint16Array" description:"uint16 array"`
+	Uint32Array    []uint32  `name:"uint32Array" description:"uint32 array"`
+	Uint64Array    []uint64  `name:"uint64Array" description:"uint64 array"`
+	Float32Array   []float32 `name:"float32Array" description:"float32 array"`
+	Float64Array   []float64 `name:"float64Array" description:"float64 array"`
+	InterfaceArray []any     `name:"interfaceArray" description:"interface array"`
+	// arrays of structs are not yet implemented
+	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
+}
+
+func (c nonDefaultsTestConfig) Validate() error {
+	return nil
+}
+
+type subNonDefaultsTestConfig struct {
+	Bool           bool    `name:"bool" description:"bool"`
+	Int            int     `name:"int" description:"int"`
+	Int8           int8    `name:"int8" description:"int8"`
+	Int16          int16   `name:"int16" description:"int16"`
+	Int32          int32   `name:"int32" description:"int32"`
+	Int64          int64   `name:"int64" description:"int64"`
+	Uint           uint    `name:"uint" description:"uint"`
+	Uint8          uint8   `name:"uint8" description:"uint8"`
+	Uint16         uint16  `name:"uint16" description:"uint16"`
+	Uint32         uint32  `name:"uint32" description:"uint32"`
+	Uint64         uint64  `name:"uint64" description:"uint64"`
+	Float32        float32 `name:"float32" description:"float32"`
+	Float64        float64 `name:"float64" description:"float64"`
+	String         string  `name:"string" description:"string"`
+	Any            any     `name:"any" description:"any"`
+	Unexported     int
+	StringArray    []string  `name:"stringArray" description:"array"`
+	BoolArray      []bool    `name:"boolArray" description:"bool array"`
+	IntArray       []int     `name:"intArray" description:"int array"`
+	Int8Array      []int8    `name:"int8Array" description:"int8 array"`
+	Int16Array     []int16   `name:"int16Array" description:"int16 array"`
+	Int32Array     []int32   `name:"int32Array" description:"int32 array"`
+	Int64Array     []int64   `name:"int64Array" description:"int64 array"`
+	UintArray      []uint    `name:"uintArray" description:"uint array"`
+	Uint8Array     []uint8   `name:"uint8Array" description:"uint8 array"`
+	Uint16Array    []uint16  `name:"uint16Array" description:"uint16 array"`
+	Uint32Array    []uint32  `name:"uint32Array" description:"uint32 array"`
+	Uint64Array    []uint64  `name:"uint64Array" description:"uint64 array"`
+	Float32Array   []float32 `name:"float32Array" description:"float32 array"`
+	Float64Array   []float64 `name:"float64Array" description:"float64 array"`
+	InterfaceArray []any     `name:"interfaceArray" description:"interface array"`
+	// arrays of structs are not yet implemented
+	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
+}
+
 func TestConfigulatorOptions(t *testing.T) {
 	t.Parallel()
 
@@ -2020,5 +2097,253 @@ func TestConfigulatorFlags(t *testing.T) {
 
 	if cfg.SubTestConfig.Float64Array[2] != 88.0 {
 		t.Fatalf("expected SubTestConfig.Float64Array[2] to be 88.0, got %v", cfg.SubTestConfig.Float64Array[2])
+	}
+}
+
+func TestNonDefault(t *testing.T) {
+	c := New[nonDefaultsTestConfig]()
+	cfg, err := c.Default()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if cfg.Bool != false {
+		t.Fatalf("expected Bool to be true, got %v", cfg.Bool)
+	}
+
+	if cfg.Int != 0 {
+		t.Fatalf("expected Int to be 0, got %v", cfg.Int)
+	}
+
+	if cfg.Int8 != 0 {
+		t.Fatalf("expected Int8 to be 0, got %v", cfg.Int8)
+	}
+
+	if cfg.Int16 != 0 {
+		t.Fatalf("expected Int16 to be 0, got %v", cfg.Int16)
+	}
+
+	if cfg.Int32 != 0 {
+		t.Fatalf("expected Int32 to be 0, got %v", cfg.Int32)
+	}
+
+	if cfg.Int64 != 0 {
+		t.Fatalf("expected Int64 to be 0, got %v", cfg.Int64)
+	}
+
+	if cfg.Uint != 0 {
+		t.Fatalf("expected Uint to be 0, got %v", cfg.Uint)
+	}
+
+	if cfg.Uint8 != 0 {
+		t.Fatalf("expected Uint8 to be 0, got %v", cfg.Uint8)
+	}
+
+	if cfg.Uint16 != 0 {
+		t.Fatalf("expected Uint16 to be 0, got %v", cfg.Uint16)
+	}
+
+	if cfg.Uint32 != 0 {
+		t.Fatalf("expected Uint32 to be 0, got %v", cfg.Uint32)
+	}
+
+	if cfg.Uint64 != 0 {
+		t.Fatalf("expected Uint64 to be 0, got %v", cfg.Uint64)
+	}
+
+	if cfg.Float32 != 0.0 {
+		t.Fatalf("expected Float32 to be 0.0, got %v", cfg.Float32)
+	}
+
+	if cfg.Float64 != 0.0 {
+		t.Fatalf("expected Float64 to be 0.0, got %v", cfg.Float64)
+	}
+
+	if cfg.String != "" {
+		t.Fatalf("expected String to be empty, got '%s'", cfg.String)
+	}
+
+	if cfg.Any != nil {
+		t.Fatalf("expected Any to be nil, got %v", cfg.Any)
+	}
+
+	if len(cfg.StringArray) != 0 {
+		t.Fatalf("expected StringArray to be empty, got %d elements", len(cfg.StringArray))
+	}
+
+	if len(cfg.BoolArray) != 0 {
+		t.Fatalf("expected BoolArray to be empty, got %d elements", len(cfg.BoolArray))
+	}
+
+	if len(cfg.IntArray) != 0 {
+		t.Fatalf("expected IntArray to be empty, got %d elements", len(cfg.IntArray))
+	}
+
+	if len(cfg.Int8Array) != 0 {
+		t.Fatalf("expected Int8Array to be empty, got %d elements", len(cfg.Int8Array))
+	}
+
+	if len(cfg.Int16Array) != 0 {
+		t.Fatalf("expected Int16Array to be empty, got %d elements", len(cfg.Int16Array))
+	}
+
+	if len(cfg.Int32Array) != 0 {
+		t.Fatalf("expected Int32Array to be empty, got %d elements", len(cfg.Int32Array))
+	}
+
+	if len(cfg.Int64Array) != 0 {
+		t.Fatalf("expected Int64Array to be empty, got %d elements", len(cfg.Int64Array))
+	}
+
+	if len(cfg.UintArray) != 0 {
+		t.Fatalf("expected UintArray to be empty, got %d elements", len(cfg.UintArray))
+	}
+
+	if len(cfg.Uint8Array) != 0 {
+		t.Fatalf("expected Uint8Array to be empty, got %d elements", len(cfg.Uint8Array))
+	}
+
+	if len(cfg.Uint16Array) != 0 {
+		t.Fatalf("expected Uint16Array to be empty, got %d elements", len(cfg.Uint16Array))
+	}
+
+	if len(cfg.Uint32Array) != 0 {
+		t.Fatalf("expected Uint32Array to be empty, got %d elements", len(cfg.Uint32Array))
+	}
+
+	if len(cfg.Uint64Array) != 0 {
+		t.Fatalf("expected Uint64Array to be empty, got %d elements", len(cfg.Uint64Array))
+	}
+
+	if len(cfg.Float32Array) != 0 {
+		t.Fatalf("expected Float32Array to be empty, got %d elements", len(cfg.Float32Array))
+	}
+
+	if len(cfg.Float64Array) != 0 {
+		t.Fatalf("expected Float64Array to be empty, got %d elements", len(cfg.Float64Array))
+	}
+
+	if len(cfg.InterfaceArray) != 0 {
+		t.Fatalf("expected InterfaceArray to be empty, got %d elements", len(cfg.InterfaceArray))
+	}
+
+	if cfg.SubTestConfig.Bool != false {
+		t.Fatalf("expected SubTestConfig.Bool to be false, got %v", cfg.SubTestConfig.Bool)
+	}
+
+	if cfg.SubTestConfig.Int != 0 {
+		t.Fatalf("expected SubTestConfig.Int to be 0, got %v", cfg.SubTestConfig.Int)
+	}
+
+	if cfg.SubTestConfig.Int8 != 0 {
+		t.Fatalf("expected SubTestConfig.Int8 to be 0, got %v", cfg.SubTestConfig.Int8)
+	}
+
+	if cfg.SubTestConfig.Int16 != 0 {
+		t.Fatalf("expected SubTestConfig.Int16 to be 0, got %v", cfg.SubTestConfig.Int16)
+	}
+
+	if cfg.SubTestConfig.Int32 != 0 {
+		t.Fatalf("expected SubTestConfig.Int32 to be 0, got %v", cfg.SubTestConfig.Int32)
+	}
+
+	if cfg.SubTestConfig.Int64 != 0 {
+		t.Fatalf("expected SubTestConfig.Int64 to be 0, got %v", cfg.SubTestConfig.Int64)
+	}
+
+	if cfg.SubTestConfig.Uint != 0 {
+		t.Fatalf("expected SubTestConfig.Uint to be 0, got %v", cfg.SubTestConfig.Uint)
+	}
+
+	if cfg.SubTestConfig.Uint8 != 0 {
+		t.Fatalf("expected SubTestConfig.Uint8 to be 0, got %v", cfg.SubTestConfig.Uint8)
+	}
+
+	if cfg.SubTestConfig.Uint16 != 0 {
+		t.Fatalf("expected SubTestConfig.Uint16 to be 0, got %v", cfg.SubTestConfig.Uint16)
+	}
+
+	if cfg.SubTestConfig.Uint32 != 0 {
+		t.Fatalf("expected SubTestConfig.Uint32 to be 0, got %v", cfg.SubTestConfig.Uint32)
+	}
+
+	if cfg.SubTestConfig.Uint64 != 0 {
+		t.Fatalf("expected SubTestConfig.Uint64 to be 0, got %v", cfg.SubTestConfig.Uint64)
+	}
+
+	if cfg.SubTestConfig.Float32 != 0.0 {
+		t.Fatalf("expected SubTestConfig.Float32 to be 0.0, got %v", cfg.SubTestConfig.Float32)
+	}
+
+	if cfg.SubTestConfig.Float64 != 0.0 {
+		t.Fatalf("expected SubTestConfig.Float64 to be 0.0, got %v", cfg.SubTestConfig.Float64)
+	}
+
+	if cfg.SubTestConfig.String != "" {
+		t.Fatalf("expected SubTestConfig.String to be empty, got '%s'", cfg.SubTestConfig.String)
+	}
+
+	if cfg.SubTestConfig.Any != nil {
+		t.Fatalf("expected SubTestConfig.Any to be nil, got %v", cfg.SubTestConfig.Any)
+	}
+
+	if len(cfg.SubTestConfig.StringArray) != 0 {
+		t.Fatalf("expected SubTestConfig.StringArray to be empty, got %d elements", len(cfg.SubTestConfig.StringArray))
+	}
+
+	if len(cfg.SubTestConfig.BoolArray) != 0 {
+		t.Fatalf("expected SubTestConfig.BoolArray to be empty, got %d elements", len(cfg.SubTestConfig.BoolArray))
+	}
+
+	if len(cfg.SubTestConfig.IntArray) != 0 {
+		t.Fatalf("expected SubTestConfig.IntArray to be empty, got %d elements", len(cfg.SubTestConfig.IntArray))
+	}
+
+	if len(cfg.SubTestConfig.Int8Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Int8Array to be empty, got %d elements", len(cfg.SubTestConfig.Int8Array))
+	}
+
+	if len(cfg.SubTestConfig.Int16Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Int16Array to be empty, got %d elements", len(cfg.SubTestConfig.Int16Array))
+	}
+
+	if len(cfg.SubTestConfig.Int32Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Int32Array to be empty, got %d elements", len(cfg.SubTestConfig.Int32Array))
+	}
+
+	if len(cfg.SubTestConfig.Int64Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Int64Array to be empty, got %d elements", len(cfg.SubTestConfig.Int64Array))
+	}
+
+	if len(cfg.SubTestConfig.UintArray) != 0 {
+		t.Fatalf("expected SubTestConfig.UintArray to be empty, got %d elements", len(cfg.SubTestConfig.UintArray))
+	}
+
+	if len(cfg.SubTestConfig.Uint8Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Uint8Array to be empty, got %d elements", len(cfg.SubTestConfig.Uint8Array))
+	}
+
+	if len(cfg.SubTestConfig.Uint16Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Uint16Array to be empty, got %d elements", len(cfg.SubTestConfig.Uint16Array))
+	}
+
+	if len(cfg.SubTestConfig.Uint32Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Uint32Array to be empty, got %d elements", len(cfg.SubTestConfig.Uint32Array))
+	}
+
+	if len(cfg.SubTestConfig.Uint64Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Uint64Array to be empty, got %d elements", len(cfg.SubTestConfig.Uint64Array))
+	}
+
+	if len(cfg.SubTestConfig.Float32Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Float32Array to be empty, got %d elements", len(cfg.SubTestConfig.Float32Array))
+	}
+
+	if len(cfg.SubTestConfig.Float64Array) != 0 {
+		t.Fatalf("expected SubTestConfig.Float64Array to be empty, got %d elements", len(cfg.SubTestConfig.Float64Array))
+	}
+
+	if len(cfg.SubTestConfig.InterfaceArray) != 0 {
+		t.Fatalf("expected SubTestConfig.InterfaceArray to be empty, got %d elements", len(cfg.SubTestConfig.InterfaceArray))
 	}
 }

@@ -188,7 +188,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 				return fmt.Errorf("failed to unwrap interface")
 			}
 		}
-		v.Set(reflect.ValueOf(i))
+		if i != nil {
+			v.Set(reflect.ValueOf(i))
+		}
 	case reflect.String:
 		var s string
 		if val.Value != nil {

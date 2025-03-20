@@ -8,36 +8,38 @@ import (
 )
 
 type testConfig struct {
-	Bool          bool          `name:"bool" default:"true" description:"bool"`
-	Int           int           `name:"int" default:"1" description:"int"`
-	Int8          int8          `name:"int8" default:"2" description:"int8"`
-	Int16         int16         `name:"int16" default:"3" description:"int16"`
-	Int32         int32         `name:"int32" default:"4" description:"int32"`
-	Int64         int64         `name:"int64" default:"5" description:"int64"`
-	Uint          uint          `name:"uint" default:"6" description:"uint"`
-	Uint8         uint8         `name:"uint8" default:"7" description:"uint8"`
-	Uint16        uint16        `name:"uint16" default:"8" description:"uint16"`
-	Uint32        uint32        `name:"uint32" default:"9" description:"uint32"`
-	Uint64        uint64        `name:"uint64" default:"10" description:"uint64"`
-	Float32       float32       `name:"float32" default:"11.0" description:"float32"`
-	Float64       float64       `name:"float64" default:"12.0" description:"float64"`
-	String        string        `name:"string" default:"15.0" description:"string"`
-	SubTestConfig subTestConfig `name:"subTestConfig" description:"subTestConfig"`
-	Unexported    int
-	StringArray   []string  `name:"stringArray" default:"16.0,14.0" description:"array"`
-	BoolArray     []bool    `name:"boolArray" default:"true,false" description:"bool array"`
-	IntArray      []int     `name:"intArray" default:"1,2,3" description:"int array"`
-	Int8Array     []int8    `name:"int8Array" default:"1,2,3" description:"int8 array"`
-	Int16Array    []int16   `name:"int16Array" default:"1,2,3" description:"int16 array"`
-	Int32Array    []int32   `name:"int32Array" default:"1,2,3" description:"int32 array"`
-	Int64Array    []int64   `name:"int64Array" default:"1,2,3" description:"int64 array"`
-	UintArray     []uint    `name:"uintArray" default:"1,2,3" description:"uint array"`
-	Uint8Array    []uint8   `name:"uint8Array" default:"1,2,3" description:"uint8 array"`
-	Uint16Array   []uint16  `name:"uint16Array" default:"1,2,3" description:"uint16 array"`
-	Uint32Array   []uint32  `name:"uint32Array" default:"1,2,3" description:"uint32 array"`
-	Uint64Array   []uint64  `name:"uint64Array" default:"1,2,3" description:"uint64 array"`
-	Float32Array  []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
-	Float64Array  []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
+	Bool           bool          `name:"bool" default:"true" description:"bool"`
+	Int            int           `name:"int" default:"1" description:"int"`
+	Int8           int8          `name:"int8" default:"2" description:"int8"`
+	Int16          int16         `name:"int16" default:"3" description:"int16"`
+	Int32          int32         `name:"int32" default:"4" description:"int32"`
+	Int64          int64         `name:"int64" default:"5" description:"int64"`
+	Uint           uint          `name:"uint" default:"6" description:"uint"`
+	Uint8          uint8         `name:"uint8" default:"7" description:"uint8"`
+	Uint16         uint16        `name:"uint16" default:"8" description:"uint16"`
+	Uint32         uint32        `name:"uint32" default:"9" description:"uint32"`
+	Uint64         uint64        `name:"uint64" default:"10" description:"uint64"`
+	Float32        float32       `name:"float32" default:"11.0" description:"float32"`
+	Float64        float64       `name:"float64" default:"12.0" description:"float64"`
+	String         string        `name:"string" default:"15.0" description:"string"`
+	Any            any           `name:"any" default:"15.0" description:"any"`
+	SubTestConfig  subTestConfig `name:"subTestConfig" description:"subTestConfig"`
+	Unexported     int
+	StringArray    []string  `name:"stringArray" default:"16.0,14.0" description:"array"`
+	BoolArray      []bool    `name:"boolArray" default:"true,false" description:"bool array"`
+	IntArray       []int     `name:"intArray" default:"1,2,3" description:"int array"`
+	Int8Array      []int8    `name:"int8Array" default:"1,2,3" description:"int8 array"`
+	Int16Array     []int16   `name:"int16Array" default:"1,2,3" description:"int16 array"`
+	Int32Array     []int32   `name:"int32Array" default:"1,2,3" description:"int32 array"`
+	Int64Array     []int64   `name:"int64Array" default:"1,2,3" description:"int64 array"`
+	UintArray      []uint    `name:"uintArray" default:"1,2,3" description:"uint array"`
+	Uint8Array     []uint8   `name:"uint8Array" default:"1,2,3" description:"uint8 array"`
+	Uint16Array    []uint16  `name:"uint16Array" default:"1,2,3" description:"uint16 array"`
+	Uint32Array    []uint32  `name:"uint32Array" default:"1,2,3" description:"uint32 array"`
+	Uint64Array    []uint64  `name:"uint64Array" default:"1,2,3" description:"uint64 array"`
+	Float32Array   []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
+	Float64Array   []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
+	InterfaceArray []any     `name:"interfaceArray" default:"1.0,2.0" description:"interface array"`
 	// arrays of structs are not yet implemented
 	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
 }
@@ -47,35 +49,37 @@ func (c testConfig) Validate() error {
 }
 
 type subTestConfig struct {
-	Bool         bool    `name:"bool" default:"true" description:"bool"`
-	Int          int     `name:"int" default:"1" description:"int"`
-	Int8         int8    `name:"int8" default:"2" description:"int8"`
-	Int16        int16   `name:"int16" default:"3" description:"int16"`
-	Int32        int32   `name:"int32" default:"4" description:"int32"`
-	Int64        int64   `name:"int64" default:"5" description:"int64"`
-	Uint         uint    `name:"uint" default:"6" description:"uint"`
-	Uint8        uint8   `name:"uint8" default:"7" description:"uint8"`
-	Uint16       uint16  `name:"uint16" default:"8" description:"uint16"`
-	Uint32       uint32  `name:"uint32" default:"9" description:"uint32"`
-	Uint64       uint64  `name:"uint64" default:"10" description:"uint64"`
-	Float32      float32 `name:"float32" default:"11.0" description:"float32"`
-	Float64      float64 `name:"float64" default:"12.0" description:"float64"`
-	String       string  `name:"string" default:"15.0" description:"string"`
-	Unexported   int
-	StringArray  []string  `name:"stringArray" default:"16.0,14.0" description:"array"`
-	BoolArray    []bool    `name:"boolArray" default:"true,false" description:"bool array"`
-	IntArray     []int     `name:"intArray" default:"1,2,3" description:"int array"`
-	Int8Array    []int8    `name:"int8Array" default:"1,2,3" description:"int8 array"`
-	Int16Array   []int16   `name:"int16Array" default:"1,2,3" description:"int16 array"`
-	Int32Array   []int32   `name:"int32Array" default:"1,2,3" description:"int32 array"`
-	Int64Array   []int64   `name:"int64Array" default:"1,2,3" description:"int64 array"`
-	UintArray    []uint    `name:"uintArray" default:"1,2,3" description:"uint array"`
-	Uint8Array   []uint8   `name:"uint8Array" default:"1,2,3" description:"uint8 array"`
-	Uint16Array  []uint16  `name:"uint16Array" default:"1,2,3" description:"uint16 array"`
-	Uint32Array  []uint32  `name:"uint32Array" default:"1,2,3" description:"uint32 array"`
-	Uint64Array  []uint64  `name:"uint64Array" default:"1,2,3" description:"uint64 array"`
-	Float32Array []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
-	Float64Array []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
+	Bool           bool    `name:"bool" default:"true" description:"bool"`
+	Int            int     `name:"int" default:"1" description:"int"`
+	Int8           int8    `name:"int8" default:"2" description:"int8"`
+	Int16          int16   `name:"int16" default:"3" description:"int16"`
+	Int32          int32   `name:"int32" default:"4" description:"int32"`
+	Int64          int64   `name:"int64" default:"5" description:"int64"`
+	Uint           uint    `name:"uint" default:"6" description:"uint"`
+	Uint8          uint8   `name:"uint8" default:"7" description:"uint8"`
+	Uint16         uint16  `name:"uint16" default:"8" description:"uint16"`
+	Uint32         uint32  `name:"uint32" default:"9" description:"uint32"`
+	Uint64         uint64  `name:"uint64" default:"10" description:"uint64"`
+	Float32        float32 `name:"float32" default:"11.0" description:"float32"`
+	Float64        float64 `name:"float64" default:"12.0" description:"float64"`
+	String         string  `name:"string" default:"15.0" description:"string"`
+	Any            any     `name:"any" default:"15.0" description:"any"`
+	Unexported     int
+	StringArray    []string  `name:"stringArray" default:"16.0,14.0" description:"array"`
+	BoolArray      []bool    `name:"boolArray" default:"true,false" description:"bool array"`
+	IntArray       []int     `name:"intArray" default:"1,2,3" description:"int array"`
+	Int8Array      []int8    `name:"int8Array" default:"1,2,3" description:"int8 array"`
+	Int16Array     []int16   `name:"int16Array" default:"1,2,3" description:"int16 array"`
+	Int32Array     []int32   `name:"int32Array" default:"1,2,3" description:"int32 array"`
+	Int64Array     []int64   `name:"int64Array" default:"1,2,3" description:"int64 array"`
+	UintArray      []uint    `name:"uintArray" default:"1,2,3" description:"uint array"`
+	Uint8Array     []uint8   `name:"uint8Array" default:"1,2,3" description:"uint8 array"`
+	Uint16Array    []uint16  `name:"uint16Array" default:"1,2,3" description:"uint16 array"`
+	Uint32Array    []uint32  `name:"uint32Array" default:"1,2,3" description:"uint32 array"`
+	Uint64Array    []uint64  `name:"uint64Array" default:"1,2,3" description:"uint64 array"`
+	Float32Array   []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
+	Float64Array   []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
+	InterfaceArray []any     `name:"interfaceArray" default:"1.0,2.0" description:"interface array"`
 	// arrays of structs are not yet implemented
 	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
 }
@@ -151,6 +155,7 @@ func TestConfigulatorOptions(t *testing.T) {
 	}
 }
 
+//nolint:golint,gocyclo
 func TestConfigulatorDefaults(t *testing.T) {
 	t.Parallel()
 
@@ -216,8 +221,29 @@ func TestConfigulatorDefaults(t *testing.T) {
 		t.Fatalf("expected default Float64 to be 12.0, got %v", cfg.Float64)
 	}
 
+	//nolint:golint,goconst
 	if cfg.String != "15.0" {
 		t.Fatalf("expected default String to be '15.0', got '%s'", cfg.String)
+	}
+
+	if cfg.Unexported != 0 {
+		t.Fatalf("expected default Unexported to be 0, got %v", cfg.Unexported)
+	}
+
+	if cfg.Any != "15.0" {
+		t.Fatalf("expected default Any to be '15.0', got '%s'", cfg.Any)
+	}
+
+	if len(cfg.InterfaceArray) != 2 {
+		t.Fatalf("expected default InterfaceArray to have 2 elements, got %d", len(cfg.InterfaceArray))
+	}
+
+	if cfg.InterfaceArray[0] != "1.0" {
+		t.Fatalf("expected default InterfaceArray[0] to be '1.0', got %v", cfg.InterfaceArray[0])
+	}
+
+	if cfg.InterfaceArray[1] != "2.0" {
+		t.Fatalf("expected default InterfaceArray[1] to be '2.0', got %v", cfg.InterfaceArray[1])
 	}
 
 	if len(cfg.StringArray) != 2 {
@@ -704,12 +730,32 @@ func TestConfigulatorDefaults(t *testing.T) {
 		t.Fatalf("expected default SubTestConfig.Float64Array[2] to be 3.0, got %v", cfg.SubTestConfig.Float64Array[2])
 	}
 
+	if cfg.SubTestConfig.Unexported != 0 {
+		t.Fatalf("expected default SubTestConfig.Unexported to be 0, got %v", cfg.SubTestConfig.Unexported)
+	}
+
+	if cfg.SubTestConfig.Any != "15.0" {
+		t.Fatalf("expected default SubTestConfig.Any to be '15.0', got '%s'", cfg.SubTestConfig.Any)
+	}
+
+	if len(cfg.SubTestConfig.InterfaceArray) != 2 {
+		t.Fatalf("expected default SubTestConfig.InterfaceArray to have 2 elements, got %d", len(cfg.SubTestConfig.InterfaceArray))
+	}
+
+	if cfg.SubTestConfig.InterfaceArray[0] != "1.0" {
+		t.Fatalf("expected default SubTestConfig.InterfaceArray[0] to be '1.0', got %v", cfg.SubTestConfig.InterfaceArray[0])
+	}
+
+	if cfg.SubTestConfig.InterfaceArray[1] != "2.0" {
+		t.Fatalf("expected default SubTestConfig.InterfaceArray[1] to be '2.0', got %v", cfg.SubTestConfig.InterfaceArray[1])
+	}
+
 	if c.cfg != nil {
 		t.Fatal("expected cfg to be nil")
 	}
-
 }
 
+//nolint:golint,gocyclo
 func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	t.Setenv("TEST_BOOL", "false")
 	t.Setenv("TEST_INT", "20")
@@ -725,6 +771,7 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	t.Setenv("TEST_FLOAT32", "30.0")
 	t.Setenv("TEST_FLOAT64", "31.0")
 	t.Setenv("TEST_STRING", "32.0")
+	t.Setenv("TEST_ANY", "33.0")
 	t.Setenv("TEST_STRINGARRAY", "53.0,54.0")
 	t.Setenv("TEST_BOOLARRAY", "false,false,true")
 	t.Setenv("TEST_INTARRAY", "33,34,35")
@@ -739,6 +786,7 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	t.Setenv("TEST_UINT64ARRAY", "60,61,62")
 	t.Setenv("TEST_FLOAT32ARRAY", "63.0,64.0,65.0")
 	t.Setenv("TEST_FLOAT64ARRAY", "66.0,67.0,68.0")
+	t.Setenv("TEST_INTERFACEARRAY", "5.0,8.0")
 
 	t.Setenv("TEST_SUBTESTCONFIG_BOOL", "false")
 	t.Setenv("TEST_SUBTESTCONFIG_INT", "40")
@@ -754,6 +802,7 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	t.Setenv("TEST_SUBTESTCONFIG_FLOAT32", "50.0")
 	t.Setenv("TEST_SUBTESTCONFIG_FLOAT64", "51.0")
 	t.Setenv("TEST_SUBTESTCONFIG_STRING", "52.0")
+	t.Setenv("TEST_SUBTESTCONFIG_ANY", "53.0")
 	t.Setenv("TEST_SUBTESTCONFIG_STRINGARRAY", "68,69")
 	t.Setenv("TEST_SUBTESTCONFIG_BOOLARRAY", "false,false,true")
 	t.Setenv("TEST_SUBTESTCONFIG_INTARRAY", "53,54,55")
@@ -768,6 +817,7 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	t.Setenv("TEST_SUBTESTCONFIG_UINT64ARRAY", "80,81,82")
 	t.Setenv("TEST_SUBTESTCONFIG_FLOAT32ARRAY", "83.0,84.0,85.0")
 	t.Setenv("TEST_SUBTESTCONFIG_FLOAT64ARRAY", "86.0,87.0,88.0")
+	t.Setenv("TEST_SUBTESTCONFIG_INTERFACEARRAY", "5.0,8.0")
 
 	c := New[testConfig]()
 	c.WithEnvironmentVariables(&EnvironmentVariableOptions{
@@ -836,10 +886,15 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 		t.Fatalf("expected String to be '32.0', got '%s'", cfg.String)
 	}
 
+	if cfg.Any != "33.0" {
+		t.Fatalf("expected Any to be '33.0', got '%s'", cfg.Any)
+	}
+
 	if len(cfg.StringArray) != 2 {
 		t.Fatalf("expected StringArray to have 2 elements, got %d", len(cfg.StringArray))
 	}
 
+	//nolint:goconst
 	if cfg.StringArray[0] != "53.0" {
 		t.Fatalf("expected StringArray[0] to be '53.0', got '%s'", cfg.StringArray[0])
 	}
@@ -1056,6 +1111,18 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 		t.Fatalf("expected Float64Array[2] to be 68.0, got %v", cfg.Float64Array[2])
 	}
 
+	if len(cfg.InterfaceArray) != 2 {
+		t.Fatalf("expected InterfaceArray to have 2 elements, got %d", len(cfg.InterfaceArray))
+	}
+
+	if cfg.InterfaceArray[0] != "5.0" {
+		t.Fatalf("expected InterfaceArray[0] to be '5.0', got %v", cfg.InterfaceArray[0])
+	}
+
+	if cfg.InterfaceArray[1] != "8.0" {
+		t.Fatalf("expected InterfaceArray[1] to be '8.0', got %v", cfg.InterfaceArray[1])
+	}
+
 	if cfg.SubTestConfig.Bool != false {
 		t.Fatalf("expected SubTestConfig.Bool to be false, got %v", cfg.SubTestConfig.Bool)
 	}
@@ -1111,8 +1178,233 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	if cfg.SubTestConfig.String != "52.0" {
 		t.Fatalf("expected SubTestConfig.String to be '52.0', got '%s'", cfg.SubTestConfig.String)
 	}
+
+	if cfg.SubTestConfig.Any != "53.0" {
+		t.Fatalf("expected SubTestConfig.Any to be '53.0', got '%s'", cfg.SubTestConfig.Any)
+	}
+
+	if len(cfg.SubTestConfig.StringArray) != 2 {
+		t.Fatalf("expected SubTestConfig.StringArray to have 2 elements, got %d", len(cfg.SubTestConfig.StringArray))
+	}
+
+	if cfg.SubTestConfig.StringArray[0] != "68" {
+		t.Fatalf("expected SubTestConfig.StringArray[0] to be '68', got '%s'", cfg.SubTestConfig.StringArray[0])
+	}
+
+	if cfg.SubTestConfig.StringArray[1] != "69" {
+		t.Fatalf("expected SubTestConfig.StringArray[1] to be '69', got '%s'", cfg.SubTestConfig.StringArray[1])
+	}
+
+	if len(cfg.SubTestConfig.BoolArray) != 3 {
+		t.Fatalf("expected SubTestConfig.BoolArray to have 3 elements, got %d", len(cfg.SubTestConfig.BoolArray))
+	}
+
+	if len(cfg.SubTestConfig.IntArray) != 3 {
+		t.Fatalf("expected SubTestConfig.IntArray to have 3 elements, got %d", len(cfg.SubTestConfig.IntArray))
+	}
+
+	if cfg.SubTestConfig.IntArray[0] != 53 {
+		t.Fatalf("expected SubTestConfig.IntArray[0] to be 53, got %v", cfg.SubTestConfig.IntArray[0])
+	}
+
+	if cfg.SubTestConfig.IntArray[1] != 54 {
+		t.Fatalf("expected SubTestConfig.IntArray[1] to be 54, got %v", cfg.SubTestConfig.IntArray[1])
+	}
+
+	if cfg.SubTestConfig.IntArray[2] != 55 {
+		t.Fatalf("expected SubTestConfig.IntArray[2] to be 55, got %v", cfg.SubTestConfig.IntArray[2])
+	}
+
+	if len(cfg.SubTestConfig.Int8Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int8Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int8Array))
+	}
+
+	if cfg.SubTestConfig.Int8Array[0] != 56 {
+		t.Fatalf("expected SubTestConfig.Int8Array[0] to be 56, got %v", cfg.SubTestConfig.Int8Array[0])
+	}
+
+	if cfg.SubTestConfig.Int8Array[1] != 57 {
+		t.Fatalf("expected SubTestConfig.Int8Array[1] to be 57, got %v", cfg.SubTestConfig.Int8Array[1])
+	}
+
+	if cfg.SubTestConfig.Int8Array[2] != 58 {
+		t.Fatalf("expected SubTestConfig.Int8Array[2] to be 58, got %v", cfg.SubTestConfig.Int8Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Int16Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int16Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int16Array))
+	}
+
+	if cfg.SubTestConfig.Int16Array[0] != 59 {
+		t.Fatalf("expected SubTestConfig.Int16Array[0] to be 59, got %v", cfg.SubTestConfig.Int16Array[0])
+	}
+
+	if cfg.SubTestConfig.Int16Array[1] != 60 {
+		t.Fatalf("expected SubTestConfig.Int16Array[1] to be 60, got %v", cfg.SubTestConfig.Int16Array[1])
+	}
+
+	if cfg.SubTestConfig.Int16Array[2] != 61 {
+		t.Fatalf("expected SubTestConfig.Int16Array[2] to be 61, got %v", cfg.SubTestConfig.Int16Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Int32Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int32Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int32Array))
+	}
+
+	if cfg.SubTestConfig.Int32Array[0] != 62 {
+		t.Fatalf("expected SubTestConfig.Int32Array[0] to be 62, got %v", cfg.SubTestConfig.Int32Array[0])
+	}
+
+	if cfg.SubTestConfig.Int32Array[1] != 63 {
+		t.Fatalf("expected SubTestConfig.Int32Array[1] to be 63, got %v", cfg.SubTestConfig.Int32Array[1])
+	}
+
+	if cfg.SubTestConfig.Int32Array[2] != 64 {
+		t.Fatalf("expected SubTestConfig.Int32Array[2] to be 64, got %v", cfg.SubTestConfig.Int32Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Int64Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int64Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int64Array))
+	}
+
+	if cfg.SubTestConfig.Int64Array[0] != 65 {
+		t.Fatalf("expected SubTestConfig.Int64Array[0] to be 65, got %v", cfg.SubTestConfig.Int64Array[0])
+	}
+
+	if cfg.SubTestConfig.Int64Array[1] != 66 {
+		t.Fatalf("expected SubTestConfig.Int64Array[1] to be 66, got %v", cfg.SubTestConfig.Int64Array[1])
+	}
+
+	if cfg.SubTestConfig.Int64Array[2] != 67 {
+		t.Fatalf("expected SubTestConfig.Int64Array[2] to be 67, got %v", cfg.SubTestConfig.Int64Array[2])
+	}
+
+	if len(cfg.SubTestConfig.UintArray) != 3 {
+		t.Fatalf("expected SubTestConfig.UintArray to have 3 elements, got %d", len(cfg.SubTestConfig.UintArray))
+	}
+
+	if cfg.SubTestConfig.UintArray[0] != 68 {
+		t.Fatalf("expected SubTestConfig.UintArray[0] to be 68, got %v", cfg.SubTestConfig.UintArray[0])
+	}
+
+	if cfg.SubTestConfig.UintArray[1] != 69 {
+		t.Fatalf("expected SubTestConfig.UintArray[1] to be 69, got %v", cfg.SubTestConfig.UintArray[1])
+	}
+
+	if cfg.SubTestConfig.UintArray[2] != 70 {
+		t.Fatalf("expected SubTestConfig.UintArray[2] to be 70, got %v", cfg.SubTestConfig.UintArray[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint8Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint8Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint8Array))
+	}
+
+	if cfg.SubTestConfig.Uint8Array[0] != 71 {
+		t.Fatalf("expected SubTestConfig.Uint8Array[0] to be 71, got %v", cfg.SubTestConfig.Uint8Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint8Array[1] != 72 {
+		t.Fatalf("expected SubTestConfig.Uint8Array[1] to be 72, got %v", cfg.SubTestConfig.Uint8Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint8Array[2] != 73 {
+		t.Fatalf("expected SubTestConfig.Uint8Array[2] to be 73, got %v", cfg.SubTestConfig.Uint8Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint16Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint16Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint16Array))
+	}
+
+	if cfg.SubTestConfig.Uint16Array[0] != 74 {
+		t.Fatalf("expected SubTestConfig.Uint16Array[0] to be 74, got %v", cfg.SubTestConfig.Uint16Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint16Array[1] != 75 {
+		t.Fatalf("expected SubTestConfig.Uint16Array[1] to be 75, got %v", cfg.SubTestConfig.Uint16Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint16Array[2] != 76 {
+		t.Fatalf("expected SubTestConfig.Uint16Array[2] to be 76, got %v", cfg.SubTestConfig.Uint16Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint32Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint32Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint32Array))
+	}
+
+	if cfg.SubTestConfig.Uint32Array[0] != 77 {
+		t.Fatalf("expected SubTestConfig.Uint32Array[0] to be 77, got %v", cfg.SubTestConfig.Uint32Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint32Array[1] != 78 {
+		t.Fatalf("expected SubTestConfig.Uint32Array[1] to be 78, got %v", cfg.SubTestConfig.Uint32Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint32Array[2] != 79 {
+		t.Fatalf("expected SubTestConfig.Uint32Array[2] to be 79, got %v", cfg.SubTestConfig.Uint32Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint64Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint64Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint64Array))
+	}
+
+	if cfg.SubTestConfig.Uint64Array[0] != 80 {
+		t.Fatalf("expected SubTestConfig.Uint64Array[0] to be 80, got %v", cfg.SubTestConfig.Uint64Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint64Array[1] != 81 {
+		t.Fatalf("expected SubTestConfig.Uint64Array[1] to be 81, got %v", cfg.SubTestConfig.Uint64Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint64Array[2] != 82 {
+		t.Fatalf("expected SubTestConfig.Uint64Array[2] to be 82, got %v", cfg.SubTestConfig.Uint64Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Float32Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Float32Array to have 3 elements, got %d", len(cfg.SubTestConfig.Float32Array))
+	}
+
+	if cfg.SubTestConfig.Float32Array[0] != 83.0 {
+		t.Fatalf("expected SubTestConfig.Float32Array[0] to be 83.0, got %v", cfg.SubTestConfig.Float32Array[0])
+	}
+
+	if cfg.SubTestConfig.Float32Array[1] != 84.0 {
+		t.Fatalf("expected SubTestConfig.Float32Array[1] to be 84.0, got %v", cfg.SubTestConfig.Float32Array[1])
+	}
+
+	if cfg.SubTestConfig.Float32Array[2] != 85.0 {
+		t.Fatalf("expected SubTestConfig.Float32Array[2] to be 85.0, got %v", cfg.SubTestConfig.Float32Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Float64Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Float64Array to have 3 elements, got %d", len(cfg.SubTestConfig.Float64Array))
+	}
+
+	if cfg.SubTestConfig.Float64Array[0] != 86.0 {
+		t.Fatalf("expected SubTestConfig.Float64Array[0] to be 86.0, got %v", cfg.SubTestConfig.Float64Array[0])
+	}
+
+	if cfg.SubTestConfig.Float64Array[1] != 87.0 {
+		t.Fatalf("expected SubTestConfig.Float64Array[1] to be 87.0, got %v", cfg.SubTestConfig.Float64Array[1])
+	}
+
+	if cfg.SubTestConfig.Float64Array[2] != 88.0 {
+		t.Fatalf("expected SubTestConfig.Float64Array[2] to be 88.0, got %v", cfg.SubTestConfig.Float64Array[2])
+	}
+
+	if len(cfg.SubTestConfig.InterfaceArray) != 2 {
+		t.Fatalf("expected SubTestConfig.InterfaceArray to have 2 elements, got %d", len(cfg.SubTestConfig.InterfaceArray))
+	}
+
+	if cfg.SubTestConfig.InterfaceArray[0] != "5.0" {
+		t.Fatalf("expected SubTestConfig.InterfaceArray[0] to be '5.0', got %v", cfg.SubTestConfig.InterfaceArray[0])
+	}
+
+	if cfg.SubTestConfig.InterfaceArray[1] != "8.0" {
+		t.Fatalf("expected SubTestConfig.InterfaceArray[1] to be '8.0', got %v", cfg.SubTestConfig.InterfaceArray[1])
+	}
 }
 
+//nolint:golint,gocyclo
 func TestConfigulatorFlags(t *testing.T) {
 	t.Parallel()
 
@@ -1123,7 +1415,7 @@ func TestConfigulatorFlags(t *testing.T) {
 		Separator: "-",
 	})
 
-	flags.Parse(
+	err := flags.Parse(
 		[]string{
 			"--bool=false",
 			"--int=20",
@@ -1184,6 +1476,10 @@ func TestConfigulatorFlags(t *testing.T) {
 			"--subTestConfig-float32Array=83.0,84.0,85.0",
 			"--subTestConfig-float64Array=86.0,87.0,88.0",
 		})
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 
 	cfg, err := c.Load()
 	if err != nil {

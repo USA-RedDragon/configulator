@@ -42,8 +42,12 @@ func (c *Configulator[C]) loadFromEnvironment() error {
 				}
 			case reflect.Invalid:
 				return fmt.Errorf("invalid type in config: %v", e.field.Type)
-			case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Complex64, reflect.Complex128:
+			case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 				return fmt.Errorf("unsupported type in config: %v", e.field.Type)
+			case reflect.Complex64, reflect.Complex128:
+				return fmt.Errorf("complex types are not supported")
+			case reflect.Pointer, reflect.Uintptr:
+				return fmt.Errorf("pointer types are not supported")
 			case reflect.Struct:
 				// a struct itself can't be expressed in an environment variable, so we'll never get here
 				return fmt.Errorf("unsupported struct type in config: %v", e.field.Type)

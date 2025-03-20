@@ -45,6 +45,7 @@ func GetDefaultsFromStruct(typ reflect.Type, arraySeparator string) (any, error)
 	return ret, nil
 }
 
+//nolint:golint,gocyclo
 func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.WrappedValue) error {
 	v := stru.FieldByName(field.Name)
 	switch v.Kind() {
@@ -357,6 +358,10 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			v.Set(reflect.ValueOf(s))
 		case reflect.Invalid:
 			return fmt.Errorf("invalid field type in config: %v", field.Type)
+		case reflect.Complex64, reflect.Complex128:
+			return fmt.Errorf("complex types are not supported")
+		case reflect.Pointer, reflect.Uintptr:
+			return fmt.Errorf("pointer types are not supported")
 		case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 			return fmt.Errorf("unsupported field type in config: %v", field.Type)
 		default:
@@ -366,6 +371,10 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 		return fmt.Errorf("invalid field type in config: %v", field.Type)
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		return fmt.Errorf("unsupported field type in config: %v", field.Type)
+	case reflect.Complex64, reflect.Complex128:
+		return fmt.Errorf("complex types are not supported")
+	case reflect.Pointer, reflect.Uintptr:
+		return fmt.Errorf("pointer types are not supported")
 	default:
 		return fmt.Errorf("unsupported field type in config: %v", v.Kind())
 	}

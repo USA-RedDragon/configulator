@@ -42,7 +42,6 @@ linters:
     - predeclared
     - reassign
     - revive
-    - testpackage
     - tparallel
     - unconvert
     - unparam

@@ -2101,7 +2101,14 @@ func TestConfigulatorFlags(t *testing.T) {
 }
 
 func TestNonDefault(t *testing.T) {
-	c := New[nonDefaultsTestConfig]()
+	pflags := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	c := New[nonDefaultsTestConfig]().
+		WithPFlags(pflags, nil).
+		WithEnvironmentVariables(&EnvironmentVariableOptions{
+			Prefix:    "TEST_",
+			Separator: "_",
+		})
+
 	cfg, err := c.Default()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)

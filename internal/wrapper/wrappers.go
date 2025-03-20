@@ -11,158 +11,180 @@ type WrappedValue struct {
 	Value any
 }
 
-func (w WrappedValue) UnwrapBool() bool {
+func (w WrappedValue) UnwrapBool() (bool, bool) {
 	if w.Value == nil {
-		return false
+		return false, false
 	}
-	return w.Value.(bool)
+	b, ok := w.Value.(bool)
+	return b, ok
 }
 
-func (w WrappedValue) UnwrapInt8() int8 {
+func (w WrappedValue) UnwrapInt8() (int8, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(int8)
+	i, ok := w.Value.(int8)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapInt16() int16 {
+func (w WrappedValue) UnwrapInt16() (int16, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(int16)
+	i, ok := w.Value.(int16)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapInt32() int32 {
+func (w WrappedValue) UnwrapInt32() (int32, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(int32)
+	i, ok := w.Value.(int32)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapInt64() int64 {
+func (w WrappedValue) UnwrapInt64() (int64, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(int64)
+	i, ok := w.Value.(int64)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapInt() int {
+func (w WrappedValue) UnwrapInt() (int, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(int)
+	i, ok := w.Value.(int)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapUint8() uint8 {
+func (w WrappedValue) UnwrapUint8() (uint8, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(uint8)
+	i, ok := w.Value.(uint8)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapUint16() uint16 {
+func (w WrappedValue) UnwrapUint16() (uint16, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(uint16)
+	i, ok := w.Value.(uint16)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapUint32() uint32 {
+func (w WrappedValue) UnwrapUint32() (uint32, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(uint32)
+	i, ok := w.Value.(uint32)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapUint64() uint64 {
+func (w WrappedValue) UnwrapUint64() (uint64, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(uint64)
+	i, ok := w.Value.(uint64)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapUint() uint {
+func (w WrappedValue) UnwrapUint() (uint, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(uint)
+	i, ok := w.Value.(uint)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapString() string {
+func (w WrappedValue) UnwrapString() (string, bool) {
 	if w.Value == nil {
-		return ""
+		return "", false
 	}
-	return w.Value.(string)
+	s, ok := w.Value.(string)
+	return s, ok
 }
 
-func (w WrappedValue) UnwrapFloat32() float32 {
+func (w WrappedValue) UnwrapFloat32() (float32, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(float32)
+	f, ok := w.Value.(float32)
+	return f, ok
 }
 
-func (w WrappedValue) UnwrapFloat64() float64 {
+func (w WrappedValue) UnwrapFloat64() (float64, bool) {
 	if w.Value == nil {
-		return 0
+		return 0, false
 	}
-	return w.Value.(float64)
+	f, ok := w.Value.(float64)
+	return f, ok
 }
 
-func (w WrappedValue) UnwrapBoolSlice() []bool {
+func (w WrappedValue) UnwrapBoolSlice() ([]bool, bool) {
 	if w.Value == nil {
-		return []bool{}
+		return nil, false
 	}
-	return w.Value.([]bool)
+	b, ok := w.Value.([]bool)
+	return b, ok
 }
 
-func (w WrappedValue) UnwrapFloat32Slice() []float32 {
+func (w WrappedValue) UnwrapFloat32Slice() ([]float32, bool) {
 	if w.Value == nil {
-		return []float32{}
+		return nil, false
 	}
-	return w.Value.([]float32)
+	f, ok := w.Value.([]float32)
+	return f, ok
 }
 
-func (w WrappedValue) UnwrapFloat64Slice() []float64 {
+func (w WrappedValue) UnwrapFloat64Slice() ([]float64, bool) {
 	if w.Value == nil {
-		return []float64{}
+		return nil, false
 	}
-	return w.Value.([]float64)
+	f, ok := w.Value.([]float64)
+	return f, ok
 }
 
-func (w WrappedValue) UnwrapInt32Slice() []int32 {
+func (w WrappedValue) UnwrapInt32Slice() ([]int32, bool) {
 	if w.Value == nil {
-		return []int32{}
+		return nil, false
 	}
-	return w.Value.([]int32)
+	i, ok := w.Value.([]int32)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapInt64Slice() []int64 {
+func (w WrappedValue) UnwrapInt64Slice() ([]int64, bool) {
 	if w.Value == nil {
-		return []int64{}
+		return nil, false
 	}
-	return w.Value.([]int64)
+	i, ok := w.Value.([]int64)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapIntSlice() []int {
+func (w WrappedValue) UnwrapIntSlice() ([]int, bool) {
 	if w.Value == nil {
-		return []int{}
+		return nil, false
 	}
-	return w.Value.([]int)
+	i, ok := w.Value.([]int)
+	return i, ok
 }
 
-func (w WrappedValue) UnwrapStringSlice() []string {
+func (w WrappedValue) UnwrapStringSlice() ([]string, bool) {
 	if w.Value == nil {
-		return []string{}
+		return nil, false
 	}
-	return w.Value.([]string)
+	s, ok := w.Value.([]string)
+	return s, ok
 }
 
-func (w WrappedValue) UnwrapUintSlice() []uint {
+func (w WrappedValue) UnwrapUintSlice() ([]uint, bool) {
 	if w.Value == nil {
-		return []uint{}
+		return nil, false
 	}
-	return w.Value.([]uint)
+	i, ok := w.Value.([]uint)
+	return i, ok
 }
 
 func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, error) {

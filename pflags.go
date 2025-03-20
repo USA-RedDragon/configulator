@@ -165,7 +165,7 @@ func (c *Configulator[C]) loadFromFlags() error {
 					errs = append(errs, fmt.Errorf("failed to wrap value for field %s: %w", f.Name, err))
 					return
 				}
-				err = inref.SetNestedStructValue(&val, *typ, flagName, wrapped, c.arraySeparator)
+				err = inref.SetNestedStructValue(&val, flagName, wrapped, c.arraySeparator)
 				if err != nil {
 					errs = append(errs, fmt.Errorf("failed to set value for field %s: %w", f.Name, err))
 					return

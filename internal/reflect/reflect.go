@@ -147,7 +147,7 @@ func GetNestedStructFieldTypeByName(typ reflect.Type, fields []string, arraySepa
 	return &field.Type, nil
 }
 
-func SetNestedStructValue(val *reflect.Value, typ reflect.Type, fields []string, wrapped wrapper.WrappedValue, arraySeparator string) error {
+func SetNestedStructValue(val *reflect.Value, fields []string, wrapped wrapper.WrappedValue, arraySeparator string) error {
 	var foundFields []reflect.StructField
 
 	field, err := GetStructFieldByName(val.Type(), fields[0], arraySeparator)

@@ -6,6 +6,7 @@ linters:
     - asasalint
     - asciicheck
     - bidichk
+    - copyloopvar
     - containedctx
     - contextcheck
     - decorder
@@ -16,7 +17,6 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exportloopref
     - forcetypeassert
     - gci
     - gocheckcompilerdirectives

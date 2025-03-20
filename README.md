@@ -1,5 +1,7 @@
 # Configulator
 
+[![go.mod version](https://img.shields.io/github/go-mod/go-version/USA-RedDragon/configulator.svg)](https://github.com/USA-RedDragon/configulator) [![codecov](https://codecov.io/gh/USA-RedDragon/configulator/graph/badge.svg?token=AhUJaQtw9R)](https://codecov.io/gh/USA-RedDragon/configulator) [![License](https://badgen.net/github/license/USA-RedDragon/configulator)](https://github.com/USA-RedDragon/configulator/blob/main/LICENSE) [![GitHub contributors](https://badgen.net/github/contributors/USA-RedDragon/configulator)](https://github.com/USA-RedDragon/configulator/graphs/contributors/) [![GoReportCard example](https://goreportcard.com/badge/github.com/USA-RedDragon/configulator)](https://goreportcard.com/report/github.com/USA-RedDragon/configulator)
+
 A simple configuration manager for use in my apps
 
 ## Features

@@ -58,8 +58,8 @@ func (c *Configulator[C]) loadMap(configFile map[string]any) error {
 	// 	field := typ.Field(i)
 	// 	if field.Type.Kind() == reflect.Struct {
 
-	// 	} else if tag := field.Tag.Get("config"); tag != "" {
-	// 		tagInfo, err := tags.ExtractStructTag(field, tag, c.arraySeparator)
+	// 	} else if tag := field.Tag.Get("name"); tag != "" {
+	// 		tagInfo, err := tags.ExtractStructTags(field, c.arraySeparator)
 	// 		if err != nil {
 	// 			return err
 	// 		}

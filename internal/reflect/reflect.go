@@ -19,8 +19,8 @@ func GetDefaultsFromStruct(typ reflect.Type, arraySeparator string) (any, error)
 
 	for i := range typ.NumField() {
 		field := typ.Field(i)
-		if tag := field.Tag.Get("config"); tag != "" {
-			tagInfo, err := tags.ExtractStructTag(field, tag, arraySeparator)
+		if tag := field.Tag.Get("name"); tag != "" {
+			tagInfo, err := tags.ExtractStructTags(field, arraySeparator)
 			if err != nil {
 				return ret, err
 			}
@@ -382,8 +382,8 @@ func GetStructFieldByName(typ reflect.Type, field, arraySeparator string) (refle
 
 	for i := range typ.NumField() {
 		f := typ.Field(i)
-		if tag := f.Tag.Get("config"); tag != "" {
-			tagInfo, err := tags.ExtractStructTag(f, tag, arraySeparator)
+		if tag := f.Tag.Get("name"); tag != "" {
+			tagInfo, err := tags.ExtractStructTags(f, arraySeparator)
 			if err != nil {
 				return reflect.StructField{}, err
 			}

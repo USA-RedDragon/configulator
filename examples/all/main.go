@@ -9,14 +9,14 @@ import (
 )
 
 type Config struct {
-	HTTP   HTTPConfig `config:"name:http"`
-	Enable bool       `config:"enable,description:enable the service"`
+	HTTP   HTTPConfig `name:"http"`
+	Enable bool       `name:"enable" description:"enable the service"`
 }
 
 type HTTPConfig struct {
-	Host  string   `config:"host,description:host to listen on,default:localhost"`
-	Port  int      `config:"port,description:port to listen on,default:8080"`
-	Stuff []string `config:"stuff,description:some stuff"`
+	Host  string   `name:"host" description:"host to listen on" default:"localhost"`
+	Port  int      `name:"port" description:"port to listen on" default:"8080"`
+	Stuff []string `name:"stuff" description:"some stuff"`
 }
 
 func (c Config) Validate() error {

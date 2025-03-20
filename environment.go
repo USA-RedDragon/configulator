@@ -73,8 +73,8 @@ func buildEnvs(typ reflect.Type, prefix, separator, arraySeparator string) ([]en
 				return nil, err
 			}
 			envs = append(envs, subenvs...)
-		} else if tag := field.Tag.Get("config"); tag != "" {
-			tagInfo, err := tags.ExtractStructTag(field, tag, arraySeparator)
+		} else if tag := field.Tag.Get("name"); tag != "" {
+			tagInfo, err := tags.ExtractStructTags(field, arraySeparator)
 			if err != nil {
 				return nil, err
 			}

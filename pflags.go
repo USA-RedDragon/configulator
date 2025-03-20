@@ -40,8 +40,8 @@ func (c *Configulator[C]) registerFlagsFromStruct(stru any, prefix string) error
 
 	for i := range typ.NumField() {
 		field := typ.Field(i)
-		if tag := field.Tag.Get("config"); tag != "" {
-			err := c.addFlag(prefix+tag, field)
+		if tag := field.Tag.Get("name"); tag != "" {
+			err := c.addFlag(prefix, field)
 			if err != nil {
 				return err
 			}
@@ -51,11 +51,13 @@ func (c *Configulator[C]) registerFlagsFromStruct(stru any, prefix string) error
 	return nil
 }
 
-func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) error {
-	tag, err := tags.ExtractStructTag(field, tagStr, c.arraySeparator)
+func (c *Configulator[C]) addFlag(prefix string, field reflect.StructField) error {
+	tag, err := tags.ExtractStructTags(field, c.arraySeparator)
 	if err != nil {
 		return err
 	}
+
+	tag.Name = prefix + tag.Name
 
 	switch field.Type.Kind() {
 	case reflect.Bool:
@@ -281,7 +283,7 @@ func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) erro
 				return fmt.Errorf("failed to unwrap string slice")
 			}
 			c.flags.StringSlice(tag.Name, v, tag.Description)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		case reflect.Uint:
 			if tag.DefaultVal.Value == nil {
 				c.flags.UintSlice(tag.Name, nil, tag.Description)
 				return nil
@@ -291,16 +293,90 @@ func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) erro
 				return fmt.Errorf("failed to unwrap uint slice")
 			}
 			c.flags.UintSlice(tag.Name, v, tag.Description)
-		case reflect.Int8, reflect.Int16:
+		case reflect.Uint8:
+			if tag.DefaultVal.Value == nil {
+				c.flags.UintSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
+			v, ok := tag.DefaultVal.UnwrapUint8Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint8 slice")
+			}
+			uint8Slice := make([]uint, len(v))
+			for i, val := range v {
+				uint8Slice[i] = uint(val)
+			}
+			c.flags.UintSlice(tag.Name, uint8Slice, tag.Description)
+		case reflect.Uint16:
+			if tag.DefaultVal.Value == nil {
+				c.flags.UintSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
+			v, ok := tag.DefaultVal.UnwrapUint16Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint16 slice")
+			}
+			uint16Slice := make([]uint, len(v))
+			for i, val := range v {
+				uint16Slice[i] = uint(val)
+			}
+			c.flags.UintSlice(tag.Name, uint16Slice, tag.Description)
+		case reflect.Uint32:
+			if tag.DefaultVal.Value == nil {
+				c.flags.UintSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
+			v, ok := tag.DefaultVal.UnwrapUint32Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint32 slice")
+			}
+			uint32Slice := make([]uint, len(v))
+			for i, val := range v {
+				uint32Slice[i] = uint(val)
+			}
+			c.flags.UintSlice(tag.Name, uint32Slice, tag.Description)
+		case reflect.Uint64:
+			if tag.DefaultVal.Value == nil {
+				c.flags.UintSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
+			v, ok := tag.DefaultVal.UnwrapUint64Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint64 slice")
+			}
+			uint64Slice := make([]uint, len(v))
+			for i, val := range v {
+				uint64Slice[i] = uint(val)
+			}
+			c.flags.UintSlice(tag.Name, uint64Slice, tag.Description)
+		case reflect.Int8:
 			if tag.DefaultVal.Value == nil {
 				c.flags.IntSlice(tag.Name, nil, tag.Description)
 				return nil
 			}
-			v, ok := tag.DefaultVal.UnwrapIntSlice()
+			v, ok := tag.DefaultVal.UnwrapInt8Slice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap int8 slice")
 			}
-			c.flags.IntSlice(tag.Name, v, tag.Description)
+			int8Slice := make([]int, len(v))
+			for i, val := range v {
+				int8Slice[i] = int(val)
+			}
+			c.flags.IntSlice(tag.Name, int8Slice, tag.Description)
+		case reflect.Int16:
+			if tag.DefaultVal.Value == nil {
+				c.flags.IntSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
+			v, ok := tag.DefaultVal.UnwrapInt16Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int16 slice")
+			}
+			int16Slice := make([]int, len(v))
+			for i, val := range v {
+				int16Slice[i] = int(val)
+			}
+			c.flags.IntSlice(tag.Name, int16Slice, tag.Description)
 		case reflect.Complex64, reflect.Complex128:
 			return fmt.Errorf("complex types are not supported")
 		case reflect.Invalid:

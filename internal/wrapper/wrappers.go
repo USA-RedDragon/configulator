@@ -251,6 +251,9 @@ func (w WrappedValue) UnwrapInterfaceSlice() ([]any, bool) {
 }
 
 func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, error) {
+	if strings.HasPrefix(val, "[") && strings.HasSuffix(val, "]") {
+		val = strings.Trim(val, "[]")
+	}
 	switch typ.Kind() {
 	case reflect.Bool:
 		b, err := strconv.ParseBool(val)

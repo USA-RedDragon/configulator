@@ -1139,6 +1139,20 @@ func TestConfigulatorFlags(t *testing.T) {
 			"--float32=30.0",
 			"--float64=31.0",
 			"--string=32.0",
+			"--stringArray=53.0,54.0",
+			"--boolArray=false,false,true",
+			"--intArray=33,34,35",
+			"--int8Array=36,37,38",
+			"--int16Array=39,40,41",
+			"--int32Array=42,43,44",
+			"--int64Array=45,46,47",
+			"--uintArray=48,49,50",
+			"--uint8Array=51,52,53",
+			"--uint16Array=54,55,56",
+			"--uint32Array=57,58,59",
+			"--uint64Array=60,61,62",
+			"--float32Array=63.0,64.0,65.0",
+			"--float64Array=66.0,67.0,68.0",
 			"--subTestConfig-bool=false",
 			"--subTestConfig-int=40",
 			"--subTestConfig-int8=41",
@@ -1153,6 +1167,22 @@ func TestConfigulatorFlags(t *testing.T) {
 			"--subTestConfig-float32=50.0",
 			"--subTestConfig-float64=51.0",
 			"--subTestConfig-string=52.0",
+			"--subTestConfig-stringArray=68,69",
+			"--subTestConfig-boolArray=false,false,true",
+			"--subTestConfig-intArray=53,54,55",
+			"--subTestConfig-int8Array=56",
+			"--subTestConfig-int8Array=57",
+			"--subTestConfig-int8Array=58",
+			"--subTestConfig-int16Array=59,60,61",
+			"--subTestConfig-int32Array=62,63,64",
+			"--subTestConfig-int64Array=65,66,67",
+			"--subTestConfig-uintArray=68,69,70",
+			"--subTestConfig-uint8Array=71,72,73",
+			"--subTestConfig-uint16Array=74,75,76",
+			"--subTestConfig-uint32Array=77,78,79",
+			"--subTestConfig-uint64Array=80,81,82",
+			"--subTestConfig-float32Array=83.0,84.0,85.0",
+			"--subTestConfig-float64Array=86.0,87.0,88.0",
 		})
 
 	cfg, err := c.Load()
@@ -1216,6 +1246,210 @@ func TestConfigulatorFlags(t *testing.T) {
 		t.Fatalf("expected String to be '32.0', got '%s'", cfg.String)
 	}
 
+	if len(cfg.StringArray) != 2 {
+		t.Fatalf("expected StringArray to have 2 elements, got %d", len(cfg.StringArray))
+	}
+
+	if cfg.StringArray[0] != "53.0" {
+		t.Fatalf("expected StringArray[0] to be '53.0', got '%s'", cfg.StringArray[0])
+	}
+
+	if cfg.StringArray[1] != "54.0" {
+		t.Fatalf("expected StringArray[1] to be '54.0', got '%s'", cfg.StringArray[1])
+	}
+
+	if len(cfg.IntArray) != 3 {
+		t.Fatalf("expected IntArray to have 3 elements, got %d", len(cfg.IntArray))
+	}
+
+	if cfg.IntArray[0] != 33 {
+		t.Fatalf("expected IntArray[0] to be 33, got %v", cfg.IntArray[0])
+	}
+
+	if cfg.IntArray[1] != 34 {
+		t.Fatalf("expected IntArray[1] to be 34, got %v", cfg.IntArray[1])
+	}
+
+	if cfg.IntArray[2] != 35 {
+		t.Fatalf("expected IntArray[2] to be 35, got %v", cfg.IntArray[2])
+	}
+
+	if len(cfg.Int8Array) != 3 {
+		t.Fatalf("expected Int8Array to have 3 elements, got %d", len(cfg.Int8Array))
+	}
+
+	if cfg.Int8Array[0] != 36 {
+		t.Fatalf("expected Int8Array[0] to be 36, got %v", cfg.Int8Array[0])
+	}
+
+	if cfg.Int8Array[1] != 37 {
+		t.Fatalf("expected Int8Array[1] to be 37, got %v", cfg.Int8Array[1])
+	}
+
+	if cfg.Int8Array[2] != 38 {
+		t.Fatalf("expected Int8Array[2] to be 38, got %v", cfg.Int8Array[2])
+	}
+
+	if len(cfg.Int16Array) != 3 {
+		t.Fatalf("expected Int16Array to have 3 elements, got %d", len(cfg.Int16Array))
+	}
+
+	if cfg.Int16Array[0] != 39 {
+		t.Fatalf("expected Int16Array[0] to be 39, got %v", cfg.Int16Array[0])
+	}
+
+	if cfg.Int16Array[1] != 40 {
+		t.Fatalf("expected Int16Array[1] to be 40, got %v", cfg.Int16Array[1])
+	}
+
+	if cfg.Int16Array[2] != 41 {
+		t.Fatalf("expected Int16Array[2] to be 41, got %v", cfg.Int16Array[2])
+	}
+
+	if len(cfg.Int32Array) != 3 {
+		t.Fatalf("expected Int32Array to have 3 elements, got %d", len(cfg.Int32Array))
+	}
+
+	if cfg.Int32Array[0] != 42 {
+		t.Fatalf("expected Int32Array[0] to be 42, got %v", cfg.Int32Array[0])
+	}
+
+	if cfg.Int32Array[1] != 43 {
+		t.Fatalf("expected Int32Array[1] to be 43, got %v", cfg.Int32Array[1])
+	}
+
+	if cfg.Int32Array[2] != 44 {
+		t.Fatalf("expected Int32Array[2] to be 44, got %v", cfg.Int32Array[2])
+	}
+
+	if len(cfg.Int64Array) != 3 {
+		t.Fatalf("expected Int64Array to have 3 elements, got %d", len(cfg.Int64Array))
+	}
+
+	if cfg.Int64Array[0] != 45 {
+		t.Fatalf("expected Int64Array[0] to be 45, got %v", cfg.Int64Array[0])
+	}
+
+	if cfg.Int64Array[1] != 46 {
+		t.Fatalf("expected Int64Array[1] to be 46, got %v", cfg.Int64Array[1])
+	}
+
+	if cfg.Int64Array[2] != 47 {
+		t.Fatalf("expected Int64Array[2] to be 47, got %v", cfg.Int64Array[2])
+	}
+
+	if len(cfg.UintArray) != 3 {
+		t.Fatalf("expected UintArray to have 3 elements, got %d", len(cfg.UintArray))
+	}
+
+	if cfg.UintArray[0] != 48 {
+		t.Fatalf("expected UintArray[0] to be 48, got %v", cfg.UintArray[0])
+	}
+
+	if cfg.UintArray[1] != 49 {
+		t.Fatalf("expected UintArray[1] to be 49, got %v", cfg.UintArray[1])
+	}
+
+	if cfg.UintArray[2] != 50 {
+		t.Fatalf("expected UintArray[2] to be 50, got %v", cfg.UintArray[2])
+	}
+
+	if len(cfg.Uint8Array) != 3 {
+		t.Fatalf("expected Uint8Array to have 3 elements, got %d", len(cfg.Uint8Array))
+	}
+
+	if cfg.Uint8Array[0] != 51 {
+		t.Fatalf("expected Uint8Array[0] to be 51, got %v", cfg.Uint8Array[0])
+	}
+
+	if cfg.Uint8Array[1] != 52 {
+		t.Fatalf("expected Uint8Array[1] to be 52, got %v", cfg.Uint8Array[1])
+	}
+
+	if cfg.Uint8Array[2] != 53 {
+		t.Fatalf("expected Uint8Array[2] to be 53, got %v", cfg.Uint8Array[2])
+	}
+
+	if len(cfg.Uint16Array) != 3 {
+		t.Fatalf("expected Uint16Array to have 3 elements, got %d", len(cfg.Uint16Array))
+	}
+
+	if cfg.Uint16Array[0] != 54 {
+		t.Fatalf("expected Uint16Array[0] to be 54, got %v", cfg.Uint16Array[0])
+	}
+
+	if cfg.Uint16Array[1] != 55 {
+		t.Fatalf("expected Uint16Array[1] to be 55, got %v", cfg.Uint16Array[1])
+	}
+
+	if cfg.Uint16Array[2] != 56 {
+		t.Fatalf("expected Uint16Array[2] to be 56, got %v", cfg.Uint16Array[2])
+	}
+
+	if len(cfg.Uint32Array) != 3 {
+		t.Fatalf("expected Uint32Array to have 3 elements, got %d", len(cfg.Uint32Array))
+	}
+
+	if cfg.Uint32Array[0] != 57 {
+		t.Fatalf("expected Uint32Array[0] to be 57, got %v", cfg.Uint32Array[0])
+	}
+
+	if cfg.Uint32Array[1] != 58 {
+		t.Fatalf("expected Uint32Array[1] to be 58, got %v", cfg.Uint32Array[1])
+	}
+
+	if cfg.Uint32Array[2] != 59 {
+		t.Fatalf("expected Uint32Array[2] to be 59, got %v", cfg.Uint32Array[2])
+	}
+
+	if len(cfg.Uint64Array) != 3 {
+		t.Fatalf("expected Uint64Array to have 3 elements, got %d", len(cfg.Uint64Array))
+	}
+
+	if cfg.Uint64Array[0] != 60 {
+		t.Fatalf("expected Uint64Array[0] to be 60, got %v", cfg.Uint64Array[0])
+	}
+
+	if cfg.Uint64Array[1] != 61 {
+		t.Fatalf("expected Uint64Array[1] to be 61, got %v", cfg.Uint64Array[1])
+	}
+
+	if cfg.Uint64Array[2] != 62 {
+		t.Fatalf("expected Uint64Array[2] to be 62, got %v", cfg.Uint64Array[2])
+	}
+
+	if len(cfg.Float32Array) != 3 {
+		t.Fatalf("expected Float32Array to have 3 elements, got %d", len(cfg.Float32Array))
+	}
+
+	if cfg.Float32Array[0] != 63.0 {
+		t.Fatalf("expected Float32Array[0] to be 63.0, got %v", cfg.Float32Array[0])
+	}
+
+	if cfg.Float32Array[1] != 64.0 {
+		t.Fatalf("expected Float32Array[1] to be 64.0, got %v", cfg.Float32Array[1])
+	}
+
+	if cfg.Float32Array[2] != 65.0 {
+		t.Fatalf("expected Float32Array[2] to be 65.0, got %v", cfg.Float32Array[2])
+	}
+
+	if len(cfg.Float64Array) != 3 {
+		t.Fatalf("expected Float64Array to have 3 elements, got %d", len(cfg.Float64Array))
+	}
+
+	if cfg.Float64Array[0] != 66.0 {
+		t.Fatalf("expected Float64Array[0] to be 66.0, got %v", cfg.Float64Array[0])
+	}
+
+	if cfg.Float64Array[1] != 67.0 {
+		t.Fatalf("expected Float64Array[1] to be 67.0, got %v", cfg.Float64Array[1])
+	}
+
+	if cfg.Float64Array[2] != 68.0 {
+		t.Fatalf("expected Float64Array[2] to be 68.0, got %v", cfg.Float64Array[2])
+	}
+
 	if cfg.SubTestConfig.Bool != false {
 		t.Fatalf("expected SubTestConfig.Bool to be false, got %v", cfg.SubTestConfig.Bool)
 	}
@@ -1270,5 +1504,225 @@ func TestConfigulatorFlags(t *testing.T) {
 
 	if cfg.SubTestConfig.String != "52.0" {
 		t.Fatalf("expected SubTestConfig.String to be '52.0', got '%s'", cfg.SubTestConfig.String)
+	}
+
+	if len(cfg.SubTestConfig.StringArray) != 2 {
+		t.Fatalf("expected SubTestConfig.StringArray to have 2 elements, got %d", len(cfg.SubTestConfig.StringArray))
+	}
+
+	if cfg.SubTestConfig.StringArray[0] != "68" {
+		t.Fatalf("expected SubTestConfig.StringArray[0] to be '68', got '%s'", cfg.SubTestConfig.StringArray[0])
+	}
+
+	if cfg.SubTestConfig.StringArray[1] != "69" {
+		t.Fatalf("expected SubTestConfig.StringArray[1] to be '69', got '%s'", cfg.SubTestConfig.StringArray[1])
+	}
+
+	if len(cfg.SubTestConfig.BoolArray) != 3 {
+		t.Fatalf("expected SubTestConfig.BoolArray to have 3 elements, got %d", len(cfg.SubTestConfig.BoolArray))
+	}
+
+	if cfg.SubTestConfig.BoolArray[0] != false {
+		t.Fatalf("expected SubTestConfig.BoolArray[0] to be false, got %v", cfg.SubTestConfig.BoolArray[0])
+	}
+
+	if cfg.SubTestConfig.BoolArray[1] != false {
+		t.Fatalf("expected SubTestConfig.BoolArray[1] to be false, got %v", cfg.SubTestConfig.BoolArray[1])
+	}
+
+	if cfg.SubTestConfig.BoolArray[2] != true {
+		t.Fatalf("expected SubTestConfig.BoolArray[2] to be true, got %v", cfg.SubTestConfig.BoolArray[2])
+	}
+
+	if len(cfg.SubTestConfig.IntArray) != 3 {
+		t.Fatalf("expected SubTestConfig.IntArray to have 3 elements, got %d", len(cfg.SubTestConfig.IntArray))
+	}
+
+	if cfg.SubTestConfig.IntArray[0] != 53 {
+		t.Fatalf("expected SubTestConfig.IntArray[0] to be 53, got %v", cfg.SubTestConfig.IntArray[0])
+	}
+
+	if cfg.SubTestConfig.IntArray[1] != 54 {
+		t.Fatalf("expected SubTestConfig.IntArray[1] to be 54, got %v", cfg.SubTestConfig.IntArray[1])
+	}
+
+	if cfg.SubTestConfig.IntArray[2] != 55 {
+		t.Fatalf("expected SubTestConfig.IntArray[2] to be 55, got %v", cfg.SubTestConfig.IntArray[2])
+	}
+
+	if len(cfg.SubTestConfig.Int8Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int8Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int8Array))
+	}
+
+	if cfg.SubTestConfig.Int8Array[0] != 56 {
+		t.Fatalf("expected SubTestConfig.Int8Array[0] to be 56, got %v", cfg.SubTestConfig.Int8Array[0])
+	}
+
+	if cfg.SubTestConfig.Int8Array[1] != 57 {
+		t.Fatalf("expected SubTestConfig.Int8Array[1] to be 57, got %v", cfg.SubTestConfig.Int8Array[1])
+	}
+
+	if cfg.SubTestConfig.Int8Array[2] != 58 {
+		t.Fatalf("expected SubTestConfig.Int8Array[2] to be 58, got %v", cfg.SubTestConfig.Int8Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Int16Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int16Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int16Array))
+	}
+
+	if cfg.SubTestConfig.Int16Array[0] != 59 {
+		t.Fatalf("expected SubTestConfig.Int16Array[0] to be 59, got %v", cfg.SubTestConfig.Int16Array[0])
+	}
+
+	if cfg.SubTestConfig.Int16Array[1] != 60 {
+		t.Fatalf("expected SubTestConfig.Int16Array[1] to be 60, got %v", cfg.SubTestConfig.Int16Array[1])
+	}
+
+	if cfg.SubTestConfig.Int16Array[2] != 61 {
+		t.Fatalf("expected SubTestConfig.Int16Array[2] to be 61, got %v", cfg.SubTestConfig.Int16Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Int32Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int32Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int32Array))
+	}
+
+	if cfg.SubTestConfig.Int32Array[0] != 62 {
+		t.Fatalf("expected SubTestConfig.Int32Array[0] to be 62, got %v", cfg.SubTestConfig.Int32Array[0])
+	}
+
+	if cfg.SubTestConfig.Int32Array[1] != 63 {
+		t.Fatalf("expected SubTestConfig.Int32Array[1] to be 63, got %v", cfg.SubTestConfig.Int32Array[1])
+	}
+
+	if cfg.SubTestConfig.Int32Array[2] != 64 {
+		t.Fatalf("expected SubTestConfig.Int32Array[2] to be 64, got %v", cfg.SubTestConfig.Int32Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Int64Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Int64Array to have 3 elements, got %d", len(cfg.SubTestConfig.Int64Array))
+	}
+
+	if cfg.SubTestConfig.Int64Array[0] != 65 {
+		t.Fatalf("expected SubTestConfig.Int64Array[0] to be 65, got %v", cfg.SubTestConfig.Int64Array[0])
+	}
+
+	if cfg.SubTestConfig.Int64Array[1] != 66 {
+		t.Fatalf("expected SubTestConfig.Int64Array[1] to be 66, got %v", cfg.SubTestConfig.Int64Array[1])
+	}
+
+	if cfg.SubTestConfig.Int64Array[2] != 67 {
+		t.Fatalf("expected SubTestConfig.Int64Array[2] to be 67, got %v", cfg.SubTestConfig.Int64Array[2])
+	}
+
+	if len(cfg.SubTestConfig.UintArray) != 3 {
+		t.Fatalf("expected SubTestConfig.UintArray to have 3 elements, got %d", len(cfg.SubTestConfig.UintArray))
+	}
+
+	if cfg.SubTestConfig.UintArray[0] != 68 {
+		t.Fatalf("expected SubTestConfig.UintArray[0] to be 68, got %v", cfg.SubTestConfig.UintArray[0])
+	}
+
+	if cfg.SubTestConfig.UintArray[1] != 69 {
+		t.Fatalf("expected SubTestConfig.UintArray[1] to be 69, got %v", cfg.SubTestConfig.UintArray[1])
+	}
+
+	if cfg.SubTestConfig.UintArray[2] != 70 {
+		t.Fatalf("expected SubTestConfig.UintArray[2] to be 70, got %v", cfg.SubTestConfig.UintArray[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint8Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint8Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint8Array))
+	}
+
+	if cfg.SubTestConfig.Uint8Array[0] != 71 {
+		t.Fatalf("expected SubTestConfig.Uint8Array[0] to be 71, got %v", cfg.SubTestConfig.Uint8Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint8Array[1] != 72 {
+		t.Fatalf("expected SubTestConfig.Uint8Array[1] to be 72, got %v", cfg.SubTestConfig.Uint8Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint8Array[2] != 73 {
+		t.Fatalf("expected SubTestConfig.Uint8Array[2] to be 73, got %v", cfg.SubTestConfig.Uint8Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint16Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint16Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint16Array))
+	}
+
+	if cfg.SubTestConfig.Uint16Array[0] != 74 {
+		t.Fatalf("expected SubTestConfig.Uint16Array[0] to be 74, got %v", cfg.SubTestConfig.Uint16Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint16Array[1] != 75 {
+		t.Fatalf("expected SubTestConfig.Uint16Array[1] to be 75, got %v", cfg.SubTestConfig.Uint16Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint16Array[2] != 76 {
+		t.Fatalf("expected SubTestConfig.Uint16Array[2] to be 76, got %v", cfg.SubTestConfig.Uint16Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint32Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint32Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint32Array))
+	}
+
+	if cfg.SubTestConfig.Uint32Array[0] != 77 {
+		t.Fatalf("expected SubTestConfig.Uint32Array[0] to be 77, got %v", cfg.SubTestConfig.Uint32Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint32Array[1] != 78 {
+		t.Fatalf("expected SubTestConfig.Uint32Array[1] to be 78, got %v", cfg.SubTestConfig.Uint32Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint32Array[2] != 79 {
+		t.Fatalf("expected SubTestConfig.Uint32Array[2] to be 79, got %v", cfg.SubTestConfig.Uint32Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Uint64Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Uint64Array to have 3 elements, got %d", len(cfg.SubTestConfig.Uint64Array))
+	}
+
+	if cfg.SubTestConfig.Uint64Array[0] != 80 {
+		t.Fatalf("expected SubTestConfig.Uint64Array[0] to be 80, got %v", cfg.SubTestConfig.Uint64Array[0])
+	}
+
+	if cfg.SubTestConfig.Uint64Array[1] != 81 {
+		t.Fatalf("expected SubTestConfig.Uint64Array[1] to be 81, got %v", cfg.SubTestConfig.Uint64Array[1])
+	}
+
+	if cfg.SubTestConfig.Uint64Array[2] != 82 {
+		t.Fatalf("expected SubTestConfig.Uint64Array[2] to be 82, got %v", cfg.SubTestConfig.Uint64Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Float32Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Float32Array to have 3 elements, got %d", len(cfg.SubTestConfig.Float32Array))
+	}
+
+	if cfg.SubTestConfig.Float32Array[0] != 83.0 {
+		t.Fatalf("expected SubTestConfig.Float32Array[0] to be 83.0, got %v", cfg.SubTestConfig.Float32Array[0])
+	}
+
+	if cfg.SubTestConfig.Float32Array[1] != 84.0 {
+		t.Fatalf("expected SubTestConfig.Float32Array[1] to be 84.0, got %v", cfg.SubTestConfig.Float32Array[1])
+	}
+
+	if cfg.SubTestConfig.Float32Array[2] != 85.0 {
+		t.Fatalf("expected SubTestConfig.Float32Array[2] to be 85.0, got %v", cfg.SubTestConfig.Float32Array[2])
+	}
+
+	if len(cfg.SubTestConfig.Float64Array) != 3 {
+		t.Fatalf("expected SubTestConfig.Float64Array to have 3 elements, got %d", len(cfg.SubTestConfig.Float64Array))
+	}
+
+	if cfg.SubTestConfig.Float64Array[0] != 86.0 {
+		t.Fatalf("expected SubTestConfig.Float64Array[0] to be 86.0, got %v", cfg.SubTestConfig.Float64Array[0])
+	}
+
+	if cfg.SubTestConfig.Float64Array[1] != 87.0 {
+		t.Fatalf("expected SubTestConfig.Float64Array[1] to be 87.0, got %v", cfg.SubTestConfig.Float64Array[1])
+	}
+
+	if cfg.SubTestConfig.Float64Array[2] != 88.0 {
+		t.Fatalf("expected SubTestConfig.Float64Array[2] to be 88.0, got %v", cfg.SubTestConfig.Float64Array[2])
 	}
 }

@@ -136,6 +136,8 @@ func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) erro
 			return fmt.Errorf("failed to unwrap float64")
 		}
 		c.flags.Float64(tag.Name, v, tag.Description)
+	case reflect.Complex64, reflect.Complex128:
+		return fmt.Errorf("complex types are not supported in pflags")
 	case reflect.String:
 		v, ok := tag.DefaultVal.UnwrapString()
 		if !ok {
@@ -195,15 +197,31 @@ func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) erro
 				return fmt.Errorf("failed to unwrap string slice")
 			}
 			c.flags.StringSlice(tag.Name, v, tag.Description)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			v, ok := tag.DefaultVal.UnwrapUintSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap uint slice")
 			}
 			c.flags.UintSlice(tag.Name, v, tag.Description)
+		case reflect.Int8, reflect.Int16:
+			v, ok := tag.DefaultVal.UnwrapIntSlice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int8 slice")
+			}
+			c.flags.IntSlice(tag.Name, v, tag.Description)
+		case reflect.Complex64, reflect.Complex128:
+			return fmt.Errorf("complex types are not supported")
+		case reflect.Invalid:
+			return fmt.Errorf("invalid type in config: %v", field.Type)
+		case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+			return fmt.Errorf("unsupported type in config: %v", field.Type)
 		default:
 			return fmt.Errorf("unsupported type in config: %v", field.Type)
 		}
+	case reflect.Invalid:
+		return fmt.Errorf("invalid type in config: %v", field.Type)
+	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+		return fmt.Errorf("unsupported type in config: %v", field.Type)
 	default:
 		return fmt.Errorf("unsupported type in config: %v", field.Type)
 	}

@@ -126,6 +126,24 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			return fmt.Errorf("failed to unwrap float64")
 		}
 		v.SetFloat(f)
+	case reflect.Complex64:
+		c, ok := val.UnwrapComplex64()
+		if !ok {
+			return fmt.Errorf("failed to unwrap complex64")
+		}
+		v.SetComplex(complex128(c))
+	case reflect.Complex128:
+		c, ok := val.UnwrapComplex128()
+		if !ok {
+			return fmt.Errorf("failed to unwrap complex128")
+		}
+		v.SetComplex(c)
+	case reflect.Interface:
+		c, ok := val.UnwrapInterface()
+		if !ok {
+			return fmt.Errorf("failed to unwrap interface")
+		}
+		v.Set(reflect.ValueOf(c))
 	case reflect.String:
 		s, ok := val.UnwrapString()
 		if !ok {
@@ -157,6 +175,18 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 				return fmt.Errorf("failed to unwrap float64 slice")
 			}
 			v.Set(reflect.ValueOf(s))
+		case reflect.Int8:
+			s, ok := val.UnwrapInt8Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int8 slice")
+			}
+			v.Set(reflect.ValueOf(s))
+		case reflect.Int16:
+			s, ok := val.UnwrapInt16Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int16 slice")
+			}
+			v.Set(reflect.ValueOf(s))
 		case reflect.Int32:
 			s, ok := val.UnwrapInt32Slice()
 			if !ok {
@@ -175,21 +205,71 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 				return fmt.Errorf("failed to unwrap int slice")
 			}
 			v.Set(reflect.ValueOf(s))
+		case reflect.Complex64:
+			s, ok := val.UnwrapComplex64Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap complex64 slice")
+			}
+			v.Set(reflect.ValueOf(s))
+		case reflect.Complex128:
+			s, ok := val.UnwrapComplex128Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap complex128 slice")
+			}
+			v.Set(reflect.ValueOf(s))
+		case reflect.Interface:
+			s, ok := val.UnwrapInterfaceSlice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap interface slice")
+			}
+			v.Set(reflect.ValueOf(s))
 		case reflect.String:
 			s, ok := val.UnwrapStringSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap string slice")
 			}
 			v.Set(reflect.ValueOf(s))
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
+		case reflect.Uint8:
+			s, ok := val.UnwrapUint8Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint8 slice")
+			}
+			v.Set(reflect.ValueOf(s))
+		case reflect.Uint16:
+			s, ok := val.UnwrapUint16Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint16 slice")
+			}
+			v.Set(reflect.ValueOf(s))
+		case reflect.Uint32:
+			s, ok := val.UnwrapUint32Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint32 slice")
+			}
+			v.Set(reflect.ValueOf(s))
+		case reflect.Uint64:
+			s, ok := val.UnwrapUint64Slice()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint64 slice")
+			}
+			v.Set(reflect.ValueOf(s))
+		case reflect.Uint:
 			s, ok := val.UnwrapUintSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap uint slice")
 			}
 			v.Set(reflect.ValueOf(s))
+		case reflect.Invalid:
+			return fmt.Errorf("invalid field type in config: %v", field.Type)
+		case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+			return fmt.Errorf("unsupported field type in config: %v", field.Type)
 		default:
 			return fmt.Errorf("unsupported array/slice type in config: %v", field.Type)
 		}
+	case reflect.Invalid:
+		return fmt.Errorf("invalid field type in config: %v", field.Type)
+	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+		return fmt.Errorf("unsupported field type in config: %v", field.Type)
 	default:
 		return fmt.Errorf("unsupported field type in config: %v", v.Kind())
 	}

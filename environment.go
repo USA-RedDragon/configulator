@@ -31,7 +31,7 @@ func (c *Configulator[C]) loadFromEnvironment() error {
 		nested := c.denest(e.name)
 		if val, exists := os.LookupEnv(e.name); exists {
 			switch e.field.Type.Kind() {
-			case reflect.Bool, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64, reflect.String, reflect.Array, reflect.Slice:
+			case reflect.Bool, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64, reflect.String, reflect.Array, reflect.Slice, reflect.Complex64, reflect.Complex128, reflect.Interface:
 				wrapped, err := wrapper.WrapString(e.field.Type, val, c.arraySeparator)
 				if err != nil {
 					return fmt.Errorf("failed to wrap value: %w", err)
@@ -40,6 +40,13 @@ func (c *Configulator[C]) loadFromEnvironment() error {
 				if err := inref.SetNestedStructValue(&val, nested, wrapped, c.arraySeparator); err != nil {
 					return fmt.Errorf("failed to set value: %w", err)
 				}
+			case reflect.Invalid:
+				return fmt.Errorf("invalid type in config: %v", e.field.Type)
+			case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+				return fmt.Errorf("unsupported type in config: %v", e.field.Type)
+			case reflect.Struct:
+				// a struct itself can't be expressed in an environment variable, so we'll never get here
+				return fmt.Errorf("unsupported struct type in config: %v", e.field.Type)
 			default:
 				return fmt.Errorf("unsupported type in config: %v", e.field.Type)
 			}

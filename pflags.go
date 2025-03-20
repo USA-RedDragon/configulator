@@ -59,78 +59,130 @@ func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) erro
 
 	switch field.Type.Kind() {
 	case reflect.Bool:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Bool(tag.Name, false, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapBool()
 		if !ok {
 			return fmt.Errorf("failed to unwrap bool")
 		}
 		c.flags.Bool(tag.Name, v, tag.Description)
 	case reflect.Int8:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Int8(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapInt8()
 		if !ok {
 			return fmt.Errorf("failed to unwrap int8")
 		}
 		c.flags.Int8(tag.Name, v, tag.Description)
 	case reflect.Int16:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Int16(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapInt16()
 		if !ok {
 			return fmt.Errorf("failed to unwrap int16")
 		}
 		c.flags.Int16(tag.Name, v, tag.Description)
 	case reflect.Int32:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Int32(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapInt32()
 		if !ok {
 			return fmt.Errorf("failed to unwrap int32")
 		}
 		c.flags.Int32(tag.Name, v, tag.Description)
 	case reflect.Int64:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Int64(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapInt64()
 		if !ok {
 			return fmt.Errorf("failed to unwrap int64")
 		}
 		c.flags.Int64(tag.Name, v, tag.Description)
 	case reflect.Int:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Int(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapInt()
 		if !ok {
 			return fmt.Errorf("failed to unwrap int")
 		}
 		c.flags.Int(tag.Name, v, tag.Description)
 	case reflect.Uint8:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Uint8(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapUint8()
 		if !ok {
 			return fmt.Errorf("failed to unwrap uint8")
 		}
 		c.flags.Uint8(tag.Name, v, tag.Description)
 	case reflect.Uint16:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Uint16(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapUint16()
 		if !ok {
 			return fmt.Errorf("failed to unwrap uint16")
 		}
 		c.flags.Uint16(tag.Name, v, tag.Description)
 	case reflect.Uint32:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Uint32(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapUint32()
 		if !ok {
 			return fmt.Errorf("failed to unwrap uint32")
 		}
 		c.flags.Uint32(tag.Name, v, tag.Description)
 	case reflect.Uint64:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Uint64(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapUint64()
 		if !ok {
 			return fmt.Errorf("failed to unwrap uint64")
 		}
 		c.flags.Uint64(tag.Name, v, tag.Description)
 	case reflect.Uint:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Uint(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapUint()
 		if !ok {
 			return fmt.Errorf("failed to unwrap uint")
 		}
 		c.flags.Uint(tag.Name, v, tag.Description)
 	case reflect.Float32:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Float32(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapFloat32()
 		if !ok {
 			return fmt.Errorf("failed to unwrap float32")
 		}
 		c.flags.Float32(tag.Name, v, tag.Description)
 	case reflect.Float64:
+		if tag.DefaultVal.Value == nil {
+			c.flags.Float64(tag.Name, 0, tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapFloat64()
 		if !ok {
 			return fmt.Errorf("failed to unwrap float64")
@@ -139,6 +191,10 @@ func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) erro
 	case reflect.Complex64, reflect.Complex128:
 		return fmt.Errorf("complex types are not supported in pflags")
 	case reflect.String:
+		if tag.DefaultVal.Value == nil {
+			c.flags.String(tag.Name, "", tag.Description)
+			return nil
+		}
 		v, ok := tag.DefaultVal.UnwrapString()
 		if !ok {
 			return fmt.Errorf("failed to unwrap string")
@@ -156,54 +212,90 @@ func (c *Configulator[C]) addFlag(tagStr string, field reflect.StructField) erro
 	case reflect.Array, reflect.Slice:
 		switch field.Type.Elem().Kind() {
 		case reflect.Bool:
+			if tag.DefaultVal.Value == nil {
+				c.flags.BoolSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapBoolSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap bool slice")
 			}
 			c.flags.BoolSlice(tag.Name, v, tag.Description)
 		case reflect.Float32:
+			if tag.DefaultVal.Value == nil {
+				c.flags.Float32Slice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapFloat32Slice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap float32 slice")
 			}
 			c.flags.Float32Slice(tag.Name, v, tag.Description)
 		case reflect.Float64:
+			if tag.DefaultVal.Value == nil {
+				c.flags.Float64Slice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapFloat64Slice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap float64 slice")
 			}
 			c.flags.Float64Slice(tag.Name, v, tag.Description)
 		case reflect.Int32:
+			if tag.DefaultVal.Value == nil {
+				c.flags.Int32Slice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapInt32Slice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap int32 slice")
 			}
 			c.flags.Int32Slice(tag.Name, v, tag.Description)
 		case reflect.Int64:
+			if tag.DefaultVal.Value == nil {
+				c.flags.Int64Slice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapInt64Slice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap int64 slice")
 			}
 			c.flags.Int64Slice(tag.Name, v, tag.Description)
 		case reflect.Int:
+			if tag.DefaultVal.Value == nil {
+				c.flags.IntSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapIntSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap int slice")
 			}
 			c.flags.IntSlice(tag.Name, v, tag.Description)
 		case reflect.String:
+			if tag.DefaultVal.Value == nil {
+				c.flags.StringSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapStringSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap string slice")
 			}
 			c.flags.StringSlice(tag.Name, v, tag.Description)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			if tag.DefaultVal.Value == nil {
+				c.flags.UintSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapUintSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap uint slice")
 			}
 			c.flags.UintSlice(tag.Name, v, tag.Description)
 		case reflect.Int8, reflect.Int16:
+			if tag.DefaultVal.Value == nil {
+				c.flags.IntSlice(tag.Name, nil, tag.Description)
+				return nil
+			}
 			v, ok := tag.DefaultVal.UnwrapIntSlice()
 			if !ok {
 				return fmt.Errorf("failed to unwrap int8 slice")

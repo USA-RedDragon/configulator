@@ -49,105 +49,173 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 	v := stru.FieldByName(field.Name)
 	switch v.Kind() {
 	case reflect.Bool:
-		b, ok := val.UnwrapBool()
-		if !ok {
-			return fmt.Errorf("failed to unwrap bool")
+		var b bool
+		if val.Value != nil {
+			var ok bool
+			b, ok = val.UnwrapBool()
+			if !ok {
+				return fmt.Errorf("failed to unwrap bool")
+			}
 		}
 		v.SetBool(b)
 	case reflect.Int8:
-		i, ok := val.UnwrapInt8()
-		if !ok {
-			return fmt.Errorf("failed to unwrap int8")
+		var i int8
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapInt8()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int8")
+			}
 		}
 		v.SetInt(int64(i))
 	case reflect.Int16:
-		i, ok := val.UnwrapInt16()
-		if !ok {
-			return fmt.Errorf("failed to unwrap int16")
+		var i int16
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapInt16()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int16")
+			}
 		}
 		v.SetInt(int64(i))
 	case reflect.Int32:
-		i, ok := val.UnwrapInt32()
-		if !ok {
-			return fmt.Errorf("failed to unwrap int32")
+		var i int32
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapInt32()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int32")
+			}
 		}
 		v.SetInt(int64(i))
 	case reflect.Int64:
-		i, ok := val.UnwrapInt64()
-		if !ok {
-			return fmt.Errorf("failed to unwrap int64")
+		var i int64
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapInt64()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int64")
+			}
 		}
 		v.SetInt(i)
 	case reflect.Int:
-		i, ok := val.UnwrapInt()
-		if !ok {
-			return fmt.Errorf("failed to unwrap int")
+		var i int
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapInt()
+			if !ok {
+				return fmt.Errorf("failed to unwrap int")
+			}
 		}
 		v.SetInt(int64(i))
 	case reflect.Uint8:
-		i, ok := val.UnwrapUint8()
-		if !ok {
-			return fmt.Errorf("failed to unwrap uint8")
+		var i uint8
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapUint8()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint8")
+			}
 		}
 		v.SetUint(uint64(i))
 	case reflect.Uint16:
-		i, ok := val.UnwrapUint16()
-		if !ok {
-			return fmt.Errorf("failed to unwrap uint16")
+		var i uint16
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapUint16()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint16")
+			}
 		}
 		v.SetUint(uint64(i))
 	case reflect.Uint32:
-		i, ok := val.UnwrapUint32()
-		if !ok {
-			return fmt.Errorf("failed to unwrap uint32")
+		var i uint32
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapUint32()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint32")
+			}
 		}
 		v.SetUint(uint64(i))
 	case reflect.Uint64:
-		i, ok := val.UnwrapUint64()
-		if !ok {
-			return fmt.Errorf("failed to unwrap uint64")
+		var i uint64
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapUint64()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint64")
+			}
 		}
 		v.SetUint(i)
 	case reflect.Uint:
-		i, ok := val.UnwrapUint()
-		if !ok {
-			return fmt.Errorf("failed to unwrap uint")
+		var i uint
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapUint()
+			if !ok {
+				return fmt.Errorf("failed to unwrap uint")
+			}
 		}
 		v.SetUint(uint64(i))
 	case reflect.Float32:
-		f, ok := val.UnwrapFloat32()
-		if !ok {
-			return fmt.Errorf("failed to unwrap float32")
+		var f float32
+		if val.Value != nil {
+			var ok bool
+			f, ok = val.UnwrapFloat32()
+			if !ok {
+				return fmt.Errorf("failed to unwrap float32")
+			}
 		}
 		v.SetFloat(float64(f))
 	case reflect.Float64:
-		f, ok := val.UnwrapFloat64()
-		if !ok {
-			return fmt.Errorf("failed to unwrap float64")
+		var f float64
+		if val.Value != nil {
+			var ok bool
+			f, ok = val.UnwrapFloat64()
+			if !ok {
+				return fmt.Errorf("failed to unwrap float64")
+			}
 		}
 		v.SetFloat(f)
 	case reflect.Complex64:
-		c, ok := val.UnwrapComplex64()
-		if !ok {
-			return fmt.Errorf("failed to unwrap complex64")
+		var c complex64
+		if val.Value != nil {
+			var ok bool
+			c, ok = val.UnwrapComplex64()
+			if !ok {
+				return fmt.Errorf("failed to unwrap complex64")
+			}
 		}
 		v.SetComplex(complex128(c))
 	case reflect.Complex128:
-		c, ok := val.UnwrapComplex128()
-		if !ok {
-			return fmt.Errorf("failed to unwrap complex128")
+		var c complex128
+		if val.Value != nil {
+			var ok bool
+			c, ok = val.UnwrapComplex128()
+			if !ok {
+				return fmt.Errorf("failed to unwrap complex128")
+			}
 		}
 		v.SetComplex(c)
 	case reflect.Interface:
-		c, ok := val.UnwrapInterface()
-		if !ok {
-			return fmt.Errorf("failed to unwrap interface")
+		var i any
+		if val.Value != nil {
+			var ok bool
+			i, ok = val.UnwrapInterface()
+			if !ok {
+				return fmt.Errorf("failed to unwrap interface")
+			}
 		}
-		v.Set(reflect.ValueOf(c))
+		v.Set(reflect.ValueOf(i))
 	case reflect.String:
-		s, ok := val.UnwrapString()
-		if !ok {
-			return fmt.Errorf("failed to unwrap string")
+		var s string
+		if val.Value != nil {
+			var ok bool
+			s, ok = val.UnwrapString()
+			if !ok {
+				return fmt.Errorf("failed to unwrap string")
+			}
 		}
 		v.SetString(s)
 	case reflect.Struct:
@@ -158,105 +226,173 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 	case reflect.Array, reflect.Slice:
 		switch v.Type().Elem().Kind() {
 		case reflect.Bool:
-			s, ok := val.UnwrapBoolSlice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap bool slice")
+			var s []bool
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapBoolSlice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap bool slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Float32:
-			s, ok := val.UnwrapFloat32Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap float32 slice")
+			var s []float32
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapFloat32Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap float32 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Float64:
-			s, ok := val.UnwrapFloat64Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap float64 slice")
+			var s []float64
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapFloat64Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap float64 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Int8:
-			s, ok := val.UnwrapInt8Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap int8 slice")
+			var s []int8
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapInt8Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap int8 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Int16:
-			s, ok := val.UnwrapInt16Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap int16 slice")
+			var s []int16
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapInt16Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap int16 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Int32:
-			s, ok := val.UnwrapInt32Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap int32 slice")
+			var s []int32
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapInt32Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap int32 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Int64:
-			s, ok := val.UnwrapInt64Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap int64 slice")
+			var s []int64
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapInt64Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap int64 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Int:
-			s, ok := val.UnwrapIntSlice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap int slice")
+			var s []int
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapIntSlice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap int slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Complex64:
-			s, ok := val.UnwrapComplex64Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap complex64 slice")
+			var s []complex64
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapComplex64Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap complex64 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Complex128:
-			s, ok := val.UnwrapComplex128Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap complex128 slice")
+			var s []complex128
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapComplex128Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap complex128 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Interface:
-			s, ok := val.UnwrapInterfaceSlice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap interface slice")
+			var s []any
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapInterfaceSlice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap interface slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.String:
-			s, ok := val.UnwrapStringSlice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap string slice")
+			var s []string
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapStringSlice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap string slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Uint8:
-			s, ok := val.UnwrapUint8Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap uint8 slice")
+			var s []uint8
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapUint8Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap uint8 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Uint16:
-			s, ok := val.UnwrapUint16Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap uint16 slice")
+			var s []uint16
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapUint16Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap uint16 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Uint32:
-			s, ok := val.UnwrapUint32Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap uint32 slice")
+			var s []uint32
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapUint32Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap uint32 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Uint64:
-			s, ok := val.UnwrapUint64Slice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap uint64 slice")
+			var s []uint64
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapUint64Slice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap uint64 slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Uint:
-			s, ok := val.UnwrapUintSlice()
-			if !ok {
-				return fmt.Errorf("failed to unwrap uint slice")
+			var s []uint
+			if val.Value != nil {
+				var ok bool
+				s, ok = val.UnwrapUintSlice()
+				if !ok {
+					return fmt.Errorf("failed to unwrap uint slice")
+				}
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Invalid:

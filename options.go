@@ -61,9 +61,6 @@ type PFlagOptions struct {
 // If WithFile() is used first, a flag for the config file is added.
 func (c *Configulator[C]) WithPFlags(flags *pflag.FlagSet, opts *PFlagOptions) *Configulator[C] {
 	c.flags = flags
-	if opts == nil {
-		opts = &PFlagOptions{}
-	}
 	c.pflagOptions = opts
 	err := c.registerFlags()
 	if err != nil {

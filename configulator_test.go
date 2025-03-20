@@ -74,9 +74,6 @@ func TestConfigulatorOptions(t *testing.T) {
 	if subCtx == nil {
 		t.Fatal("expected non-nil context")
 	}
-	if subCtx.Value(configKey) == nil {
-		t.Fatal("expected ConfigKey to be set in context")
-	}
 	if subCtx.Value(configKey) != c {
 		t.Fatal("expected context to contain Configulator")
 	}

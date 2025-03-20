@@ -8,26 +8,54 @@ import (
 )
 
 type testConfig struct {
-	Bool    bool    `config:"bool,default:true,description:bool"`
-	Int     int     `config:"int,default:1,description:int"`
-	Int8    int8    `config:"int8,default:2,description:int8"`
-	Int16   int16   `config:"int16,default:3,description:int16"`
-	Int32   int32   `config:"int32,default:4,description:int32"`
-	Int64   int64   `config:"int64,default:5,description:int64"`
-	Uint    uint    `config:"uint,default:6,description:uint"`
-	Uint8   uint8   `config:"uint8,default:7,description:uint8"`
-	Uint16  uint16  `config:"uint16,default:8,description:uint16"`
-	Uint32  uint32  `config:"uint32,default:9,description:uint32"`
-	Uint64  uint64  `config:"uint64,default:10,description:uint64"`
-	Float32 float32 `config:"float32,default:11.0,description:float32"`
-	Float64 float64 `config:"float64,default:12.0,description:float64"`
-	String  string  `config:"string,default:15.0,description:string"`
+	Bool          bool          `config:"bool,default:true,description:bool"`
+	Int           int           `config:"int,default:1,description:int"`
+	Int8          int8          `config:"int8,default:2,description:int8"`
+	Int16         int16         `config:"int16,default:3,description:int16"`
+	Int32         int32         `config:"int32,default:4,description:int32"`
+	Int64         int64         `config:"int64,default:5,description:int64"`
+	Uint          uint          `config:"uint,default:6,description:uint"`
+	Uint8         uint8         `config:"uint8,default:7,description:uint8"`
+	Uint16        uint16        `config:"uint16,default:8,description:uint16"`
+	Uint32        uint32        `config:"uint32,default:9,description:uint32"`
+	Uint64        uint64        `config:"uint64,default:10,description:uint64"`
+	Float32       float32       `config:"float32,default:11.0,description:float32"`
+	Float64       float64       `config:"float64,default:12.0,description:float64"`
+	String        string        `config:"string,default:15.0,description:string"`
+	SubTestConfig subTestConfig `config:"subTestConfig,description:subTestConfig"`
+	Unexported    int
+	// Known issues:
+	// defaults in arrays are not split appropriately
 	// StringArray []string `config:"stringArray,default:16.0,14.0,description:array"`
-	Unexported int
+	// arrays of structs are not yet implemented
+	// SubTestConfigArray []subTestConfig `config:"subTestConfigArray,description:subTestConfigArray"`
 }
 
 func (c testConfig) Validate() error {
 	return nil
+}
+
+type subTestConfig struct {
+	Bool       bool    `config:"bool,default:true,description:bool"`
+	Int        int     `config:"int,default:1,description:int"`
+	Int8       int8    `config:"int8,default:2,description:int8"`
+	Int16      int16   `config:"int16,default:3,description:int16"`
+	Int32      int32   `config:"int32,default:4,description:int32"`
+	Int64      int64   `config:"int64,default:5,description:int64"`
+	Uint       uint    `config:"uint,default:6,description:uint"`
+	Uint8      uint8   `config:"uint8,default:7,description:uint8"`
+	Uint16     uint16  `config:"uint16,default:8,description:uint16"`
+	Uint32     uint32  `config:"uint32,default:9,description:uint32"`
+	Uint64     uint64  `config:"uint64,default:10,description:uint64"`
+	Float32    float32 `config:"float32,default:11.0,description:float32"`
+	Float64    float64 `config:"float64,default:12.0,description:float64"`
+	String     string  `config:"string,default:15.0,description:string"`
+	Unexported int
+	// Known issues:
+	// defaults in arrays are not split appropriately
+	// StringArray []string `config:"stringArray,default:16.0,14.0,description:array"`
+	// arrays of structs are not yet implemented
+	// SubTestConfigArray []subTestConfig `config:"subTestConfigArray,description:subTestConfigArray"`
 }
 
 func TestConfigulatorOptions(t *testing.T) {

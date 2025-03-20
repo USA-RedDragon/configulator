@@ -1,6 +1,7 @@
 package configulator
 
 import (
+	"context"
 	"testing"
 
 	"github.com/spf13/pflag"
@@ -68,4 +69,15 @@ func TestConfigulatorOptions(t *testing.T) {
 		t.Fatalf("expected file path 'test.yaml', got '%s'", c.fileOptions.Paths[0])
 	}
 
+	ctx := context.TODO()
+	subCtx := c.WithContext(ctx)
+	if subCtx == nil {
+		t.Fatal("expected non-nil context")
+	}
+	if subCtx.Value(configKey) == nil {
+		t.Fatal("expected ConfigKey to be set in context")
+	}
+	if subCtx.Value(configKey) != c {
+		t.Fatal("expected context to contain Configulator")
+	}
 }

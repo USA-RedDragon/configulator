@@ -178,26 +178,6 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			}
 		}
 		v.SetFloat(f)
-	case reflect.Complex64:
-		var c complex64
-		if val.Value != nil {
-			var ok bool
-			c, ok = val.UnwrapComplex64()
-			if !ok {
-				return fmt.Errorf("failed to unwrap complex64")
-			}
-		}
-		v.SetComplex(complex128(c))
-	case reflect.Complex128:
-		var c complex128
-		if val.Value != nil {
-			var ok bool
-			c, ok = val.UnwrapComplex128()
-			if !ok {
-				return fmt.Errorf("failed to unwrap complex128")
-			}
-		}
-		v.SetComplex(c)
 	case reflect.Interface:
 		var i any
 		if val.Value != nil {
@@ -302,26 +282,6 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 				s, ok = val.UnwrapIntSlice()
 				if !ok {
 					return fmt.Errorf("failed to unwrap int slice")
-				}
-			}
-			v.Set(reflect.ValueOf(s))
-		case reflect.Complex64:
-			var s []complex64
-			if val.Value != nil {
-				var ok bool
-				s, ok = val.UnwrapComplex64Slice()
-				if !ok {
-					return fmt.Errorf("failed to unwrap complex64 slice")
-				}
-			}
-			v.Set(reflect.ValueOf(s))
-		case reflect.Complex128:
-			var s []complex128
-			if val.Value != nil {
-				var ok bool
-				s, ok = val.UnwrapComplex128Slice()
-				if !ok {
-					return fmt.Errorf("failed to unwrap complex128 slice")
 				}
 			}
 			v.Set(reflect.ValueOf(s))

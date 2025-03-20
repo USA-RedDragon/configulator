@@ -187,22 +187,6 @@ func (w WrappedValue) UnwrapIntSlice() ([]int, bool) {
 	return i, ok
 }
 
-func (w WrappedValue) UnwrapComplex128Slice() ([]complex128, bool) {
-	if w.Value == nil {
-		return nil, false
-	}
-	c, ok := w.Value.([]complex128)
-	return c, ok
-}
-
-func (w WrappedValue) UnwrapComplex64Slice() ([]complex64, bool) {
-	if w.Value == nil {
-		return nil, false
-	}
-	c, ok := w.Value.([]complex64)
-	return c, ok
-}
-
 func (w WrappedValue) UnwrapStringSlice() ([]string, bool) {
 	if w.Value == nil {
 		return nil, false
@@ -249,30 +233,6 @@ func (w WrappedValue) UnwrapUintSlice() ([]uint, bool) {
 	}
 	i, ok := w.Value.([]uint)
 	return i, ok
-}
-
-func (w WrappedValue) UnwrapComplex64() (complex64, bool) {
-	if w.Value == nil {
-		return complex64(0), false
-	}
-	c, ok := w.Value.(complex64)
-	return c, ok
-}
-
-func (w WrappedValue) UnwrapComplex128() (complex128, bool) {
-	if w.Value == nil {
-		return complex128(0), false
-	}
-	c, ok := w.Value.(complex128)
-	return c, ok
-}
-
-func (w WrappedValue) UnwrapComplexSlice() ([]complex128, bool) {
-	if w.Value == nil {
-		return nil, false
-	}
-	c, ok := w.Value.([]complex128)
-	return c, ok
 }
 
 func (w WrappedValue) UnwrapInterface() (any, bool) {
@@ -372,12 +332,6 @@ func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, err
 			return WrappedValue{}, err
 		}
 		return WrappedValue{f}, nil
-	case reflect.Complex64, reflect.Complex128:
-		c, err := strconv.ParseComplex(val, 128)
-		if err != nil {
-			return WrappedValue{}, err
-		}
-		return WrappedValue{c}, nil
 	case reflect.Interface:
 		return WrappedValue{val}, nil
 	case reflect.Slice, reflect.Array:
@@ -527,17 +481,6 @@ func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, err
 				uints[i] = uint(in)
 			}
 			return WrappedValue{uints}, nil
-		case reflect.Complex64, reflect.Complex128:
-			parts := strings.Split(val, arraySeparator)
-			complexes := make([]complex128, len(parts))
-			for i, part := range parts {
-				c, err := strconv.ParseComplex(part, 128)
-				if err != nil {
-					return WrappedValue{}, err
-				}
-				complexes[i] = c
-			}
-			return WrappedValue{complexes}, nil
 		case reflect.Interface:
 			parts := strings.Split(val, arraySeparator)
 			interfaces := make([]any, len(parts))
@@ -547,14 +490,14 @@ func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, err
 			return WrappedValue{interfaces}, nil
 		case reflect.Invalid:
 			return WrappedValue{}, fmt.Errorf("invalid type %v", typ.Elem().Kind())
-		case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+		case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Complex64, reflect.Complex128:
 			return WrappedValue{}, fmt.Errorf("unsupported type %v", typ.Elem().Kind())
 		default:
 			return WrappedValue{}, fmt.Errorf("unsupported type %v", typ.Elem().Kind())
 		}
 	case reflect.Invalid:
 		return WrappedValue{}, fmt.Errorf("invalid type %v", typ.Kind())
-	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+	case reflect.Chan, reflect.Func, reflect.UnsafePointer, reflect.Complex64, reflect.Complex128:
 		return WrappedValue{}, fmt.Errorf("unsupported type %v", typ.Kind())
 	default:
 		return WrappedValue{}, fmt.Errorf("unsupported type %v", typ.Kind())

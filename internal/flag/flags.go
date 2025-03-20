@@ -195,6 +195,9 @@ func AddFlag(flags *pflag.FlagSet, prefix string, field reflect.StructField, sep
 		if err != nil {
 			return fmt.Errorf("failed to register flags for struct %s: %w", field.Name, err)
 		}
+	case reflect.Map:
+		// TODO: Handle map types
+		return fmt.Errorf("unsupported map type in config: %v", field.Type)
 	case reflect.Array, reflect.Slice:
 		switch field.Type.Elem().Kind() {
 		case reflect.Bool:
@@ -375,6 +378,15 @@ func AddFlag(flags *pflag.FlagSet, prefix string, field reflect.StructField, sep
 				strSlice[i] = fmt.Sprintf("%v", val)
 			}
 			flags.StringSlice(tag.Name, strSlice, tag.Description)
+		case reflect.Struct:
+			// TODO: Handle struct slices
+			return fmt.Errorf("unsupported struct slice type in config: %v", field.Type)
+		case reflect.Map:
+			// TODO: Handle map types
+			return fmt.Errorf("unsupported map type in config: %v", field.Type)
+		case reflect.Array, reflect.Slice:
+			// TODO: Handle array and slice types
+			return fmt.Errorf("unsupported array/slice type in config: %v", field.Type)
 		case reflect.Complex64, reflect.Complex128:
 			return fmt.Errorf("complex types are not supported")
 		case reflect.Invalid:

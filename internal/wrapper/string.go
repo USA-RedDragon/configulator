@@ -255,6 +255,9 @@ func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, err
 			return WrappedValue{}, fmt.Errorf("complex types are not supported")
 		case reflect.Pointer, reflect.Uintptr:
 			return WrappedValue{}, fmt.Errorf("pointer types are not supported")
+		case reflect.Struct:
+			// a struct itself can't be expressed in an environment variable, so we'll never get here
+			return WrappedValue{}, fmt.Errorf("unsupported struct type %v", typ.Elem().Kind())
 		case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 			return WrappedValue{}, fmt.Errorf("unsupported type %v", typ.Elem().Kind())
 		default:
@@ -266,6 +269,9 @@ func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, err
 		return WrappedValue{}, fmt.Errorf("complex types are not supported")
 	case reflect.Invalid:
 		return WrappedValue{}, fmt.Errorf("invalid type %v", typ.Kind())
+	case reflect.Struct:
+		// a struct itself can't be expressed in an environment variable, so we'll never get here
+		return WrappedValue{}, fmt.Errorf("unsupported struct type %v", typ.Kind())
 	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		return WrappedValue{}, fmt.Errorf("unsupported type %v", typ.Kind())
 	default:

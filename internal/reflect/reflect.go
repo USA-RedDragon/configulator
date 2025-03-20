@@ -358,6 +358,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 				}
 			}
 			v.Set(reflect.ValueOf(s))
+		case reflect.Struct:
+			// a struct itself can't be expressed in an environment variable, so we'll never get here
+			return fmt.Errorf("unsupported struct type in config: %v", field.Type)
 		case reflect.Invalid:
 			return fmt.Errorf("invalid field type in config: %v", field.Type)
 		case reflect.Complex64, reflect.Complex128:

@@ -40,8 +40,9 @@ type testConfig struct {
 	Float32Array   []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
 	Float64Array   []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
 	InterfaceArray []any     `name:"interfaceArray" default:"1.0,2.0" description:"interface array"`
-	// arrays of structs are not yet implemented
 	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
+	// maps are not yet implemented
+	// arrays of maps, slices/arrays, and structs are not yet implemented
 }
 
 func (c testConfig) Validate() error {
@@ -80,8 +81,6 @@ type subTestConfig struct {
 	Float32Array   []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
 	Float64Array   []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
 	InterfaceArray []any     `name:"interfaceArray" default:"1.0,2.0" description:"interface array"`
-	// arrays of structs are not yet implemented
-	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
 }
 
 type nonDefaultsTestConfig struct {
@@ -117,8 +116,6 @@ type nonDefaultsTestConfig struct {
 	Float32Array   []float32 `name:"float32Array" description:"float32 array"`
 	Float64Array   []float64 `name:"float64Array" description:"float64 array"`
 	InterfaceArray []any     `name:"interfaceArray" description:"interface array"`
-	// arrays of structs are not yet implemented
-	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
 }
 
 func (c nonDefaultsTestConfig) Validate() error {
@@ -2100,7 +2097,9 @@ func TestConfigulatorFlags(t *testing.T) {
 	}
 }
 
+//nolint:gocyclo
 func TestNonDefault(t *testing.T) {
+	t.Parallel()
 	pflags := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	c := New[nonDefaultsTestConfig]().
 		WithPFlags(pflags, nil).
@@ -2353,4 +2352,20 @@ func TestNonDefault(t *testing.T) {
 	if len(cfg.SubTestConfig.InterfaceArray) != 0 {
 		t.Fatalf("expected SubTestConfig.InterfaceArray to be empty, got %d elements", len(cfg.SubTestConfig.InterfaceArray))
 	}
+}
+
+func TestFile(t *testing.T) {
+	t.Parallel()
+}
+
+func TestPrecedence(t *testing.T) {
+	t.Parallel()
+}
+
+func TestConfigFlag(t *testing.T) {
+	t.Parallel()
+}
+
+func TestErrorCases(t *testing.T) {
+	t.Parallel()
 }

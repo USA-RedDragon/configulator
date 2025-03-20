@@ -31,7 +31,7 @@ func (c *Configulator[C]) loadFromEnvironment() error {
 		nested := c.denest(e.name)
 		if val, exists := os.LookupEnv(e.name); exists {
 			switch e.field.Type.Kind() {
-			case reflect.Bool, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64, reflect.String, reflect.Array, reflect.Slice, reflect.Interface:
+			case reflect.Bool, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64, reflect.String, reflect.Array, reflect.Slice, reflect.Interface, reflect.Map:
 				wrapped, err := wrapper.WrapString(e.field.Type, val, c.arraySeparator)
 				if err != nil {
 					return fmt.Errorf("failed to wrap value: %w", err)

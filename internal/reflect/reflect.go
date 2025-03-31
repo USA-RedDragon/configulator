@@ -61,12 +61,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if b, ok = a.(bool); ok {
 						v.SetBool(b)
 						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap bool")
 					}
-				} else {
-					return fmt.Errorf("failed to unwrap bool")
 				}
+				return fmt.Errorf("failed to unwrap bool")
 			}
 		}
 		v.SetBool(b)
@@ -81,12 +78,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if i, ok = a.(int8); ok {
 						v.SetInt(int64(i))
 						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap int8")
 					}
-				} else {
-					return fmt.Errorf("failed to unwrap int8")
 				}
+				return fmt.Errorf("failed to unwrap int8")
 			}
 		}
 		v.SetInt(int64(i))
@@ -101,12 +95,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if i, ok = a.(int16); ok {
 						v.SetInt(int64(i))
 						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap int16")
 					}
-				} else {
-					return fmt.Errorf("failed to unwrap int16")
 				}
+				return fmt.Errorf("failed to unwrap int16")
 			}
 		}
 		v.SetInt(int64(i))
@@ -121,12 +112,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if i, ok = a.(int32); ok {
 						v.SetInt(int64(i))
 						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap int32")
 					}
-				} else {
-					return fmt.Errorf("failed to unwrap int32")
 				}
+				return fmt.Errorf("failed to unwrap int32")
 			}
 		}
 		v.SetInt(int64(i))
@@ -141,12 +129,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if i, ok = a.(int64); ok {
 						v.SetInt(i)
 						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap int64")
 					}
-				} else {
-					return fmt.Errorf("failed to unwrap int64")
 				}
+				return fmt.Errorf("failed to unwrap int64")
 			}
 		}
 		v.SetInt(i)
@@ -161,12 +146,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if i, ok = a.(int); ok {
 						v.SetInt(int64(i))
 						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap int")
 					}
-				} else {
-					return fmt.Errorf("failed to unwrap int")
 				}
+				return fmt.Errorf("failed to unwrap int")
 			}
 		}
 		v.SetInt(int64(i))
@@ -181,12 +163,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if i, ok = a.(uint8); ok {
 						v.SetUint(uint64(i))
 						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap uint8")
 					}
-				} else {
-					return fmt.Errorf("failed to unwrap uint8")
 				}
+				return fmt.Errorf("failed to unwrap uint8")
 			}
 		}
 		v.SetUint(uint64(i))
@@ -316,19 +295,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapInterface()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					if i, ok = a.(any); ok {
-						if i != nil {
-							v.Set(reflect.ValueOf(i))
-						}
-						return nil
-					} else {
-						return fmt.Errorf("failed to unwrap interface")
-					}
-				} else {
-					return fmt.Errorf("failed to unwrap interface")
-				}
+				return fmt.Errorf("failed to unwrap interface")
 			}
 		}
 		if i != nil {

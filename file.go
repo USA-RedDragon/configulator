@@ -54,16 +54,20 @@ func (c *Configulator[C]) loadMap(configFile map[string]any, nest []string) erro
 	refVal := reflect.ValueOf(c.cfg).Elem()
 	for key, val := range configFile {
 		// Split the key by the separator to get the nested structure
-		nested := append(nest, key)
+		nest := append(nest, key)
 
-		_, err := inref.GetNestedStructFieldTypeByName(reflect.TypeOf(*c.cfg), nested, c.arraySeparator)
+		_, err := inref.GetNestedStructFieldTypeByName(reflect.TypeOf(*c.cfg), nest, c.arraySeparator)
 		if err != nil {
 			continue
 		}
 
 		switch val.(type) {
 		case map[string]any:
-			err := c.loadMap(val.(map[string]any), nested)
+			newMap, ok := val.(map[string]any)
+			if !ok {
+				return fmt.Errorf("failed to cast value to map[string]any for key %s", key)
+			}
+			err := c.loadMap(newMap, nest)
 			if err != nil {
 				slog.Error("Failed to load nested map", "key", key, "error", err)
 				return fmt.Errorf("failed to load nested map for key %s: %w", key, err)
@@ -72,7 +76,7 @@ func (c *Configulator[C]) loadMap(configFile map[string]any, nest []string) erro
 		}
 
 		wr := wrapper.WrappedValue{Value: val}
-		err = inref.SetNestedStructValue(&refVal, nested, wr, c.arraySeparator)
+		err = inref.SetNestedStructValue(&refVal, nest, wr, c.arraySeparator)
 		if err != nil {
 			return fmt.Errorf("failed to set value for key %s: %w", key, err)
 		}

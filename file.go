@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 
-	"github.com/goccy/go-yaml"
+	inref "github.com/USA-RedDragon/configulator/internal/reflect"
+	"github.com/USA-RedDragon/configulator/internal/wrapper"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -44,27 +47,36 @@ func (c *Configulator[C]) loadFromFile() error {
 		return ErrConfigFileNotFound
 	}
 
-	slog.Info("Loaded config file", "config", configFile)
-	return c.loadMap(configFile)
+	return c.loadMap(configFile, []string{})
 }
 
-func (c *Configulator[C]) loadMap(configFile map[string]any) error {
-	// typ := reflect.TypeOf(c.cfg).Elem()
-	// if typ.Kind() != reflect.Struct {
-	// 	return fmt.Errorf("expected struct, got %v", typ.Kind())
-	// }
+func (c *Configulator[C]) loadMap(configFile map[string]any, nest []string) error {
+	refVal := reflect.ValueOf(c.cfg).Elem()
+	for key, val := range configFile {
+		// Split the key by the separator to get the nested structure
+		nested := append(nest, key)
 
-	// for i := range typ.NumField() {
-	// 	field := typ.Field(i)
-	// 	if field.Type.Kind() == reflect.Struct {
+		_, err := inref.GetNestedStructFieldTypeByName(reflect.TypeOf(*c.cfg), nested, c.arraySeparator)
+		if err != nil {
+			continue
+		}
 
-	// 	} else if tag := field.Tag.Get("name"); tag != "" {
-	// 		tagInfo, err := tags.ExtractStructTags(field, c.arraySeparator)
-	// 		if err != nil {
-	// 			return err
-	// 		}
+		switch val.(type) {
+		case map[string]any:
+			err := c.loadMap(val.(map[string]any), nested)
+			if err != nil {
+				slog.Error("Failed to load nested map", "key", key, "error", err)
+				return fmt.Errorf("failed to load nested map for key %s: %w", key, err)
+			}
+			continue
+		}
 
-	// 	}
-	// }
+		wr := wrapper.WrappedValue{Value: val}
+		err = inref.SetNestedStructValue(&refVal, nested, wr, c.arraySeparator)
+		if err != nil {
+			return fmt.Errorf("failed to set value for key %s: %w", key, err)
+		}
+	}
+
 	return nil
 }

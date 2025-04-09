@@ -16,6 +16,9 @@ type EnvironmentVariableOptions struct {
 
 // WithEnvironmentVariables sets the options for loading configuration from environment variables.
 func (c *Configulator[C]) WithEnvironmentVariables(opts *EnvironmentVariableOptions) *Configulator[C] {
+	if opts == nil {
+		opts = &EnvironmentVariableOptions{}
+	}
 	c.envOptions = opts
 	return c
 }

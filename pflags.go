@@ -25,8 +25,8 @@ func (c *Configulator[C]) registerFlags() error {
 		c.flags.StringP(ConfigFileKey, "c", c.fileOptions.Paths[0], "config file")
 	}
 
-	separator := "."
-	if c.pflagOptions != nil && c.pflagOptions.Separator != "" {
+	var separator string
+	if c.pflagOptions != nil {
 		separator = c.pflagOptions.Separator
 	}
 	err := flag.RegisterFlagsFromStruct(c.flags, c.cfg, "", separator, c.arraySeparator)
@@ -49,8 +49,8 @@ func (c *Configulator[C]) loadFromFlags() error {
 			return
 		}
 		if f.Changed {
-			sep := "."
-			if c.pflagOptions != nil && c.pflagOptions.Separator != "" {
+			var sep string
+			if c.pflagOptions != nil {
 				sep = c.pflagOptions.Separator
 			}
 			flagName := strings.Split(f.Name, sep)

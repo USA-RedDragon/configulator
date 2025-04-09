@@ -19,6 +19,9 @@ func (c *Configulator[C]) WithEnvironmentVariables(opts *EnvironmentVariableOpti
 	if opts == nil {
 		opts = &EnvironmentVariableOptions{}
 	}
+	if opts.Separator == "" {
+		opts.Separator = "__"
+	}
 	c.envOptions = opts
 	return c
 }
@@ -64,6 +67,12 @@ type PFlagOptions struct {
 // If WithFile() is used first, a flag for the config file is added.
 func (c *Configulator[C]) WithPFlags(flags *pflag.FlagSet, opts *PFlagOptions) *Configulator[C] {
 	c.flags = flags
+	if opts == nil {
+		opts = &PFlagOptions{}
+	}
+	if opts.Separator == "" {
+		opts.Separator = "."
+	}
 	c.pflagOptions = opts
 	err := c.registerFlags()
 	if err != nil {

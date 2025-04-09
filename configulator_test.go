@@ -2366,6 +2366,10 @@ func TestConfigFlag(t *testing.T) {
 	t.Parallel()
 }
 
+func TestInvalidNames(t *testing.T) {
+	t.Parallel()
+}
+
 func TestErrorCases(t *testing.T) {
 	t.Parallel()
 }

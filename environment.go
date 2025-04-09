@@ -29,7 +29,8 @@ func (c *Configulator[C]) loadFromEnvironment() error {
 
 	for _, e := range envs {
 		nested := c.denest(e.name)
-		if val, exists := os.LookupEnv(e.name); exists {
+		name := strings.ReplaceAll(e.name, "-", "_")
+		if val, exists := os.LookupEnv(name); exists {
 			switch e.field.Type.Kind() {
 			case reflect.Bool, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint, reflect.Float32, reflect.Float64, reflect.String, reflect.Array, reflect.Slice, reflect.Interface, reflect.Map:
 				wrapped, err := wrapper.WrapString(e.field.Type, val, c.arraySeparator)

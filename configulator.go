@@ -41,8 +41,7 @@ func New[C Config]() *Configulator[C] {
 	return c
 }
 
-// Load reads the configuration from the environment variables, files, and flags.
-func (c *Configulator[C]) Load() (*C, error) {
+func (c *Configulator[C]) load() (*C, error) {
 	cfg, err := c.Default()
 	if err != nil {
 		return c.cfg, fmt.Errorf("failed to get defaults: %w", err)
@@ -78,7 +77,27 @@ func (c *Configulator[C]) Load() (*C, error) {
 		}
 	}
 
-	return c.cfg, (*c.cfg).Validate()
+	return c.cfg, nil
+}
+
+// Load reads the configuration from the environment variables, files, and flags.
+func (c *Configulator[C]) Load() (*C, error) {
+	cfg, err := c.load()
+	if err != nil {
+		return c.cfg, fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	return cfg, (*cfg).Validate()
+}
+
+// LoadWithoutValidation reads the configuration from the environment variables, files, and flags without validating it.
+func (c *Configulator[C]) LoadWithoutValidation() (*C, error) {
+	cfg, err := c.load()
+	if err != nil {
+		return c.cfg, fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	return cfg, nil
 }
 
 // Default returns the default configuration.

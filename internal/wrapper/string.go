@@ -9,7 +9,7 @@ import (
 
 //nolint:golint,gocyclo
 func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, error) {
-	if strings.HasPrefix(val, "[") && strings.HasSuffix(val, "]") {
+	if (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array) && strings.HasPrefix(val, "[") && strings.HasSuffix(val, "]") {
 		val = strings.Trim(val, "[]")
 	}
 	switch typ.Kind() {

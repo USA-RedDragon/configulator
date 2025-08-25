@@ -11,6 +11,22 @@ A simple configuration manager for use in my apps
   - Environment variables
   - Command line arguments (`spf13/pflag`)
 
+## Supported types
+
+Working:
+
+- all scalars except complex
+- structs
+- arrays of scalars
+
+Not working:
+
+- maps
+- arrays of maps
+- arrays of structs
+- multi-dimensional arrays
+- complex scalars
+
 ## Usage
 
 > [!NOTE]
@@ -18,7 +34,7 @@ Because the configuration options are expressed as different cases (i.e. `http.h
 
 ### Struct tags
 
-This library uses the `name`, `default`, and `description` tags. Multiple values can be passed if they are comma separated. Fields without a `name` tag are not utilized
+This library uses the `name`, `default`, and `description` tags. Multiple values can be passed if they are comma separated. Fields without a `name` tag are not utilized. The field name can be inferred from `json` or `yaml` tags if present.
 
 Examples of struct field tags and their meanings:
 

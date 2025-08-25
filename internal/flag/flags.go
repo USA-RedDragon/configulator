@@ -16,7 +16,11 @@ func RegisterFlagsFromStruct(flags *pflag.FlagSet, stru any, prefix, separator, 
 
 	for i := range typ.NumField() {
 		field := typ.Field(i)
-		if tag := field.Tag.Get("name"); tag != "" {
+		fieldName, err := tags.ExtractNameFromTags(field.Tag)
+		if err != nil {
+			return fmt.Errorf("field %s: %w", field.Name, err)
+		}
+		if tag := fieldName; tag != "" {
 			err := AddFlag(flags, prefix, field, separator, arraySeparator)
 			if err != nil {
 				return err

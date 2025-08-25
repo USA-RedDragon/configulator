@@ -19,7 +19,11 @@ func GetDefaultsFromStruct(typ reflect.Type, arraySeparator string) (any, error)
 
 	for i := range typ.NumField() {
 		field := typ.Field(i)
-		if tag := field.Tag.Get("name"); tag != "" {
+		fieldName, err := tags.ExtractNameFromTags(field.Tag)
+		if err != nil {
+			return nil, fmt.Errorf("field %s: %w", field.Name, err)
+		}
+		if tag := fieldName; tag != "" {
 			tagInfo, err := tags.ExtractStructTags(field, arraySeparator)
 			if err != nil {
 				return ret, err

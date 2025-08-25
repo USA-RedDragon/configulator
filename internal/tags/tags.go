@@ -3,6 +3,7 @@ package tags
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/USA-RedDragon/configulator/internal/wrapper"
 )
@@ -18,9 +19,9 @@ func ExtractStructTags(field reflect.StructField, arraySeparator string) (Struct
 		Description: field.Tag.Get("description"),
 	}
 
-	nameTag := field.Tag.Get("name")
-	if nameTag == "" {
-		return ret, fmt.Errorf("missing name tag")
+	nameTag, err := ExtractNameFromTags(field.Tag)
+	if err != nil {
+		return ret, fmt.Errorf("field %s: %w", field.Name, err)
 	}
 	ret.Name = nameTag
 
@@ -34,4 +35,24 @@ func ExtractStructTags(field reflect.StructField, arraySeparator string) (Struct
 	}
 
 	return ret, nil
+}
+
+func ExtractNameFromTags(tag reflect.StructTag) (string, error) {
+	// Check tags in order of precedence
+	// 1. name
+	// 2. json
+	// 3. yaml
+	nameTag := tag.Get("name")
+	if nameTag == "" {
+		nameTag = tag.Get("json")
+		nameTag = strings.SplitN(nameTag, ",", 2)[0]
+		if nameTag == "" {
+			nameTag = tag.Get("yaml")
+			nameTag = strings.SplitN(nameTag, ",", 2)[0]
+			if nameTag == "" {
+				return "", fmt.Errorf("no name, json, or yaml tag found")
+			}
+		}
+	}
+	return nameTag, nil
 }

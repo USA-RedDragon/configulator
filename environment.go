@@ -71,6 +71,10 @@ func buildEnvs(typ reflect.Type, prefix, separator, arraySeparator string) ([]en
 	envs := []env{}
 	for i := range typ.NumField() {
 		field := typ.Field(i)
+		fieldName, err := tags.ExtractNameFromTags(field.Tag)
+		if err != nil {
+			return nil, fmt.Errorf("field %s: %w", field.Name, err)
+		}
 		if field.Type.Kind() == reflect.Struct {
 			newPrefix := prefix + field.Name + separator
 			subenvs, err := buildEnvs(field.Type, newPrefix, separator, arraySeparator)
@@ -78,7 +82,7 @@ func buildEnvs(typ reflect.Type, prefix, separator, arraySeparator string) ([]en
 				return nil, err
 			}
 			envs = append(envs, subenvs...)
-		} else if tag := field.Tag.Get("name"); tag != "" {
+		} else if tag := fieldName; tag != "" {
 			tagInfo, err := tags.ExtractStructTags(field, arraySeparator)
 			if err != nil {
 				return nil, err

@@ -338,6 +338,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						if s, ok = s.([]bool); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(bool); ok {
+									slice.Index(i).SetBool(str)
+								} else {
+									return fmt.Errorf("failed to convert interface to bool in slice")
+								}
+							}
+							v.Set(slice)
+							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap bool slice")
 						}
@@ -357,6 +368,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if ok {
 						if s, ok = s.([]float32); ok {
 							v.Set(reflect.ValueOf(s))
+							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(float32); ok {
+									slice.Index(i).SetFloat(float64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to float32 in slice")
+								}
+							}
+							v.Set(slice)
 							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap float32 slice")
@@ -378,6 +400,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						if s, ok = s.([]float64); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(float64); ok {
+									slice.Index(i).SetFloat(str)
+								} else {
+									return fmt.Errorf("failed to convert interface to float64 in slice")
+								}
+							}
+							v.Set(slice)
+							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap float64 slice")
 						}
@@ -397,6 +430,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if ok {
 						if s, ok = s.([]int8); ok {
 							v.Set(reflect.ValueOf(s))
+							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(int8); ok {
+									slice.Index(i).SetInt(int64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to int8 in slice")
+								}
+							}
+							v.Set(slice)
 							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap int8 slice")
@@ -418,6 +462,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						if s, ok = s.([]int16); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(int16); ok {
+									slice.Index(i).SetInt(int64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to int16 in slice")
+								}
+							}
+							v.Set(slice)
+							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap int16 slice")
 						}
@@ -437,6 +492,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if ok {
 						if s, ok = s.([]int32); ok {
 							v.Set(reflect.ValueOf(s))
+							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(int32); ok {
+									slice.Index(i).SetInt(int64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to int32 in slice")
+								}
+							}
+							v.Set(slice)
 							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap int32 slice")
@@ -458,6 +524,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						if s, ok = s.([]int64); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(int64); ok {
+									slice.Index(i).SetInt(str)
+								} else {
+									return fmt.Errorf("failed to convert interface to int64 in slice")
+								}
+							}
+							v.Set(slice)
+							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap int64 slice")
 						}
@@ -477,6 +554,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if ok {
 						if s, ok = s.([]int); ok {
 							v.Set(reflect.ValueOf(s))
+							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(int); ok {
+									slice.Index(i).SetInt(int64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to int in slice")
+								}
+							}
+							v.Set(slice)
 							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap int slice")
@@ -508,6 +596,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						if s, ok = s.([]string); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(string); ok {
+									slice.Index(i).SetString(str)
+								} else {
+									return fmt.Errorf("failed to convert interface to string in slice")
+								}
+							}
+							v.Set(slice)
+							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap string slice %v=%v", reflect.TypeOf(s), s)
 						}
@@ -527,6 +626,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if ok {
 						if s, ok = s.([]uint8); ok {
 							v.Set(reflect.ValueOf(s))
+							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(uint8); ok {
+									slice.Index(i).SetUint(uint64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to uint8 in slice")
+								}
+							}
+							v.Set(slice)
 							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap uint8 slice")
@@ -548,6 +658,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						if s, ok = s.([]uint16); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(uint16); ok {
+									slice.Index(i).SetUint(uint64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to uint16 in slice")
+								}
+							}
+							v.Set(slice)
+							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap uint16 slice")
 						}
@@ -567,6 +688,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if ok {
 						if s, ok = s.([]uint32); ok {
 							v.Set(reflect.ValueOf(s))
+							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(uint32); ok {
+									slice.Index(i).SetUint(uint64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to uint32 in slice")
+								}
+							}
+							v.Set(slice)
 							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap uint32 slice")
@@ -588,6 +720,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						if s, ok = s.([]uint64); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(uint64); ok {
+									slice.Index(i).SetUint(str)
+								} else {
+									return fmt.Errorf("failed to convert interface to uint64 in slice")
+								}
+							}
+							v.Set(slice)
+							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap uint64 slice")
 						}
@@ -607,6 +750,17 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 					if ok {
 						if s, ok = s.([]uint); ok {
 							v.Set(reflect.ValueOf(s))
+							return nil
+						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
+							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
+							for i, val := range s {
+								if str, ok := val.(uint); ok {
+									slice.Index(i).SetUint(uint64(str))
+								} else {
+									return fmt.Errorf("failed to convert interface to uint in slice")
+								}
+							}
+							v.Set(slice)
 							return nil
 						} else {
 							return fmt.Errorf("failed to unwrap uint slice")

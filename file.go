@@ -3,7 +3,6 @@ package configulator
 import (
 	"bufio"
 	"fmt"
-	"log/slog"
 	"os"
 	"reflect"
 
@@ -65,7 +64,6 @@ func (c *Configulator[C]) loadMap(configFile map[string]any, nest []string) erro
 		case map[string]any:
 			err := c.loadMap(val, nest)
 			if err != nil {
-				slog.Error("Failed to load nested map", "key", key, "error", err)
 				return fmt.Errorf("failed to load nested map for key %s: %w", key, err)
 			}
 			continue

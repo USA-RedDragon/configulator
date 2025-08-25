@@ -2,7 +2,6 @@ package reflect
 
 import (
 	"fmt"
-	"log/slog"
 	"reflect"
 	"strings"
 
@@ -506,7 +505,6 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 				if !ok {
 					s, ok := val.UnwrapInterface()
 					if ok {
-						slog.Info("Setting string slice", "val", s, "type", reflect.TypeOf(s))
 						if s, ok = s.([]string); ok {
 							v.Set(reflect.ValueOf(s))
 							return nil

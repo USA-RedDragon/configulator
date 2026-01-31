@@ -163,7 +163,33 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			if !ok {
 				a, ok := val.UnwrapInterface()
 				if ok {
-					if i, ok = a.(uint8); ok {
+					switch conv := a.(type) {
+					case uint8:
+						i = conv
+						v.SetUint(uint64(i))
+						return nil
+					case uint16:
+						i = uint8(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case uint32:
+						i = uint8(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case uint64:
+						i = uint8(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case int:
+						i = uint8(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case int64:
+						i = uint8(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case float64:
+						i = uint8(conv)
 						v.SetUint(uint64(i))
 						return nil
 					}
@@ -271,7 +297,37 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			if !ok {
 				a, ok := val.UnwrapInterface()
 				if ok {
-					if i, ok = a.(uint); ok {
+					switch conv := a.(type) {
+					case uint:
+						i = conv
+						v.SetUint(uint64(i))
+						return nil
+					case uint8:
+						i = uint(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case uint16:
+						i = uint(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case uint32:
+						i = uint(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case uint64:
+						i = uint(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case int:
+						i = uint(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case int64:
+						i = uint(conv)
+						v.SetUint(uint64(i))
+						return nil
+					case float64:
+						i = uint(conv)
 						v.SetUint(uint64(i))
 						return nil
 					}

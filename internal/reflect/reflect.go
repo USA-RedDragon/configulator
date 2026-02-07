@@ -21,7 +21,8 @@ func GetDefaultsFromStruct(typ reflect.Type, arraySeparator string) (any, error)
 		field := typ.Field(i)
 		fieldName, err := tags.ExtractNameFromTags(field.Tag)
 		if err != nil {
-			return nil, fmt.Errorf("field %s: %w", field.Name, err)
+			// Skip fields without name/json/yaml tags (e.g. unexported or untagged fields)
+			continue
 		}
 		if tag := fieldName; tag != "" {
 			tagInfo, err := tags.ExtractStructTags(field, arraySeparator)
@@ -35,6 +36,10 @@ func GetDefaultsFromStruct(typ reflect.Type, arraySeparator string) (any, error)
 					return ret, err
 				}
 				structField.Set(reflect.ValueOf(nested))
+				continue
+			}
+			if (structField.Kind() == reflect.Slice || structField.Kind() == reflect.Array) && structField.Type().Elem().Kind() == reflect.Struct {
+				// Struct slices default to nil; they can be set via config files.
 				continue
 			}
 			err = SetStructValue(&newVal, field, tagInfo.DefaultVal)
@@ -809,8 +814,45 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			}
 			v.Set(reflect.ValueOf(s))
 		case reflect.Struct:
-			// a struct itself can't be expressed in an environment variable, so we'll never get here
-			return fmt.Errorf("unsupported struct type in config: %v", field.Type)
+			if val.Value != nil {
+				iface, ok := val.UnwrapInterface()
+				if !ok {
+					return fmt.Errorf("failed to unwrap struct slice value")
+				}
+				sliceItems, ok := iface.([]any)
+				if !ok {
+					// Try direct assignment if it's already the correct type
+					rv := reflect.ValueOf(iface)
+					if rv.Type().AssignableTo(v.Type()) {
+						v.Set(rv)
+						return nil
+					}
+					return fmt.Errorf("failed to convert value to slice of maps for struct slice")
+				}
+				elemType := v.Type().Elem()
+				slice := reflect.MakeSlice(v.Type(), len(sliceItems), len(sliceItems))
+				for i, item := range sliceItems {
+					mapItem, ok := item.(map[string]any)
+					if !ok {
+						return fmt.Errorf("failed to convert item %d to map for struct slice", i)
+					}
+					elemVal := reflect.New(elemType).Elem()
+					for key, value := range mapItem {
+						structField, err := GetStructFieldByName(elemType, key, "")
+						if err != nil {
+							continue
+						}
+						wrapped := wrapper.WrappedValue{Value: value}
+						err = SetStructValue(&elemVal, structField, wrapped)
+						if err != nil {
+							return fmt.Errorf("failed to set field %s in struct slice item %d: %w", key, i, err)
+						}
+					}
+					slice.Index(i).Set(elemVal)
+				}
+				v.Set(slice)
+			}
+			return nil
 		case reflect.Invalid:
 			return fmt.Errorf("invalid field type in config: %v", field.Type)
 		case reflect.Complex64, reflect.Complex128:

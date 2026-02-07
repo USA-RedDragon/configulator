@@ -18,7 +18,8 @@ func RegisterFlagsFromStruct(flags *pflag.FlagSet, stru any, prefix, separator, 
 		field := typ.Field(i)
 		fieldName, err := tags.ExtractNameFromTags(field.Tag)
 		if err != nil {
-			return fmt.Errorf("field %s: %w", field.Name, err)
+			// Skip fields without name/json/yaml tags (e.g. unexported or untagged fields)
+			continue
 		}
 		if tag := fieldName; tag != "" {
 			err := AddFlag(flags, prefix, field, separator, arraySeparator)
@@ -383,8 +384,9 @@ func AddFlag(flags *pflag.FlagSet, prefix string, field reflect.StructField, sep
 			}
 			flags.StringSlice(tag.Name, strSlice, tag.Description)
 		case reflect.Struct:
-			// TODO: Handle struct slices
-			return fmt.Errorf("unsupported struct slice type in config: %v", field.Type)
+			// Struct slices can't be expressed as flags, skip registration.
+			// They can be set via config files or programmatically.
+			return nil
 		case reflect.Map:
 			// TODO: Handle map types
 			return fmt.Errorf("unsupported map type in config: %v", field.Type)

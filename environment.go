@@ -73,7 +73,8 @@ func buildEnvs(typ reflect.Type, prefix, separator, arraySeparator string) ([]en
 		field := typ.Field(i)
 		fieldName, err := tags.ExtractNameFromTags(field.Tag)
 		if err != nil {
-			return nil, fmt.Errorf("field %s: %w", field.Name, err)
+			// Skip fields without name/json/yaml tags (e.g. unexported or untagged fields)
+			continue
 		}
 		if field.Type.Kind() == reflect.Struct {
 			newPrefix := prefix + field.Name + separator
@@ -82,6 +83,9 @@ func buildEnvs(typ reflect.Type, prefix, separator, arraySeparator string) ([]en
 				return nil, err
 			}
 			envs = append(envs, subenvs...)
+		} else if (field.Type.Kind() == reflect.Slice || field.Type.Kind() == reflect.Array) && field.Type.Elem().Kind() == reflect.Struct {
+			// Struct slices can't be expressed as environment variables, skip them.
+			continue
 		} else if tag := fieldName; tag != "" {
 			tagInfo, err := tags.ExtractStructTags(field, arraySeparator)
 			if err != nil {

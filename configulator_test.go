@@ -2,47 +2,48 @@ package configulator
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/spf13/pflag"
 )
 
 type testConfig struct {
-	Bool           bool          `name:"bool" default:"true" description:"bool"`
-	Int            int           `name:"int" default:"1" description:"int"`
-	Int8           int8          `name:"int8" default:"2" description:"int8"`
-	Int16          int16         `name:"int16" default:"3" description:"int16"`
-	Int32          int32         `name:"int32" default:"4" description:"int32"`
-	Int64          int64         `name:"int64" default:"5" description:"int64"`
-	Uint           uint          `name:"uint" default:"6" description:"uint"`
-	Uint8          uint8         `name:"uint8" default:"7" description:"uint8"`
-	Uint16         uint16        `name:"uint16" default:"8" description:"uint16"`
-	Uint32         uint32        `name:"uint32" default:"9" description:"uint32"`
-	Uint64         uint64        `name:"uint64" default:"10" description:"uint64"`
-	Float32        float32       `name:"float32" default:"11.0" description:"float32"`
-	Float64        float64       `name:"float64" default:"12.0" description:"float64"`
-	String         string        `name:"string" default:"15.0" description:"string"`
-	Any            any           `name:"any" default:"15.0" description:"any"`
-	SubTestConfig  subTestConfig `name:"subTestConfig" description:"subTestConfig"`
-	Unexported     int
-	StringArray    []string  `name:"stringArray" default:"16.0,14.0" description:"array"`
-	BoolArray      []bool    `name:"boolArray" default:"true,false" description:"bool array"`
-	IntArray       []int     `name:"intArray" default:"1,2,3" description:"int array"`
-	Int8Array      []int8    `name:"int8Array" default:"1,2,3" description:"int8 array"`
-	Int16Array     []int16   `name:"int16Array" default:"1,2,3" description:"int16 array"`
-	Int32Array     []int32   `name:"int32Array" default:"1,2,3" description:"int32 array"`
-	Int64Array     []int64   `name:"int64Array" default:"1,2,3" description:"int64 array"`
-	UintArray      []uint    `name:"uintArray" default:"1,2,3" description:"uint array"`
-	Uint8Array     []uint8   `name:"uint8Array" default:"1,2,3" description:"uint8 array"`
-	Uint16Array    []uint16  `name:"uint16Array" default:"1,2,3" description:"uint16 array"`
-	Uint32Array    []uint32  `name:"uint32Array" default:"1,2,3" description:"uint32 array"`
-	Uint64Array    []uint64  `name:"uint64Array" default:"1,2,3" description:"uint64 array"`
-	Float32Array   []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
-	Float64Array   []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
-	InterfaceArray []any     `name:"interfaceArray" default:"1.0,2.0" description:"interface array"`
-	// SubTestConfigArray []subTestConfig `name:"subTestConfigArray" description:"subTestConfig array"`
+	Bool               bool          `name:"bool" default:"true" description:"bool"`
+	Int                int           `name:"int" default:"1" description:"int"`
+	Int8               int8          `name:"int8" default:"2" description:"int8"`
+	Int16              int16         `name:"int16" default:"3" description:"int16"`
+	Int32              int32         `name:"int32" default:"4" description:"int32"`
+	Int64              int64         `name:"int64" default:"5" description:"int64"`
+	Uint               uint          `name:"uint" default:"6" description:"uint"`
+	Uint8              uint8         `name:"uint8" default:"7" description:"uint8"`
+	Uint16             uint16        `name:"uint16" default:"8" description:"uint16"`
+	Uint32             uint32        `name:"uint32" default:"9" description:"uint32"`
+	Uint64             uint64        `name:"uint64" default:"10" description:"uint64"`
+	Float32            float32       `name:"float32" default:"11.0" description:"float32"`
+	Float64            float64       `name:"float64" default:"12.0" description:"float64"`
+	String             string        `name:"string" default:"15.0" description:"string"`
+	Any                any           `name:"any" default:"15.0" description:"any"`
+	SubTestConfig      subTestConfig `name:"subTestConfig" description:"subTestConfig"`
+	Unexported         int
+	StringArray        []string         `name:"stringArray" default:"16.0,14.0" description:"array"`
+	BoolArray          []bool           `name:"boolArray" default:"true,false" description:"bool array"`
+	IntArray           []int            `name:"intArray" default:"1,2,3" description:"int array"`
+	Int8Array          []int8           `name:"int8Array" default:"1,2,3" description:"int8 array"`
+	Int16Array         []int16          `name:"int16Array" default:"1,2,3" description:"int16 array"`
+	Int32Array         []int32          `name:"int32Array" default:"1,2,3" description:"int32 array"`
+	Int64Array         []int64          `name:"int64Array" default:"1,2,3" description:"int64 array"`
+	UintArray          []uint           `name:"uintArray" default:"1,2,3" description:"uint array"`
+	Uint8Array         []uint8          `name:"uint8Array" default:"1,2,3" description:"uint8 array"`
+	Uint16Array        []uint16         `name:"uint16Array" default:"1,2,3" description:"uint16 array"`
+	Uint32Array        []uint32         `name:"uint32Array" default:"1,2,3" description:"uint32 array"`
+	Uint64Array        []uint64         `name:"uint64Array" default:"1,2,3" description:"uint64 array"`
+	Float32Array       []float32        `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
+	Float64Array       []float64        `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
+	InterfaceArray     []any            `name:"interfaceArray" default:"1.0,2.0" description:"interface array"`
+	SubTestConfigArray []subTestConfig2 `name:"subTestConfigArray" description:"subTestConfig array"`
 	// maps are not yet implemented
-	// arrays of maps, slices/arrays, and structs are not yet implemented
+	// arrays of maps and slices/arrays are not yet implemented
 }
 
 func (c testConfig) Validate() error {
@@ -81,6 +82,11 @@ type subTestConfig struct {
 	Float32Array   []float32 `name:"float32Array" default:"1.0,2.0,3.0" description:"float32 array"`
 	Float64Array   []float64 `name:"float64Array" default:"1.0,2.0,3.0" description:"float64 array"`
 	InterfaceArray []any     `name:"interfaceArray" default:"1.0,2.0" description:"interface array"`
+}
+
+type subTestConfig2 struct {
+	Name string `name:"name" description:"name of the item"`
+	Port int    `name:"port" default:"8080" description:"port number"`
 }
 
 type nonDefaultsTestConfig struct {
@@ -2372,4 +2378,150 @@ func TestInvalidNames(t *testing.T) {
 
 func TestErrorCases(t *testing.T) {
 	t.Parallel()
+}
+
+// structSliceConfig tests that configs containing slices of structs work.
+type structSliceConfig struct {
+	LogLevel string              `name:"log-level" description:"Logging level" default:"info"`
+	Servers  []structSliceServer `name:"servers" description:"Server configurations"`
+	Simple   subTestConfig2      `name:"simple" description:"A simple sub-config"`
+}
+
+func (c structSliceConfig) Validate() error {
+	return nil
+}
+
+type structSliceServer struct {
+	Host string `name:"host" description:"Server host"`
+	Port int    `name:"port" default:"443" description:"Server port"`
+}
+
+func TestStructSliceWithPFlags(t *testing.T) {
+	t.Parallel()
+
+	pflags := pflag.NewFlagSet("test-struct-slice", pflag.ContinueOnError)
+
+	c := New[structSliceConfig]()
+	if c == nil {
+		t.Fatal("expected non-nil Configulator")
+	}
+
+	// This should not panic
+	c.WithPFlags(pflags, &PFlagOptions{
+		Separator: ".",
+	})
+
+	cfg, err := c.Default()
+	if err != nil {
+		t.Fatalf("expected no error getting defaults, got %v", err)
+	}
+
+	if cfg.LogLevel != "info" {
+		t.Fatalf("expected LogLevel to be 'info', got '%s'", cfg.LogLevel)
+	}
+
+	if cfg.Servers != nil {
+		t.Fatalf("expected Servers to be nil, got %v", cfg.Servers)
+	}
+}
+
+func TestStructSliceWithEnvironment(t *testing.T) {
+	c := New[structSliceConfig]()
+	if c == nil {
+		t.Fatal("expected non-nil Configulator")
+	}
+
+	c.WithEnvironmentVariables(&EnvironmentVariableOptions{
+		Prefix:    "STRUCTSLICE_",
+		Separator: "__",
+	})
+
+	t.Setenv("STRUCTSLICE_LOG_LEVEL", "debug")
+
+	cfg, err := c.LoadWithoutValidation()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if cfg.LogLevel != "debug" {
+		t.Fatalf("expected LogLevel to be 'debug', got '%s'", cfg.LogLevel)
+	}
+
+	if cfg.Servers != nil {
+		t.Fatalf("expected Servers to be nil (not settable via env), got %v", cfg.Servers)
+	}
+}
+
+func TestStructSliceWithFile(t *testing.T) {
+	t.Parallel()
+
+	// Create a temporary YAML config file with struct slice data
+	yamlContent := `log-level: warn
+servers:
+  - host: example.com
+    port: 8080
+  - host: other.com
+    port: 9090
+simple:
+  name: test-simple
+  port: 3000
+`
+	tmpDir := t.TempDir()
+	tmpFile := tmpDir + "/config.yaml"
+	err := os.WriteFile(tmpFile, []byte(yamlContent), 0644)
+	if err != nil {
+		t.Fatalf("failed to write temp config file: %v", err)
+	}
+
+	pflags := pflag.NewFlagSet("test-struct-slice-file", pflag.ContinueOnError)
+
+	c := New[structSliceConfig]()
+	if c == nil {
+		t.Fatal("expected non-nil Configulator")
+	}
+
+	c.WithFile(&FileOptions{
+		Paths:           []string{tmpFile},
+		ErrorIfNotFound: true,
+	})
+	c.WithPFlags(pflags, &PFlagOptions{
+		Separator: ".",
+	})
+
+	cfg, err := c.LoadWithoutValidation()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if cfg.LogLevel != "warn" {
+		t.Fatalf("expected LogLevel to be 'warn', got '%s'", cfg.LogLevel)
+	}
+
+	if len(cfg.Servers) != 2 {
+		t.Fatalf("expected 2 servers, got %d", len(cfg.Servers))
+	}
+
+	if cfg.Servers[0].Host != "example.com" {
+		t.Fatalf("expected first server host to be 'example.com', got '%s'", cfg.Servers[0].Host)
+	}
+
+	if cfg.Servers[0].Port != 8080 {
+		t.Fatalf("expected first server port to be 8080, got %d", cfg.Servers[0].Port)
+	}
+
+	if cfg.Servers[1].Host != "other.com" {
+		t.Fatalf("expected second server host to be 'other.com', got '%s'", cfg.Servers[1].Host)
+	}
+
+	if cfg.Servers[1].Port != 9090 {
+		t.Fatalf("expected second server port to be 9090, got %d", cfg.Servers[1].Port)
+	}
+
+	if cfg.Simple.Name != "test-simple" {
+		t.Fatalf("expected Simple.Name to be 'test-simple', got '%s'", cfg.Simple.Name)
+	}
+
+	if cfg.Simple.Port != 3000 {
+		t.Fatalf("expected Simple.Port to be 3000, got %d", cfg.Simple.Port)
+	}
 }

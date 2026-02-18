@@ -2525,3 +2525,26 @@ simple:
 		t.Fatalf("expected Simple.Port to be 3000, got %d", cfg.Simple.Port)
 	}
 }
+
+func TestFileWithoutPFlags(t *testing.T) {
+	t.Parallel()
+
+	c := New[testConfig]().
+		WithFile(&FileOptions{
+			Paths: []string{"testdata/nonexistent.yaml"},
+		})
+
+	// This should not panic with nil pointer dereference on pflag.FlagSet
+	ctx := c.WithContext(context.TODO())
+	cFromCtx, err := FromContext[testConfig](ctx)
+	if err != nil {
+		t.Fatalf("expected no error from context, got %v", err)
+	}
+
+	// Load should not panic; file not found is expected but should not cause a nil deref
+	_, err = cFromCtx.Load()
+	if err != nil {
+		// Error is expected since the file doesn't exist, but no panic should occur
+		t.Logf("expected error from missing file: %v", err)
+	}
+}

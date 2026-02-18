@@ -48,7 +48,7 @@ func (c *Configulator[C]) load() (*C, error) {
 	}
 	c.cfg = &cfg
 	if c.fileOptions != nil || (c.flags != nil && c.flags.Changed(ConfigFileKey)) {
-		if c.flags.Changed(ConfigFileKey) {
+		if c.flags != nil && c.flags.Changed(ConfigFileKey) {
 			c.fileOptions.Paths = []string{c.flags.Lookup(ConfigFileKey).Value.String()}
 		}
 		err = c.loadFromFile()

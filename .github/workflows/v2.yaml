@@ -1,0 +1,48 @@
+name: v2
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 'v2 @ ${{ github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version-file: v2/go.mod
+      - name: Test v2 runtime + conformance corpus
+        run: cd v2 && go test -race -count=1 ./...
+      - name: Test generator (negative fixtures, std smoke, schema/sample)
+        run: cd v2/cmd/configulator && go test -count=1 ./...
+      - name: Build examples
+        run: |
+          for d in v2/examples/*/; do
+            (cd "$d" && go build ./...)
+          done
+
+  generate-and-diff:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
+        with:
+          go-version-file: v2/go.mod
+      - name: Regenerate everything; committed output must not drift
+        run: |
+          cd v2/internal/conformance
+          for T in Scalars Nested Collections Optionals Embedded Durations; do
+            go run github.com/USA-RedDragon/configulator/v2/cmd/configulator \
+              -type "$T" -output "$(echo "$T" | tr '[:upper:]' '[:lower:]')_configulator.go"
+          done
+          cd ../..
+          for d in examples/*/; do (cd "$d" && go generate ./...); done
+          git diff --exit-code

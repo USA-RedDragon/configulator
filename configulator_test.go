@@ -2380,8 +2380,8 @@ func TestFile(t *testing.T) {
 		t.Error("SubTestConfig.Bool = false, want true (from file)")
 	}
 	// fields absent from the file keep their defaults
-	if cfg.Int16 != 2 {
-		t.Errorf("Int16 = %d, want default 2", cfg.Int16)
+	if cfg.Int16 != 3 {
+		t.Errorf("Int16 = %d, want default 3", cfg.Int16)
 	}
 
 	// a missing search path is a soft miss when ErrorIfNotFound is false
@@ -2431,8 +2431,8 @@ func TestPrecedence(t *testing.T) {
 		t.Errorf("String = %q, want from-flag (flag over file)", cfg.String)
 	}
 	// untouched by any layer: default survives
-	if cfg.Int16 != 2 {
-		t.Errorf("Int16 = %d, want default 2", cfg.Int16)
+	if cfg.Int16 != 3 {
+		t.Errorf("Int16 = %d, want default 3", cfg.Int16)
 	}
 }
 

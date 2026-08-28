@@ -433,6 +433,19 @@ func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ v2.UnmarshalerFrom = (*poolShadow)(nil)
 
+// PrintConfig renders every field as "path = value" lines, redacting
+// fields tagged secret:"true". Values never appear in the origin
+// Report; this method is the one place redaction is enforced.
+func (c *Collections) PrintConfig() string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("tags = %v\n", c.Tags))
+	b.WriteString(fmt.Sprintf("labels = %v\n", c.Labels))
+	b.WriteString(fmt.Sprintf("servers = %v\n", c.Servers))
+	b.WriteString(fmt.Sprintf("pools = %v\n", c.Pools))
+	b.WriteString(fmt.Sprintf("log-level = %v\n", c.LogLevel))
+	return b.String()
+}
+
 // collectionsQuoteKey quotes a map key whose characters would make
 // a dotted origin path ambiguous.
 func collectionsQuoteKey(k string) string {

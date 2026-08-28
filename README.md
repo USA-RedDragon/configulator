@@ -116,7 +116,7 @@ type.
 | `-flags` | `pflag` (default) \| `std` \| `none` |
 | `-tags` | shadow struct tags, default `json,yaml,toml` |
 | `-schema` | print a JSON Schema to stdout (no code generated); pipe it where you want it |
-| `-sample` | print a commented sample config to stdout (no code generated) |
+| `-sample` | print a sample config to stdout (no code generated); `-format yaml\|json\|toml`, commented YAML by default |
 | `-markdown` | print a Markdown reference table of every key to stdout (`-env-prefix`, `-env-separator`, `-flag-separator` shape the env/flag columns) |
 | `-no-validate` | don't require a `Validate() error` method |
 

@@ -212,6 +212,34 @@ func TestShortUnderStdRejected(t *testing.T) {
 	}
 }
 
+func TestSampleFormats(t *testing.T) {
+	src := "package fixture\n\ntype Sub struct {\n\tHost string `name:\"host\" default:\"localhost\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Sub    `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	j, err := emitSampleJSON(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"port": 8080`, `"key": "(secret)"`, `"host": "localhost"`, `"tags": [`, `"a",`} {
+		if !strings.Contains(string(j), want) {
+			t.Errorf("json sample missing %q:\n%s", want, j)
+		}
+	}
+
+	tm := string(emitSampleTOML(m))
+	for _, want := range []string{"port = 8080", `key = "(secret)"`, "[sub]", `host = "localhost"`, `tags = ["a", "b"]`} {
+		if !strings.Contains(tm, want) {
+			t.Errorf("toml sample missing %q:\n%s", want, tm)
+		}
+	}
+	if strings.Index(tm, "[sub]") < strings.Index(tm, "tags =") {
+		t.Errorf("toml scalars must precede tables:\n%s", tm)
+	}
+}
+
 func TestMarkdown(t *testing.T) {
 	src := "package fixture\n\ntype Sub struct {\n\tHost string `name:\"host\" default:\"localhost\" description:\"bind host\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\" required:\"true\" description:\"listen port\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Sub    `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
 	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)

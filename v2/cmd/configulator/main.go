@@ -19,7 +19,8 @@ func main() {
 	flagsMode := flag.String("flags", "pflag", "flag adapter: pflag | std | none")
 	noValidate := flag.Bool("no-validate", false, "allow a config type without Validate() error")
 	schema := flag.Bool("schema", false, "print a JSON Schema to stdout instead of generating")
-	sample := flag.Bool("sample", false, "print a commented YAML sample config to stdout instead of generating")
+	sample := flag.Bool("sample", false, "print a sample config to stdout instead of generating (see -format)")
+	format := flag.String("format", "yaml", "sample format: yaml (commented) | json | toml")
 	markdown := flag.Bool("markdown", false, "print a Markdown reference table of every key to stdout instead of generating")
 	envPrefix := flag.String("env-prefix", "", "env var prefix shown in -markdown output (verbatim)")
 	envSep := flag.String("env-separator", "_", "env var separator shown in -markdown output")
@@ -67,6 +68,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "configulator: pass at most one of -schema, -sample, -markdown; output goes to stdout, pipe it where you want it")
 		os.Exit(2)
 	}
+	if *format != "yaml" && !*sample {
+		fmt.Fprintln(os.Stderr, "configulator: -format only applies to -sample")
+		os.Exit(2)
+	}
 	if modes == 1 {
 		switch {
 		case *schema:
@@ -76,7 +81,21 @@ func main() {
 			}
 			os.Stdout.Write(b)
 		case *sample:
-			os.Stdout.Write(emitSample(model))
+			switch *format {
+			case "yaml":
+				os.Stdout.Write(emitSample(model))
+			case "json":
+				b, err := emitSampleJSON(model)
+				if err != nil {
+					fatal(err)
+				}
+				os.Stdout.Write(b)
+			case "toml":
+				os.Stdout.Write(emitSampleTOML(model))
+			default:
+				fmt.Fprintf(os.Stderr, "configulator: unknown -format %q: expected yaml, json, or toml\n", *format)
+				os.Exit(2)
+			}
 		case *markdown:
 			os.Stdout.Write(emitMarkdown(model, *flagSep, *envPrefix, *envSep))
 		}

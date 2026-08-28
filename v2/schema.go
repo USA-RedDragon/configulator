@@ -15,9 +15,10 @@ type Schema[C any] struct {
 	DecodeFile func(data []byte, u Unmarshal, cfg *C, set SetOrigin, file string) error
 	// ApplyEnv reads variables through ec.Getenv and applies present ones.
 	ApplyEnv func(cfg *C, ec EnvContext, set SetOrigin) error
-	// Required checks required:"true" fields after all layers ran.
-	// Nil when the config has none.
-	Required func(*C, SetOrigin) error
+	// Required lists the dotted paths of required:"true" fields. Load
+	// verifies each has a recorded origin after all layers ran — pure
+	// data, no generated logic to misuse.
+	Required []string
 }
 
 // EnvContext carries everything the generated env applier needs

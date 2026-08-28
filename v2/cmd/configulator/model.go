@@ -205,10 +205,6 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 	t := f.Type
 	fieldPath := path + "." + f.GoName
 
-	if err := checkImportable(t, outPkg, fieldPath); err != nil {
-		return err
-	}
-
 	// stdtypes sentinel slots take precedence (opaque-leaf detection runs
 	// before mirroring; the slot set is fixed and format-independent).
 	if named, ok := t.(*types.Named); ok {
@@ -365,30 +361,6 @@ func implementsTextUnmarshaler(t types.Type) bool {
 	return false
 }
 
-// checkImportable rejects types from internal packages the OUTPUT package
-// may not import (G3: same-tree is fine, cross-tree is uncompilable).
-func checkImportable(t types.Type, outPkg *types.Package, fieldPath string) error {
-	named, ok := t.(*types.Named)
-	if !ok || named.Obj().Pkg() == nil {
-		return nil
-	}
-	depPath := named.Obj().Pkg().Path()
-	idx := strings.Index(depPath+"/", "/internal/")
-	if idx < 0 && !strings.HasPrefix(depPath, "internal/") {
-		return nil
-	}
-	var root string
-	if strings.HasPrefix(depPath, "internal/") {
-		root = ""
-	} else {
-		root = depPath[:idx]
-	}
-	if outPkg.Path() == root || strings.HasPrefix(outPkg.Path(), root+"/") {
-		return nil // same tree: importable
-	}
-	return fmt.Errorf("%s: type %s lives in internal package %s, which the output package %s may not import", fieldPath, t, depPath, outPkg.Path())
-}
-
 func checkDefault(f *Field) error {
 	switch f.Kind {
 	case KindString, KindSliceScalar:
@@ -447,4 +419,21 @@ func checkSiblingCollisions(fields []*Field, path string) error {
 		seen[folded] = f.Tag
 	}
 	return nil
+}
+
+// findShortTag returns the first dotted path carrying a short: tag, for
+// the -flags=std generate-time error.
+func findShortTag(fields []*Field, prefix string) string {
+	for _, f := range fields {
+		p := joinPath(prefix, f.Tag)
+		if f.Short != "" {
+			return p
+		}
+		if f.Kind == KindStruct {
+			if s := findShortTag(f.Fields, p); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
 }

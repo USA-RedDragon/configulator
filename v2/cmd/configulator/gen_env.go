@@ -136,9 +136,16 @@ func kindWord(k Kind) string {
 // envAssign parses string v into the field and records the origin.
 func (e *emitter) envAssign(f *Field, path string) []Code {
 	rec := Id("set").Call(Lit(path), Qual(pkgCfg, "LayerEnv"), Id("n"))
+	errVal := func() Code {
+		// secret: fields never leak their raw value through an error
+		if f.Secret {
+			return Lit("(redacted)")
+		}
+		return Id("v")
+	}
 	parseErr := func() Code {
 		return Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
-			Id("Path"): Lit(path), Id("Source"): Id("n"), Id("Value"): Id("v"), Id("Err"): Err(),
+			Id("Path"): Lit(path), Id("Source"): Id("n"), Id("Value"): errVal(), Id("Err"): Err(),
 		}))
 	}
 	switch f.Kind {

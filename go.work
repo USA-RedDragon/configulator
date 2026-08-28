@@ -5,4 +5,9 @@ use (
 	./examples/all
 	./v2
 	./v2/cmd/configulator
+	./v2/examples/all
+	./v2/examples/minimal
+	./v2/examples/jsonv2
+	./v2/examples/toml
+	./v2/examples/stdflag
 )

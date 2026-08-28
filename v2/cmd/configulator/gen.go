@@ -60,10 +60,14 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 	e.emitDecodeFile()
 	e.emitApplyTo(shadowName(m.TypeName), m.Fields, "", "cfg")
 	e.emitApplyEnv()
-	if flagsMode == "pflag" {
+	switch flagsMode {
+	case "pflag":
 		e.emitPFlagHooks()
+	case "std":
+		e.emitStdFlagHooks()
 	}
 	e.emitFastPaths()
+	e.emitPrintConfig()
 	if e.needQuoteKey {
 		e.f.Comment("// " + e.quoteKeyName() + " quotes a map key whose characters would make")
 		e.f.Comment("// a dotted origin path ambiguous.")
@@ -112,12 +116,35 @@ func cfgSel(recv string, f *Field, extra ...string) *Statement {
 
 func (e *emitter) emitSchemaCtor(flagsMode string) {
 	n := e.m.TypeName
+	d := Dict{
+		Id("ApplyDefaults"): Id(lowerFirst(n) + "ApplyDefaults"),
+		Id("DecodeFile"):    Id(lowerFirst(n) + "DecodeFile"),
+		Id("ApplyEnv"):      Id(lowerFirst(n) + "ApplyEnv"),
+	}
+	if req := requiredPaths(e.m.Fields, ""); len(req) > 0 {
+		var lits []Code
+		for _, p := range req {
+			lits = append(lits, Lit(p))
+		}
+		d[Id("Required")] = Index().String().Values(lits...)
+	}
 	e.f.Comment(fmt.Sprintf("%sSchema returns the generated schema for %s.", n, n))
 	e.f.Func().Id(n+"Schema").Params().Op("*").Qual(pkgCfg, "Schema").Index(Id(n)).Block(
-		Return(Op("&").Qual(pkgCfg, "Schema").Index(Id(n)).Values(Dict{
-			Id("ApplyDefaults"): Id(lowerFirst(n) + "ApplyDefaults"),
-			Id("DecodeFile"):    Id(lowerFirst(n) + "DecodeFile"),
-			Id("ApplyEnv"):      Id(lowerFirst(n) + "ApplyEnv"),
-		})),
+		Return(Op("&").Qual(pkgCfg, "Schema").Index(Id(n)).Values(d)),
 	)
+}
+
+// requiredPaths collects dotted paths of required:"true" fields.
+func requiredPaths(fields []*Field, prefix string) []string {
+	var out []string
+	for _, f := range fields {
+		p := joinPath(prefix, f.Tag)
+		if f.Required {
+			out = append(out, p)
+		}
+		if f.Kind == KindStruct {
+			out = append(out, requiredPaths(f.Fields, p)...)
+		}
+	}
+	return out
 }

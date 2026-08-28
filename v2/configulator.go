@@ -219,10 +219,12 @@ func (c *Configulator[C]) load() (*C, error) {
 		*cfg = staged
 	}
 
-	// 5. required:"true" checks, after every layer had its chance.
-	if c.schema.Required != nil {
-		if err := c.schema.Required(cfg, set); err != nil {
-			return cfg, err
+	// 5. required:"true" checks, after every layer had its chance: a
+	// required field must have a recorded origin (a default: tag counts —
+	// "required" means "some layer or default supplied it").
+	for _, path := range c.schema.Required {
+		if _, ok := c.report.Origin(path); !ok {
+			return cfg, &RequiredError{Path: path}
 		}
 	}
 

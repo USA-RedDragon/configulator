@@ -18,6 +18,8 @@ func main() {
 	output := flag.String("output", "", "output file (default <type>_configulator.go)")
 	flagsMode := flag.String("flags", "pflag", "flag adapter: pflag | std | none")
 	noValidate := flag.Bool("no-validate", false, "allow a config type without Validate() error")
+	schema := flag.Bool("schema", false, "also write <type>.schema.json")
+	sample := flag.Bool("sample", false, "also write <type>.sample.yaml")
 	flag.Parse()
 
 	if *typeName == "" {
@@ -35,13 +37,18 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	named, outPkg, err := loadPackage(dir, *typeName)
+	named, outPkg, err := loadPackage(dir, *typeName, nil)
 	if err != nil {
 		fatal(err)
 	}
 	model, err := buildModel(named, outPkg, *noValidate)
 	if err != nil {
 		fatal(err)
+	}
+	if *flagsMode == "std" {
+		if p := findShortTag(model.Fields, ""); p != "" {
+			fatal(fmt.Errorf("%s: short: tag is a generate-time error under -flags=std — stdlib flag has no shorthand concept", p))
+		}
 	}
 
 	out := *output
@@ -56,6 +63,24 @@ func main() {
 		fatal(err)
 	}
 	fmt.Fprintf(os.Stderr, "configulator: wrote %s\n", out)
+	if *schema {
+		b, err := emitJSONSchema(model)
+		if err != nil {
+			fatal(err)
+		}
+		p := strings.ToLower(*typeName) + ".schema.json"
+		if err := os.WriteFile(p, b, 0o644); err != nil {
+			fatal(err)
+		}
+		fmt.Fprintf(os.Stderr, "configulator: wrote %s\n", p)
+	}
+	if *sample {
+		p := strings.ToLower(*typeName) + ".sample.yaml"
+		if err := os.WriteFile(p, emitSample(model), 0o644); err != nil {
+			fatal(err)
+		}
+		fmt.Fprintf(os.Stderr, "configulator: wrote %s\n", p)
+	}
 }
 
 func fatal(err error) {

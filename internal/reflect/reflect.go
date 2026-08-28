@@ -83,10 +83,22 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			if !ok {
 				a, ok := val.UnwrapInterface()
 				if ok {
-					if i, ok = a.(int8); ok {
-						v.SetInt(int64(i))
-						return nil
+					// YAML decodes integers as int, so accept the same
+					// widening set the unsigned cases always had.
+					switch conv := a.(type) {
+					case int8:
+						i = conv
+					case int:
+						i = int8(conv)
+					case int64:
+						i = int8(conv)
+					case float64:
+						i = int8(conv)
+					default:
+						return fmt.Errorf("failed to unwrap int8")
 					}
+					v.SetInt(int64(i))
+					return nil
 				}
 				return fmt.Errorf("failed to unwrap int8")
 			}
@@ -100,10 +112,22 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			if !ok {
 				a, ok := val.UnwrapInterface()
 				if ok {
-					if i, ok = a.(int16); ok {
-						v.SetInt(int64(i))
-						return nil
+					// YAML decodes integers as int, so accept the same
+					// widening set the unsigned cases always had.
+					switch conv := a.(type) {
+					case int16:
+						i = conv
+					case int:
+						i = int16(conv)
+					case int64:
+						i = int16(conv)
+					case float64:
+						i = int16(conv)
+					default:
+						return fmt.Errorf("failed to unwrap int16")
 					}
+					v.SetInt(int64(i))
+					return nil
 				}
 				return fmt.Errorf("failed to unwrap int16")
 			}
@@ -117,10 +141,22 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			if !ok {
 				a, ok := val.UnwrapInterface()
 				if ok {
-					if i, ok = a.(int32); ok {
-						v.SetInt(int64(i))
-						return nil
+					// YAML decodes integers as int, so accept the same
+					// widening set the unsigned cases always had.
+					switch conv := a.(type) {
+					case int32:
+						i = conv
+					case int:
+						i = int32(conv)
+					case int64:
+						i = int32(conv)
+					case float64:
+						i = int32(conv)
+					default:
+						return fmt.Errorf("failed to unwrap int32")
 					}
+					v.SetInt(int64(i))
+					return nil
 				}
 				return fmt.Errorf("failed to unwrap int32")
 			}

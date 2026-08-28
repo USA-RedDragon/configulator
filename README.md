@@ -91,8 +91,8 @@ enable       cli      --enable
 | `name:"key"` | key in files, env, and flags; falls back to `json:`/`yaml:` tags |
 | `default:"v"` | default value, parsed at generate time |
 | `description:"…"` | flag help text |
-| `env:"-"` / `env:"NAME"` | skip env, or override the derived env name |
-| `flag:"-"` / `flag:"name"` | skip flags, or override the flag name |
+| `env:"-"` / `env:"NAME"` | skip env, or override this field's env segment (uppercase `A-Z0-9_` only, used verbatim) |
+| `flag:"-"` / `flag:"name"` | skip flags, or override this field's flag name segment |
 | `short:"p"` | flag shorthand (pflag only) |
 | `secret:"true"` | redacted in `PrintConfig()` and error messages |
 | `required:"true"` | must be set by some layer; checked at `Load()` |
@@ -115,8 +115,9 @@ type.
 | `-output` | output file, default `<type>_configulator.go` |
 | `-flags` | `pflag` (default) \| `std` \| `none` |
 | `-tags` | shadow struct tags, default `json,yaml,toml` |
-| `-schema` | also emit a JSON Schema for the config |
-| `-sample` | also emit a commented sample config file |
+| `-schema` | print a JSON Schema to stdout (no code generated); pipe it where you want it |
+| `-sample` | print a commented sample config to stdout (no code generated) |
+| `-markdown` | print a Markdown reference table of every key to stdout (`-env-prefix`, `-env-separator`, `-flag-separator` shape the env/flag columns) |
 | `-no-validate` | don't require a `Validate() error` method |
 
 ### Requirements

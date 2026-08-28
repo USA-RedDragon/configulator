@@ -26,7 +26,7 @@ func envNameCall(segments []string) *Statement {
 
 func (e *emitter) envFields(body *[]Code, fields []*Field, segPrefix []string, pathPrefix string) {
 	for _, f := range fields {
-		segs := append(append([]string{}, segPrefix...), f.Tag)
+		segs := append(append([]string{}, segPrefix...), f.envSeg())
 		path := joinPath(pathPrefix, f.Tag)
 		if f.EnvSkip {
 			e.f.Comment("// " + path + ": env:\"-\"")
@@ -61,7 +61,10 @@ func (e *emitter) envFields(body *[]Code, fields []*Field, segPrefix []string, p
 func (e *emitter) envPtrStruct(body *[]Code, f *Field, segs []string, path string) {
 	elemType := fieldGoType(f.Elem.Type)
 	for _, lf := range f.Elem.Fields {
-		lsegs := append(append([]string{}, segs...), lf.Tag)
+		if lf.EnvSkip {
+			continue
+		}
+		lsegs := append(append([]string{}, segs...), lf.envSeg())
 		lpath := path + "." + lf.Tag
 		if lf.Kind == KindStruct || lf.Kind == KindPointer {
 			panic("envPtrStruct: nested composite inside *Struct not supported yet: " + lpath)

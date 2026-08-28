@@ -172,6 +172,11 @@ func walkStruct(st *types.Struct, outPkg *types.Package, path string) ([]*Field,
 		case "":
 		default:
 			f.EnvName = tag.Get("env")
+			if !isUpperEnvSeg(f.EnvName) {
+				return nil, fmt.Errorf(
+					"%s.%s: env:%q overrides must be uppercase A-Z, 0-9, and _ (they are used verbatim in both configulator implementations)",
+					path, f.GoName, f.EnvName)
+			}
 		}
 		switch tag.Get("flag") {
 		case "-":
@@ -187,6 +192,37 @@ func walkStruct(st *types.Struct, outPkg *types.Package, path string) ([]*Field,
 		out = append(out, f)
 	}
 	return out, nil
+}
+
+// envSeg is this field's env var segment: the tag name (folded at runtime
+// by EnvName) or the verbatim env:"NAME" override, which validation pins
+// to characters the fold cannot change.
+func (f *Field) envSeg() string {
+	if f.EnvName != "" {
+		return f.EnvName
+	}
+	return f.Tag
+}
+
+// flagSeg is this field's flag name segment: the tag name or the verbatim
+// flag:"name" override.
+func (f *Field) flagSeg() string {
+	if f.FlagName != "" {
+		return f.FlagName
+	}
+	return f.Tag
+}
+
+func isUpperEnvSeg(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if !(c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_') {
+			return false
+		}
+	}
+	return true
 }
 
 func tagName(tag reflect.StructTag) string {

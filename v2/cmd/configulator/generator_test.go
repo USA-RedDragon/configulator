@@ -212,6 +212,71 @@ func TestShortUnderStdRejected(t *testing.T) {
 	}
 }
 
+func TestMarkdown(t *testing.T) {
+	src := "package fixture\n\ntype Sub struct {\n\tHost string `name:\"host\" default:\"localhost\" description:\"bind host\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\" required:\"true\" description:\"listen port\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Sub    `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	md := string(emitMarkdown(m, ".", "APP_", "_"))
+	// Cells are padded for alignment; normalize runs of spaces per line
+	// before asserting content. Mirrors the Rust CLI test.
+	var squeezed []string
+	for _, line := range strings.Split(md, "\n") {
+		squeezed = append(squeezed, strings.Join(strings.Fields(line), " "))
+	}
+	md = strings.Join(squeezed, "\n")
+	for _, want := range []string{
+		"| Key | Type | Default | Environment | Flag | Description |",
+		"| `port` | integer | `8080` | `APP_PORT` | `--port` | listen port (required) |",
+		"| `key` | string | | `APP_KEY` | `--key` | secret |",
+		"| `sub.host` | string | `localhost` | `APP_SUB_HOST` | `--sub.host` | bind host |",
+		"| `tags` | list of string | `a,b` | `APP_TAGS` | `--tags` | |",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown missing %q:\n%s", want, md)
+		}
+	}
+}
+
+func TestEnvFlagOverrides(t *testing.T) {
+	src := "package fixture\n\ntype Cfg struct {\n" +
+		"\tHost     string `name:\"host\" env:\"HOSTNAME_OVERRIDE\" flag:\"hostname\"`\n" +
+		"\tInternal string `name:\"internal\" env:\"-\" flag:\"-\"`\n" +
+		"\tPort     uint16 `name:\"port\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := emit(m, "pflag")
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := string(out)
+	if !strings.Contains(code, `"HOSTNAME_OVERRIDE"`) {
+		t.Errorf("env override segment not emitted:\n%s", code)
+	}
+	if strings.Contains(code, `"HOST"`) {
+		t.Errorf("derived env segment emitted despite override:\n%s", code)
+	}
+	if !strings.Contains(code, `"hostname"`) {
+		t.Errorf("flag override segment not emitted:\n%s", code)
+	}
+	// flag:"-" must not register the flag; env:"-" must not read the var.
+	if strings.Contains(code, `"INTERNAL"`) {
+		t.Errorf("env:\"-\" field still read from env:\n%s", code)
+	}
+}
+
+func TestBadEnvOverrideRejected(t *testing.T) {
+	src := "package fixture\n\ntype Cfg struct {\n" +
+		"\tHost string `name:\"host\" env:\"lower-case\"`\n}\n" + validateStub
+	_, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	if err == nil || !strings.Contains(err.Error(), "uppercase") {
+		t.Fatalf("want uppercase-override error, got %v", err)
+	}
+}
+
 func TestSchemaAndSample(t *testing.T) {
 	src := "package fixture\n\ntype Sub struct {\n\tHost string `name:\"host\" default:\"localhost\" description:\"bind host\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\" required:\"true\" description:\"listen port\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Sub    `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
 	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)

@@ -35,7 +35,7 @@ func (e *emitter) emitStdFlagHooks() {
 	var walk func(fields []*Field, segs []string, path string)
 	walk = func(fields []*Field, segs []string, path string) {
 		for _, f := range fields {
-			s2 := append(append([]string{}, segs...), f.Tag)
+			s2 := append(append([]string{}, segs...), f.flagSeg())
 			p2 := joinPath(path, f.Tag)
 			switch f.Kind {
 			case KindStruct:

@@ -186,3 +186,135 @@ func sampleValue(f *Field) string {
 	}
 	return `""`
 }
+
+// emitMarkdown renders a flat Markdown reference table of every config
+// key: file path, env var, flag, type, default, and description, with
+// cells padded so the raw text reads as a table. Collections are
+// file-only, so their env/flag cells are em-dashes; struct-collection
+// element fields appear as servers[].addr / pools.<key>.size rows.
+// Mirrors the Rust configulator-cli's --markdown output.
+func emitMarkdown(m *Model, flagSep, envPrefix, envSep string) []byte {
+	var rows [][6]string
+	markdownFields(&rows, m.Fields, "", envPrefix, envSep, "", flagSep, true)
+
+	header := [6]string{"Key", "Type", "Default", "Environment", "Flag", "Description"}
+	var widths [6]int
+	for i, h := range header {
+		widths[i] = runeLen(h)
+	}
+	for _, r := range rows {
+		for i, c := range r {
+			if l := runeLen(c); l > widths[i] {
+				widths[i] = l
+			}
+		}
+	}
+	pad := func(c string, w int) string { return c + strings.Repeat(" ", w-runeLen(c)) }
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "# %s configuration\n\n", m.TypeName)
+	cells := make([]string, 6)
+	for i, h := range header {
+		cells[i] = pad(h, widths[i])
+	}
+	fmt.Fprintf(&b, "| %s |\n", strings.Join(cells, " | "))
+	for i := range header {
+		cells[i] = strings.Repeat("-", widths[i])
+	}
+	fmt.Fprintf(&b, "|-%s-|\n", strings.Join(cells, "-|-"))
+	for _, r := range rows {
+		for i, c := range r {
+			cells[i] = pad(c, widths[i])
+		}
+		fmt.Fprintf(&b, "| %s |\n", strings.Join(cells, " | "))
+	}
+	return []byte(b.String())
+}
+
+func runeLen(s string) int { return len([]rune(s)) }
+
+func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagPath, flagSep string, reachable bool) {
+	for _, f := range fields {
+		key := f.Tag
+		if path != "" {
+			key = path + "." + f.Tag
+		}
+		fEnv := env + envSegUpper(f)
+		fFlag := f.flagSeg()
+		if flagPath != "" {
+			fFlag = flagPath + flagSep + f.flagSeg()
+		}
+		envCell, flagCell := "\u2014", "\u2014"
+		if reachable && !f.EnvSkip {
+			envCell = "`" + fEnv + "`"
+		}
+		if reachable && !f.FlagSkip {
+			flagCell = "`--" + fFlag + "`"
+		}
+		desc := f.Desc
+		if f.Required {
+			if desc == "" {
+				desc = "required"
+			} else {
+				desc += " (required)"
+			}
+		}
+		if f.Secret {
+			if desc == "" {
+				desc = "secret"
+			} else {
+				desc += " (secret)"
+			}
+		}
+		def := ""
+		if f.Default != "" {
+			def = "`" + f.Default + "`"
+		}
+		switch f.Kind {
+		case KindStruct:
+			markdownFields(rows, f.Fields, key, fEnv+envSep, envSep, fFlag, flagSep, reachable)
+		case KindSliceStruct:
+			*rows = append(*rows, [6]string{"`" + key + "`", "list of objects", "", "\u2014", "\u2014", desc})
+			markdownFields(rows, f.Elem.Fields, key+"[]", "", envSep, "", flagSep, false)
+		case KindMapStruct:
+			*rows = append(*rows, [6]string{"`" + key + "`", "map of objects", "", "\u2014", "\u2014", desc})
+			markdownFields(rows, f.Elem.Fields, key+".<key>", "", envSep, "", flagSep, false)
+		case KindMapScalar:
+			*rows = append(*rows, [6]string{"`" + key + "`", "map of " + markdownType(f.Elem), "", "\u2014", "\u2014", desc})
+		case KindSliceScalar:
+			*rows = append(*rows, [6]string{"`" + key + "`", "list of " + markdownType(f.Elem), def, envCell, flagCell, desc})
+		case KindPointer:
+			inner := *f.Elem
+			if inner.Kind == KindStruct {
+				markdownFields(rows, inner.Fields, key, fEnv+envSep, envSep, fFlag, flagSep, reachable)
+				continue
+			}
+			*rows = append(*rows, [6]string{"`" + key + "`", markdownType(&inner), def, envCell, flagCell, desc})
+		default:
+			*rows = append(*rows, [6]string{"`" + key + "`", markdownType(f), def, envCell, flagCell, desc})
+		}
+	}
+}
+
+func markdownType(f *Field) string {
+	switch f.Kind {
+	case KindString, KindDuration, KindStdSlot, KindTextLeaf:
+		return "string"
+	case KindBool:
+		return "boolean"
+	case KindInt, KindUint:
+		return "integer"
+	case KindFloat:
+		return "number"
+	}
+	return "string"
+}
+
+// envSegUpper is the env segment as EnvName folds it at runtime: the
+// verbatim override, or the tag uppercased with - folded to _.
+func envSegUpper(f *Field) string {
+	if f.EnvName != "" {
+		return f.EnvName
+	}
+	return strings.ReplaceAll(strings.ToUpper(f.Tag), "-", "_")
+}

@@ -2362,14 +2362,108 @@ func TestNonDefault(t *testing.T) {
 
 func TestFile(t *testing.T) {
 	t.Parallel()
+	dir := t.TempDir()
+	path := dir + "/config.yaml"
+	if err := os.WriteFile(path, []byte("int8: 42\nsubTestConfig:\n  bool: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	c := New[testConfig]().WithFile(&FileOptions{Paths: []string{path}})
+	cfg, err := c.LoadWithoutValidation()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.Int8 != 42 {
+		t.Errorf("Int8 = %d, want 42 (from file)", cfg.Int8)
+	}
+	if !cfg.SubTestConfig.Bool {
+		t.Error("SubTestConfig.Bool = false, want true (from file)")
+	}
+	// fields absent from the file keep their defaults
+	if cfg.Int16 != 2 {
+		t.Errorf("Int16 = %d, want default 2", cfg.Int16)
+	}
+
+	// a missing search path is a soft miss when ErrorIfNotFound is false
+	c2 := New[testConfig]().WithFile(&FileOptions{Paths: []string{dir + "/nope.yaml"}})
+	if _, err := c2.LoadWithoutValidation(); err != nil {
+		t.Errorf("missing optional file should not error, got %v", err)
+	}
+
+	// ... and an error when ErrorIfNotFound is true
+	c3 := New[testConfig]().WithFile(&FileOptions{Paths: []string{dir + "/nope.yaml"}, ErrorIfNotFound: true})
+	if _, err := c3.LoadWithoutValidation(); err == nil {
+		t.Error("missing required file should error")
+	}
 }
 
 func TestPrecedence(t *testing.T) {
-	t.Parallel()
+	// NOT parallel: env vars are process-global.
+	dir := t.TempDir()
+	path := dir + "/config.yaml"
+	// file sets three fields; env overrides one of them; a flag overrides
+	// another. Expected: flag > env > file > default.
+	if err := os.WriteFile(path, []byte("int8: 10\nuint8: 10\nstring: from-file\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PRECTEST_UINT8", "20")
+
+	flags := pflag.NewFlagSet("precedence", pflag.ContinueOnError)
+	c := New[testConfig]().
+		WithFile(&FileOptions{Paths: []string{path}}).
+		WithEnvironmentVariables(&EnvironmentVariableOptions{Prefix: "PRECTEST_", Separator: "_"}).
+		WithPFlags(flags, nil)
+	if err := flags.Parse([]string{"--string", "from-flag"}); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := c.LoadWithoutValidation()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.Int8 != 10 {
+		t.Errorf("Int8 = %d, want 10 (file over default)", cfg.Int8)
+	}
+	if cfg.Uint8 != 20 {
+		t.Errorf("Uint8 = %d, want 20 (env over file)", cfg.Uint8)
+	}
+	if cfg.String != "from-flag" {
+		t.Errorf("String = %q, want from-flag (flag over file)", cfg.String)
+	}
+	// untouched by any layer: default survives
+	if cfg.Int16 != 2 {
+		t.Errorf("Int16 = %d, want default 2", cfg.Int16)
+	}
 }
 
 func TestConfigFlag(t *testing.T) {
 	t.Parallel()
+	dir := t.TempDir()
+	searched := dir + "/search.yaml"
+	explicit := dir + "/explicit.yaml"
+	if err := os.WriteFile(searched, []byte("string: from-search\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(explicit, []byte("string: from-explicit\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// --config replaces the search list entirely (v1's documented-by-test
+	// behavior; v2 additionally makes a missing explicit path a hard error).
+	flags := pflag.NewFlagSet("configflag", pflag.ContinueOnError)
+	c := New[testConfig]().
+		WithFile(&FileOptions{Paths: []string{searched}}).
+		WithPFlags(flags, nil)
+	if err := flags.Parse([]string{"--config", explicit}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := c.LoadWithoutValidation()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.String != "from-explicit" {
+		t.Errorf("String = %q, want from-explicit (--config wins over search paths)", cfg.String)
+	}
 }
 
 func TestInvalidNames(t *testing.T) {

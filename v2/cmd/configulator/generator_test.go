@@ -327,3 +327,70 @@ func TestSchemaAndSample(t *testing.T) {
 		}
 	}
 }
+
+// TestNamedScalarTypes covers `type LogLevel string`-style fields (same
+// package and imported), with defaults and nesting. The generator used to
+// assign the decoded basic value straight to the named field, which does
+// not compile. Every flags mode must build, and env + file must land.
+func TestNamedScalarTypes(t *testing.T) {
+	files := map[string]string{
+		"kinds/kinds.go": "package kinds\n\ntype Storage string\n\nconst (\n\tStoragePostgres Storage = \"postgres\"\n\tStorageSQLite Storage = \"sqlite\"\n)\n",
+		"cfg.go": "package fixture\n\nimport \"fixture/kinds\"\n\n" +
+			"type Level string\n\ntype Retries int32\n\ntype Toggle bool\n\ntype Ratio float64\n\n" +
+			"type Cfg struct {\n" +
+			"\tLevel   Level         `name:\"level\" default:\"info\"`\n" +
+			"\tRetries Retries       `name:\"retries\" default:\"3\"`\n" +
+			"\tToggle  Toggle        `name:\"toggle\"`\n" +
+			"\tRatio   Ratio         `name:\"ratio\" default:\"0.5\"`\n" +
+			"\tStore   Store         `name:\"store\"`\n" +
+			"}\n\n" +
+			"type Store struct {\n\tType kinds.Storage `name:\"type\" default:\"sqlite\"`\n}\n" + validateStub,
+	}
+	for _, mode := range []string{"pflag", "std", "none"} {
+		t.Run(mode, func(t *testing.T) {
+			dir := writeModule(t, files)
+			named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv())
+			if err != nil {
+				t.Fatal(err)
+			}
+			m, err := buildModel(named, outPkg, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := emit(m, mode)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			main := "package main\n\nimport (\n\t\"fmt\"\n\n\tconfigulator \"github.com/USA-RedDragon/configulator/v2\"\n\tfixture \"fixture\"\n)\n\n" +
+				"func main() {\n\tcfg, err := configulator.New(fixture.CfgSchema()).\n" +
+				"\t\tWithEnvironmentVariables(&configulator.EnvironmentVariableOptions{Prefix: \"FX_\", Separator: \"_\"}).\n" +
+				"\t\tWithFile(&configulator.FileOptions{Search: []string{\"cfg.json\"}}).\n\t\tLoad()\n" +
+				"\tif err != nil {\n\t\tpanic(err)\n\t}\n" +
+				"\tfmt.Printf(\"%s %d %t %g %s\\n\", cfg.Level, cfg.Retries, cfg.Toggle, cfg.Ratio, cfg.Store.Type)\n}\n"
+			if err := os.MkdirAll(filepath.Join(dir, "cmd", "run"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cmd", "run", "main.go"), []byte(main), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cfg.json"), []byte(`{"retries": 7, "store": {"type": "postgres"}}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			cmd := exec.Command("go", "run", "./cmd/run")
+			cmd.Dir = dir
+			cmd.Env = append(hermeticEnv(), "FX_LEVEL=debug", "FX_TOGGLE=true")
+			var stderr strings.Builder
+			cmd.Stderr = &stderr
+			o, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("named scalar output does not build/run under -flags=%s: %v\n%s", mode, err, stderr.String())
+			}
+			if got, want := strings.TrimSpace(string(o)), "debug 7 true 0.5 postgres"; got != want {
+				t.Fatalf("-flags=%s: got %q, want %q", mode, got, want)
+			}
+		})
+	}
+}

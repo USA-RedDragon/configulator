@@ -90,5 +90,8 @@ func castLit(f *Field, v int) *Statement {
 	if t.Kind() == types.Int {
 		return Lit(v)
 	}
+	if _, named := f.Type.(*types.Named); named {
+		return fieldGoType(f.Type).Call(Lit(v))
+	}
 	return Id(t.Name()).Call(Lit(v))
 }

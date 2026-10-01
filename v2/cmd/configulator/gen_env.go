@@ -103,7 +103,7 @@ func (e *emitter) envPtrStruct(body *[]Code, f *Field, segs []string, path strin
 		var inner []Code
 		if lf.Kind == KindString {
 			inner = append(inner, alloc...)
-			inner = append(inner, Id("e").Dot(goName(lf)).Op("=").Id("v"))
+			inner = append(inner, Id("e").Dot(goName(lf)).Op("=").Add(convNamed(lf.Type, Id("v"))))
 		} else {
 			inner = append(inner, parseNumericOrBool(lf, "p")...)
 			inner = append(inner, If(Err().Op("!=").Nil()).Block(
@@ -111,7 +111,7 @@ func (e *emitter) envPtrStruct(body *[]Code, f *Field, segs []string, path strin
 					Id("Path"): Lit(lpath), Id("Source"): Id("n"), Id("Value"): Id("v"), Id("Err"): Err(),
 				}))))
 			inner = append(inner, alloc...)
-			inner = append(inner, Id("e").Dot(goName(lf)).Op("=").Add(numConv(lf, "p")))
+			inner = append(inner, Id("e").Dot(goName(lf)).Op("=").Add(convNamed(lf.Type, numConv(lf, "p"))))
 		}
 		inner = append(inner,
 			cfgSel("cfg", f).Op("=").Op("&").Id("e"),
@@ -153,17 +153,17 @@ func (e *emitter) envAssign(f *Field, path string) []Code {
 	}
 	switch f.Kind {
 	case KindString:
-		return []Code{cfgSel("cfg", f).Op("=").Id("v"), rec}
+		return []Code{cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Id("v"))), rec}
 	case KindBool:
 		return []Code{
 			List(Id("p"), Err()).Op(":=").Qual("strconv", "ParseBool").Call(Id("v")),
 			If(Err().Op("!=").Nil()).Block(parseErr()),
-			cfgSel("cfg", f).Op("=").Id("p"), rec,
+			cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Id("p"))), rec,
 		}
 	case KindInt, KindUint, KindFloat:
 		return append(parseNumeric(f, "p"),
 			If(Err().Op("!=").Nil()).Block(parseErr()),
-			cfgSel("cfg", f).Op("=").Add(numConv(f, "p")), rec)
+			cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, numConv(f, "p"))), rec)
 	case KindDuration:
 		return []Code{
 			List(Id("d"), Err()).Op(":=").Qual("time", "ParseDuration").Call(Id("v")),

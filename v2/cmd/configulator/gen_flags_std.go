@@ -170,7 +170,7 @@ func stdApply(f *Field, path string, name *Statement) []Code {
 			return cfgSel("cfg", f).Op("=").Op("&").Id("pv")
 		}
 		_ = v
-		return cfgSel("cfg", f).Op("=").Id("pv")
+		return cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Id("pv")))
 	}
 	t := target.Type.Underlying().String()
 	switch target.Kind {

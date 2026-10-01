@@ -10,6 +10,19 @@ import (
 var outPkgPath string
 
 // fieldGoType renders the user-side Go type for casts and temporaries.
+// convNamed wraps expr in a conversion to t when t is a named type over a
+// basic type (e.g. `type LogLevel string`). Decoded values arrive as the
+// underlying basic type, which Go won't assign to the named type without a
+// conversion. Plain basic types pass through unchanged.
+func convNamed(t types.Type, expr *Statement) *Statement {
+	if named, ok := t.(*types.Named); ok {
+		if _, basic := named.Underlying().(*types.Basic); basic {
+			return fieldGoType(t).Call(expr)
+		}
+	}
+	return expr
+}
+
 func fieldGoType(t types.Type) *Statement {
 	switch u := t.(type) {
 	case *types.Named:

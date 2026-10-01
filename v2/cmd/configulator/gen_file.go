@@ -54,7 +54,7 @@ func (e *emitter) applyToFields(fields []*Field, src, pathPrefix string) []Code 
 		switch f.Kind {
 		case KindString, KindBool, KindInt, KindUint, KindFloat, KindTextLeaf:
 			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
-				cfgSel("cfg", f).Op("=").Op("*").Add(sel.Clone()), recFile,
+				cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))), recFile,
 			))
 		case KindDuration, KindStdSlot:
 			hint := `"30s"`
@@ -203,7 +203,7 @@ func (e *emitter) applyElementFields(fields []*Field, src, dst, path string) []C
 		switch f.Kind {
 		case KindString, KindBool, KindInt, KindUint, KindFloat:
 			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
-				Id(dst).Dot(goName(f)).Op("=").Op("*").Add(sel.Clone()),
+				Id(dst).Dot(goName(f)).Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))),
 				Id("set").Call(Lit(path+"."+f.Tag), Qual(pkgCfg, "LayerFile"), Id("file")),
 			))
 		default:
@@ -219,7 +219,7 @@ func (e *emitter) applyElementFieldsExpr(fields []*Field, src, dst, pathVar stri
 	for _, f := range fields {
 		sel := Id(src).Dot(goName(f))
 		out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
-			Id(dst).Dot(goName(f)).Op("=").Op("*").Add(sel.Clone()),
+			Id(dst).Dot(goName(f)).Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))),
 			Id("set").Call(Id(pathVar).Op("+").Lit("."+f.Tag), Qual(pkgCfg, "LayerFile"), Id("file")),
 		))
 	}

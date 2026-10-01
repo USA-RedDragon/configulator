@@ -207,6 +207,7 @@ func flagAssign(f *Field) Code {
 	case KindPointer:
 		return cfgSel("cfg", f).Op("=").Op("&").Id("v")
 	}
-	// exact-width Get* returns the exact type; platform int/uint need no cast
-	return cfgSel("cfg", f).Op("=").Id("v")
+	// exact-width Get* returns the exact type; platform int/uint need no cast,
+	// but a named type over a basic (type LogLevel string) still does
+	return cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Id("v")))
 }

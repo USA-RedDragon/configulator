@@ -74,7 +74,7 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 			Var().Id("slot").Qual(pkgCfg, f.SlotType),
 			If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v"))), Err().Op("!=").Nil()).Block(parseErr()),
 			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
-		}, Id("sv")
+		}, convNamed(f.Type, Id("sv"))
 	case KindTextLeaf:
 		return []Code{
 			Var().Id("tl").Add(fieldGoType(f.Type)),

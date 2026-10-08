@@ -184,7 +184,7 @@ func stdConv(target *Field, path string) []Code {
 	case KindStdSlot:
 		conv := append([]Code{Id("raw").Op(":=").Add(get).Assert(String())},
 			slotParse(target, path, Lit("-").Op("+").Id("fn"), "raw", "sv")...)
-		return append(conv, Id("pv").Op(":=").Add(Id("sv")))
+		return append(conv, Id("pv").Op(":=").Add(convNamed(target.Type, Id("sv"))))
 	case KindInt:
 		raw := Add(get).Assert(Int64())
 		switch {

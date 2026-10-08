@@ -85,7 +85,7 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
     (or no flag library at all, with `-flags=none`)
 - No reflection at runtime: `go generate` writes the loading code
 - Supported types:
-  - Every scalar except complex numbers
+  - Every scalar, including complex numbers (`1+2i`)
   - Nested structs, and pointers to scalars or structs for optional values
   - Slices of scalars
   - Maps and slices of structs (files only)

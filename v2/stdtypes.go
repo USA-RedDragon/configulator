@@ -177,3 +177,37 @@ func (s *Month) UnmarshalText(b []byte) error {
 }
 
 func (s *Month) Value() (time.Month, bool) { return s.v, s.ok }
+
+// Complex128 decodes a complex128 from strconv.ParseComplex syntax ("1+2i").
+type Complex128 struct {
+	v  complex128
+	ok bool
+}
+
+func (s *Complex128) UnmarshalText(b []byte) error {
+	c, err := strconv.ParseComplex(strings.TrimSpace(string(b)), 128)
+	if err != nil {
+		return err
+	}
+	s.v, s.ok = c, true
+	return nil
+}
+
+func (s *Complex128) Value() (complex128, bool) { return s.v, s.ok }
+
+// Complex64 decodes a complex64 from strconv.ParseComplex syntax ("1+2i").
+type Complex64 struct {
+	v  complex64
+	ok bool
+}
+
+func (s *Complex64) UnmarshalText(b []byte) error {
+	c, err := strconv.ParseComplex(strings.TrimSpace(string(b)), 64)
+	if err != nil {
+		return err
+	}
+	s.v, s.ok = complex64(c), true
+	return nil
+}
+
+func (s *Complex64) Value() (complex64, bool) { return s.v, s.ok }

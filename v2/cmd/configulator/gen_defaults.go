@@ -73,7 +73,7 @@ func defaultValue(f *Field, def string, path, sep Code) ([]Code, *Statement) {
 			Var().Id("slot").Qual(pkgCfg, f.SlotType),
 			Id("_").Op("=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Lit(def))),
 			List(Id("v"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
-		}, Id("v")
+		}, convNamed(f.Type, Id("v"))
 	case KindSliceScalar:
 		parts := Qual(pkgCfg, "SplitList").Call(Lit(def), sep)
 		return parseList(f, parts, path, Lit("default tag"), Lit(def)), Id("lst")

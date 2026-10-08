@@ -100,6 +100,7 @@ func slotHint(slot string) string {
 		"Location": `"America/New_York"`, "TCPAddr": `"127.0.0.1:8080"`,
 		"UDPAddr": `"127.0.0.1:53"`, "HardwareAddr": `"aa:bb:cc:dd:ee:ff"`,
 		"URL": `"https://example.com"`, "Month": `"January"`,
+		"Complex64": `"1+2i"`, "Complex128": `"1+2i"`,
 	}
 	if h, ok := hints[slot]; ok {
 		return h

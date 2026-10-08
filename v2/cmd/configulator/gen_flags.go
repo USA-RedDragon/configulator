@@ -283,7 +283,7 @@ func (e *emitter) applyFlag(l leaf, name *Statement) Code {
 	var val *Statement
 	switch {
 	case f.Kind == KindStdSlot:
-		prep, val = slotParse(f, path, source(), "v", "sv"), Id("sv")
+		prep, val = slotParse(f, path, source(), "v", "sv"), convNamed(f.Type, Id("sv"))
 	case f.Kind == KindSliceScalar && pflagNativeSlice(f.Elem) == "":
 		prep = parseList(f, Id("v"), Lit(path), source(), Qual("strings", "Join").Call(Id("v"), Lit(",")))
 		val = Id("lst")

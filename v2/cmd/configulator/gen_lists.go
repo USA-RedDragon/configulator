@@ -59,7 +59,7 @@ func fileList(f *Field, sel, target *Statement, path Code) []Code {
 			If(Op("!").Id("ok")).Block(Return(Op("&").Qual(pkgCfg, "OpaqueSpellingError").Values(Dict{
 				Id("Path"): path, Id("Hint"): Lit(hint),
 			}))),
-			Id("lst").Index(Id("li")).Op("=").Id("lv"),
+			Id("lst").Index(Id("li")).Op("=").Add(convNamed(f.Elem.Type, Id("lv"))),
 		}
 	default:
 		conv = []Code{Id("lst").Index(Id("li")).Op("=").Add(fieldGoType(f.Elem.Type)).Call(Id("lx"))}
@@ -137,7 +137,8 @@ func parseElem(elem *Field, in, out string, fail func() Code) []Code {
 		return []Code{
 			Var().Id("slot").Qual(pkgCfg, elem.SlotType),
 			If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(s)), Err().Op("!=").Nil()).Block(fail()),
-			List(Id(out), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
+			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
+			Id(out).Op(":=").Add(convNamed(elem.Type, Id("sv"))),
 		}
 	case KindTextLeaf:
 		return []Code{

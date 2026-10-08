@@ -123,6 +123,10 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
   default is not "explicit". If no file support is configured, no `--config`
   flag is registered and passing one is an unknown-flag error.
 - Symlinks/relative paths: OS semantics, not normalized.
+- Complex numbers: a leaf decoded from text like `1+2i`, `(1+2i)`, `2i` or
+  `3`, as Go's `strconv.ParseComplex` reads it. A file may also hold a plain
+  number. `j` in place of `i` is a parse error. Rust support is optional
+  (`num-complex`).
 - Decoder-map keys are lowercased extensions matched literally — no
   aliasing; register both `.yml` and `.yaml` to accept both. An
   extension-less path is an error naming the path.

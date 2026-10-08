@@ -522,6 +522,86 @@ func TestStdlibTypes(t *testing.T) {
 	}
 }
 
+func TestComplexTypes(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		fixtureFile: "package fixture\n\ntype Power complex128\n\n" +
+			"type Cfg struct {\n" +
+			"\tCenter complex128 `name:\"center\" default:\"-0.5+0i\"`\n" +
+			"\tExp    Power      `name:\"exp\" default:\"2\"`\n" +
+			"\tC      complex64  `name:\"c\" default:\"(-0.63+0.34i)\"`\n" +
+			"\tSeeds  []Power    `name:\"seeds\" default:\"1+1i,2i\"`\n" +
+			"\tZ      complex128 `name:\"z\"`\n" +
+			"}\n" + validateStub,
+	}
+	binds := map[string][2]string{
+		flagsPFlag: {"cpflag \"github.com/USA-RedDragon/configulator/v2/flags/pflag\"\n\t\"github.com/spf13/pflag\"",
+			"fs := pflag.NewFlagSet(\"x\", pflag.ContinueOnError)\n\tcpflag.Bind(c, fs, fixture.CfgPFlagHooks(), nil)\n\t_ = fs.Parse(os.Args[1:])"},
+		flagsStd: {"cstd \"github.com/USA-RedDragon/configulator/v2/flags/std\"\n\t\"flag\"",
+			"fs := flag.NewFlagSet(\"x\", flag.ContinueOnError)\n\tcstd.Bind(c, fs, fixture.CfgStdFlagHooks(), nil)\n\t_ = fs.Parse(os.Args[1:])"},
+		flagsNone: {"", ""},
+	}
+	for mode, bind := range binds {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			dir := writeModule(t, files)
+			named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			m, err := buildModel(named, outPkg, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := emit(m, mode)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cfg.json"), []byte(`{"z": "3-4i", "seeds": ["1i", "5"]}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			main := "package main\n\nimport (\n\t\"fmt\"\n\t\"os\"\n\n\tconfigulator \"github.com/USA-RedDragon/configulator/v2\"\n\tfixture \"fixture\"\n\t" + bind[0] + "\n)\n\n" +
+				"var _ = os.Args\n\n" +
+				"func main() {\n\tc := configulator.New(fixture.CfgSchema()).\n" +
+				"\t\tWithEnvironmentVariables(&configulator.EnvironmentVariableOptions{Prefix: \"FX_\", Separator: \"_\"}).\n" +
+				"\t\tWithFile(&configulator.FileOptions{Search: []string{\"cfg.json\"}})\n\t" + bind[1] + "\n" +
+				"\tcfg, err := c.Load()\n\tif err != nil {\n\t\tpanic(err)\n\t}\n" +
+				"\tfmt.Println(cfg.Center, cfg.Exp, cfg.C, cfg.Seeds, cfg.Z)\n}\n"
+			if err := os.MkdirAll(filepath.Join(dir, "cmd", "run"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cmd", "run", "main.go"), []byte(main), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"run", "./cmd/run"}
+			want := "(1-2i) (2+0i) (-0.63+0.34i) [(0+1i) (5+0i)] (3-4i)"
+			if mode != flagsNone {
+				dash := "-"
+				if mode == flagsPFlag {
+					dash = "--"
+				}
+				args = append(args, dash+"exp=3+1i", dash+"c=0.5i")
+				want = "(1-2i) (3+1i) (0+0.5i) [(0+1i) (5+0i)] (3-4i)"
+			}
+			cmd := exec.CommandContext(t.Context(), "go", args...)
+			cmd.Dir = dir
+			cmd.Env = append(hermeticEnv(t), "FX_CENTER=1-2i")
+			var stderr strings.Builder
+			cmd.Stderr = &stderr
+			o, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("-flags=%s: %v\n%s", mode, err, stderr.String())
+			}
+			if got := strings.TrimSpace(string(o)); got != want {
+				t.Fatalf("-flags=%s:\n got %q\nwant %q", mode, got, want)
+			}
+		})
+	}
+}
+
 func TestNestedCollections(t *testing.T) {
 	t.Parallel()
 	files := map[string]string{

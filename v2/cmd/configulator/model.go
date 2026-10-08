@@ -388,6 +388,12 @@ func classifyBasic(f *Field, u *types.Basic, fieldPath string) error {
 		f.Bits = basicBits(u)
 	case info&types.IsString != 0:
 		f.Kind = KindString
+	case info&types.IsComplex != 0:
+		f.Kind = KindStdSlot
+		f.SlotType = "Complex128"
+		if u.Kind() == types.Complex64 {
+			f.SlotType = "Complex64"
+		}
 	default:
 		return fmt.Errorf("%s: unsupported basic type %s", fieldPath, u)
 	}
@@ -548,6 +554,10 @@ func parseStdSlot(slot string, text []byte) error {
 		return new(configulator.URL).UnmarshalText(text)
 	case "Month":
 		return new(configulator.Month).UnmarshalText(text)
+	case "Complex64":
+		return new(configulator.Complex64).UnmarshalText(text)
+	case "Complex128":
+		return new(configulator.Complex128).UnmarshalText(text)
 	default:
 		return fmt.Errorf("no default parser for slot %s", slot)
 	}

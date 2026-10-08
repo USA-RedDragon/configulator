@@ -273,6 +273,11 @@ func sampleValue(f *Field) string {
 		case KindString, KindDuration, KindStdSlot:
 			return strconv.Quote(f.Default)
 		case KindSliceScalar:
+			// Like the JSON and TOML samples, write a default whose
+			// elements don't parse when split on "," as an empty list.
+			if _, ok := typedDefault(f); !ok {
+				return "[]"
+			}
 			parts := strings.Split(f.Default, ",")
 			for i, p := range parts {
 				parts[i] = sampleValue(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: p})

@@ -15,7 +15,7 @@ import (
 func emitJSONSchema(m *Model) ([]byte, error) {
 	root := schemaObject(m.Fields)
 	root["$schema"] = "http://json-schema.org/draft-07/schema#"
-	root["title"] = m.TypeName
+	root["title"] = "Configuration"
 	b, err := jsonv2.Marshal(root, jsonv2.Deterministic(true), jsontext.WithIndent("  "))
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func schemaDefault(f *Field) any {
 // decoder the application uses.
 func emitSample(m *Model) []byte {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Sample configuration for %s.\n", m.TypeName)
+	b.WriteString("# Sample configuration\n")
 	sampleFields(&b, m.Fields, 0)
 	return []byte(b.String())
 }
@@ -277,7 +277,7 @@ func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byt
 
 	var b strings.Builder
 	if title {
-		fmt.Fprintf(&b, "# %s configuration\n\n", m.TypeName)
+		b.WriteString("# Configuration\n\n")
 	}
 	cells := make([]string, 6)
 	for i, h := range header {

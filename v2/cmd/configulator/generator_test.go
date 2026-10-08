@@ -722,7 +722,7 @@ func TestSampleCollectionExamples(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "# Sample configuration for Cfg.\n" +
+	want := "# Sample configuration\n" +
 		"# peers:\n" +
 		"#   - name: \"\"\n" +
 		"#     rules:\n" +
@@ -774,7 +774,7 @@ func TestSampleSecretWithDefaultIsCommented(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "# Sample configuration for Cfg.\n# dsn: \"(secret)\"\n# ptr: \"(secret)\"\n# on: \"(secret)\"\n"
+	want := "# Sample configuration\n# dsn: \"(secret)\"\n# ptr: \"(secret)\"\n# on: \"(secret)\"\n"
 	if got := string(emitSample(m)); got != want {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
@@ -790,7 +790,7 @@ func TestSampleListDefaultsQuoted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "# Sample configuration for Cfg.\n" +
+	want := "# Sample configuration\n" +
 		"origins: [\"*\", \"https://*\"]\n" +
 		"ports: [80, 443]\n" +
 		"waits: [\"1s\", \"2m\"]\n"

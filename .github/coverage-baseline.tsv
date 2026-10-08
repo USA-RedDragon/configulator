@@ -1,0 +1,10 @@
+configulator.go	47	38
+environment.go	46	34
+file.go	41	35
+internal/flag/flags.go	271	224
+internal/reflect/reflect.go	576	377
+internal/tags/tags.go	28	26
+internal/wrapper/string.go	180	142
+internal/wrapper/wrappers.go	119	89
+options.go	21	18
+pflags.go	63	48

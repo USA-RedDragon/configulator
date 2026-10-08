@@ -258,17 +258,23 @@ func TestSampleFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"port": 8080`, `"key": "(secret)"`, `"host": "localhost"`, `"tags": [`, `"a",`} {
+	for _, want := range []string{`"port": 8080`, `"host": "localhost"`, `"tags": [`, `"a",`} {
 		if !strings.Contains(string(j), want) {
 			t.Errorf("json sample missing %q:\n%s", want, j)
 		}
 	}
+	if strings.Contains(string(j), `"key"`) {
+		t.Errorf("json sample must leave out the secret key:\n%s", j)
+	}
 
 	tm := string(emitSampleTOML(m))
-	for _, want := range []string{"port = 8080", `key = "(secret)"`, "[sub]", `host = "localhost"`, `tags = ["a", "b"]`} {
+	for _, want := range []string{"port = 8080", "[sub]", `host = "localhost"`, `tags = ["a", "b"]`} {
 		if !strings.Contains(tm, want) {
 			t.Errorf("toml sample missing %q:\n%s", want, tm)
 		}
+	}
+	if strings.Contains(tm, "key =") {
+		t.Errorf("toml sample must leave out the secret key:\n%s", tm)
 	}
 	if strings.Index(tm, "[sub]") < strings.Index(tm, "tags =") {
 		t.Errorf("toml scalars must precede tables:\n%s", tm)
@@ -675,5 +681,21 @@ func TestMarkdownShorthand(t *testing.T) {
 		if !strings.Contains(md, want) {
 			t.Errorf("markdown missing %q:\n%s", want, md)
 		}
+	}
+}
+
+func TestSampleSecretWithDefaultIsCommented(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n"+
+		"\tDSN string `name:\"dsn\" secret:\"true\" default:\"file:app.db\"`\n"+
+		"\tPtr *string `name:\"ptr\" secret:\"true\" default:\"x\"`\n"+
+		"\tOn bool `name:\"on\" secret:\"true\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# Sample configuration for Cfg.\n# dsn: \"(secret)\"\n# ptr: \"(secret)\"\n# on: \"(secret)\"\n"
+	if got := string(emitSample(m)); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }

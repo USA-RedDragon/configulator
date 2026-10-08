@@ -145,14 +145,14 @@ func sampleFields(b *strings.Builder, fields []*Field, depth int) {
 				}
 				continue
 			}
-			if f.Default != "" {
-				fmt.Fprintf(b, "%s%s: %s\n", ind, f.Tag, secretOr(f, sampleValue(f)))
+			if f.Default != "" && !f.Secret {
+				fmt.Fprintf(b, "%s%s: %s\n", ind, f.Tag, sampleValue(f))
 				continue
 			}
 			fmt.Fprintf(b, "%s# %s: %s\n", ind, f.Tag, secretOr(f, sampleValue(f)))
 		default:
 			val := secretOr(f, sampleValue(f))
-			if f.Default == "" && f.Kind != KindBool {
+			if f.Secret || (f.Default == "" && f.Kind != KindBool) {
 				fmt.Fprintf(b, "%s# %s: %s\n", ind, f.Tag, val)
 			} else {
 				fmt.Fprintf(b, "%s%s: %s\n", ind, f.Tag, val)

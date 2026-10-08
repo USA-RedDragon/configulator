@@ -16,9 +16,6 @@ type kv struct {
 }
 
 func sampleLeafTyped(f *Field) any {
-	if f.Secret {
-		return "(secret)"
-	}
 	if f.Default != "" {
 		if d := schemaDefault(f); d != nil {
 			return d
@@ -43,6 +40,9 @@ func sampleLeafTyped(f *Field) any {
 func sampleTree(fields []*Field) []kv {
 	out := make([]kv, 0, len(fields))
 	for _, f := range fields {
+		if f.Secret {
+			continue
+		}
 		var v any
 		switch f.Kind {
 		case KindStruct:

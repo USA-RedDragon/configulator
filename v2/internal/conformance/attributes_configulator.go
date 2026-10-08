@@ -5,18 +5,19 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
-	"github.com/spf13/pflag"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type attributesShadow struct {
@@ -35,9 +36,11 @@ func AttributesSchema() *configulator.Schema[Attributes] {
 		DecodeFile:    attributesDecodeFile,
 	}
 }
+
 func attributesApplyDefaults(cfg *Attributes, sep string, set configulator.SetOrigin) error {
 	return nil
 }
+
 func attributesDecodeFile(data []byte, u configulator.Unmarshal, cfg *Attributes, sep string, set configulator.SetOrigin, file string) error {
 	var sh attributesShadow
 	if err := u(data, &sh); err != nil {
@@ -48,6 +51,7 @@ func attributesDecodeFile(data []byte, u configulator.Unmarshal, cfg *Attributes
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *attributesShadow) applyTo(cfg *Attributes, sep string, set configulator.SetOrigin, file string) error {
 	if s.Token != nil {
 		cfg.Token = *s.Token
@@ -71,6 +75,7 @@ func (s *attributesShadow) applyTo(cfg *Attributes, sep string, set configulator
 	}
 	return nil
 }
+
 func attributesApplyEnv(cfg *Attributes, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "token"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -124,6 +129,7 @@ func AttributesPFlagHooks() cpflag.Hooks[Attributes] {
 		Register: attributesRegisterPFlags,
 	}
 }
+
 func attributesRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"token"}, o.Separator), strings.Join([]string{"rn"}, o.Separator), strings.Join([]string{"no-env"}, o.Separator), strings.Join([]string{"port"}, o.Separator)}
 	shorts := []string{"", "", "", "p"}
@@ -148,6 +154,7 @@ func attributesRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.Uint16P(names[3], "p", uint16(0), "")
 	return nil
 }
+
 func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"token"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
@@ -208,6 +215,7 @@ func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, o *cpflag.Options
 	}
 	return nil
 }
+
 func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -312,7 +320,7 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*attributesShadow)(nil)
+var _ json.UnmarshalerFrom = (*attributesShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

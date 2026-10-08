@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"go/format"
 	"go/types"
 	"strings"
 	"unicode"
 
 	. "github.com/dave/jennifer/jen"
+	"golang.org/x/tools/imports"
 )
 
 const (
@@ -66,10 +66,12 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 	e.f.HeaderComment("")
 	e.f.HeaderComment("//go:build goexperiment.jsonv2")
 	e.f.ImportName(pkgCfg, "configulator")
-	e.f.ImportAlias(pkgCfg, "configulator")
 	e.f.ImportName(pkgImpl, "impl")
 	e.f.ImportAlias(pkgPFlag, "cpflag")
+	e.f.ImportAlias(pkgStdFlag, "cstd")
 	e.f.ImportName(pfl, "pflag")
+	e.f.ImportName(pkgJSONText, "jsontext")
+	e.f.ImportName(pkgJSONv2, "json")
 
 	e.emitShadowStruct(shadowName(m.TypeName), m.Fields)
 	e.emitSchemaCtor()
@@ -86,7 +88,7 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 	e.emitFastPaths()
 	e.emitPrintConfig()
 	if e.needQuoteKey {
-		e.f.Func().Id(e.quoteKeyName()).Params(Id("k").String()).String().Block(
+		e.decl().Func().Id(e.quoteKeyName()).Params(Id("k").String()).String().Block(
 			For(List(Id("_"), Id("c")).Op(":=").Range().Id("k")).Block(
 				If(Id("c").Op("==").LitRune('.').Op("||").Id("c").Op("==").LitRune('[')).Block(
 					Return(Lit(`"`).Op("+").Qual("strings", "NewReplacer").Call(Lit(`\`), Lit(`\\`), Lit(`"`), Lit(`\"`)).Dot("Replace").Call(Id("k")).Op("+").Lit(`"`)),
@@ -97,7 +99,14 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 	}
 
 	src := []byte(fmt.Sprintf("%#v", e.f))
-	return format.Source(src)
+	return imports.Process("", src, &imports.Options{FormatOnly: true, Comments: true, TabIndent: true, TabWidth: 8})
+}
+
+// decl starts a new top-level declaration, separated from the previous
+// one by a blank line, and returns the file to add it to.
+func (e *emitter) decl() *File {
+	e.f.Line()
+	return e.f
 }
 
 func shadowName(typeName string) string { return lowerFirst(typeName) + "Shadow" }
@@ -146,9 +155,9 @@ func (e *emitter) emitSchemaCtor() {
 		d[Id("ConditionalRequired")] = Id(fn)
 		body := append([]Code{Var().Id("req").Index().String()}, cond...)
 		body = append(body, Return(Id("req")))
-		e.f.Func().Id(fn).Params(Id("cfg").Op("*").Id(n)).Index().String().Block(body...)
+		e.decl().Func().Id(fn).Params(Id("cfg").Op("*").Id(n)).Index().String().Block(body...)
 	}
-	e.f.Comment(fmt.Sprintf("%sSchema returns the generated schema for %s.", n, n))
+	e.decl().Comment(fmt.Sprintf("%sSchema returns the generated schema for %s.", n, n))
 	e.f.Func().Id(n+"Schema").Params().Op("*").Qual(pkgCfg, "Schema").Index(Id(n)).Block(
 		Return(Op("&").Qual(pkgCfg, "Schema").Index(Id(n)).Values(d)),
 	)

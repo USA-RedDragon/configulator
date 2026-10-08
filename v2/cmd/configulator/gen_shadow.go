@@ -113,5 +113,5 @@ func (e *emitter) emitShadowStruct(name string, fields []*Field) {
 		tags := map[string]string{"json": f.Tag, "yaml": f.Tag, "toml": f.Tag}
 		defs = append(defs, Id(goName(f)).Add(e.shadowFieldType(f)).Tag(tags))
 	}
-	e.f.Type().Id(name).Struct(defs...)
+	e.decl().Type().Id(name).Struct(defs...)
 }

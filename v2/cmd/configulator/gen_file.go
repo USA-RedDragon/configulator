@@ -10,7 +10,7 @@ import (
 
 func (e *emitter) emitDecodeFile() {
 	n := e.m.TypeName
-	e.f.Func().Id(lowerFirst(n)+"DecodeFile").Params(
+	e.decl().Func().Id(lowerFirst(n)+"DecodeFile").Params(
 		Id("data").Index().Byte(), Id("u").Qual(pkgCfg, "Unmarshal"),
 		Id("cfg").Op("*").Id(n), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"), Id("file").String(),
 	).Error().Block(
@@ -24,7 +24,7 @@ func (e *emitter) emitDecodeFile() {
 
 func (e *emitter) emitApplyTo(shadow string, fields []*Field, pathPrefix string) {
 	body := append(e.applyToFields(fields, "s", pathPrefix), Return(Nil()))
-	e.f.Func().Params(Id("s").Op("*").Id(shadow)).Id("applyTo").Params(
+	e.decl().Func().Params(Id("s").Op("*").Id(shadow)).Id("applyTo").Params(
 		Id("cfg").Op("*").Id(e.typeForShadow(shadow)), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"), Id("file").String(),
 	).Error().Block(body...)
 }

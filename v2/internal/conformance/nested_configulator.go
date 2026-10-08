@@ -5,30 +5,34 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
-	"github.com/spf13/pflag"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type nHTTPShadow struct {
 	Host *string `json:"host" toml:"host" yaml:"host"`
 	Port *uint16 `json:"port" toml:"port" yaml:"port"`
 }
+
 type nPoolShadow struct {
 	Size *uint16 `json:"size" toml:"size" yaml:"size"`
 }
+
 type nDBShadow struct {
 	URL  *string      `json:"url" toml:"url" yaml:"url"`
 	Pool *nPoolShadow `json:"pool" toml:"pool" yaml:"pool"`
 }
+
 type nestedShadow struct {
 	AppName *string      `json:"app-name" toml:"app-name" yaml:"app-name"`
 	HTTP    *nHTTPShadow `json:"http" toml:"http" yaml:"http"`
@@ -43,6 +47,7 @@ func NestedSchema() *configulator.Schema[Nested] {
 		DecodeFile:    nestedDecodeFile,
 	}
 }
+
 func nestedApplyDefaults(cfg *Nested, sep string, set configulator.SetOrigin) error {
 	cfg.AppName = "myapp"
 	set("app-name", configulator.LayerDefault, "default tag")
@@ -56,6 +61,7 @@ func nestedApplyDefaults(cfg *Nested, sep string, set configulator.SetOrigin) er
 	set("db.pool.size", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func nestedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nested, sep string, set configulator.SetOrigin, file string) error {
 	var sh nestedShadow
 	if err := u(data, &sh); err != nil {
@@ -66,6 +72,7 @@ func nestedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nested, sep st
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *nestedShadow) applyTo(cfg *Nested, sep string, set configulator.SetOrigin, file string) error {
 	if s.AppName != nil {
 		cfg.AppName = *s.AppName
@@ -95,6 +102,7 @@ func (s *nestedShadow) applyTo(cfg *Nested, sep string, set configulator.SetOrig
 	}
 	return nil
 }
+
 func nestedApplyEnv(cfg *Nested, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "app-name"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -154,6 +162,7 @@ func NestedPFlagHooks() cpflag.Hooks[Nested] {
 		Register: nestedRegisterPFlags,
 	}
 }
+
 func nestedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"app-name"}, o.Separator), strings.Join([]string{"http", "host"}, o.Separator), strings.Join([]string{"http", "port"}, o.Separator), strings.Join([]string{"db", "url"}, o.Separator), strings.Join([]string{"db", "pool", "size"}, o.Separator)}
 	for i, name := range names {
@@ -171,6 +180,7 @@ func nestedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.Uint16(names[4], uint16(10), "")
 	return nil
 }
+
 func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"app-name"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
@@ -234,6 +244,7 @@ func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep st
 	}
 	return nil
 }
+
 func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -294,7 +305,7 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nestedShadow)(nil)
+var _ json.UnmarshalerFrom = (*nestedShadow)(nil)
 
 func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -352,7 +363,7 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nHTTPShadow)(nil)
+var _ json.UnmarshalerFrom = (*nHTTPShadow)(nil)
 
 func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -402,7 +413,7 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nDBShadow)(nil)
+var _ json.UnmarshalerFrom = (*nDBShadow)(nil)
 
 func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -447,7 +458,7 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nPoolShadow)(nil)
+var _ json.UnmarshalerFrom = (*nPoolShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

@@ -7,7 +7,7 @@ import (
 func (e *emitter) emitApplyEnv() {
 	n := e.m.TypeName
 	body := append(e.envFields(e.m.Fields), Return(Nil()))
-	e.f.Func().Id(lowerFirst(n)+"ApplyEnv").Params(
+	e.decl().Func().Id(lowerFirst(n)+"ApplyEnv").Params(
 		Id("cfg").Op("*").Id(n), Id("ec").Qual(pkgCfg, "EnvContext"), Id("set").Qual(pkgCfg, "SetOrigin"),
 	).Error().Block(body...)
 }

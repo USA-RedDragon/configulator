@@ -11,7 +11,7 @@ import (
 
 func (e *emitter) emitPFlagHooks() {
 	n := e.m.TypeName
-	e.f.Comment(n + "PFlagHooks returns the pflag hooks for " + n + ".")
+	e.decl().Comment(n + "PFlagHooks returns the pflag hooks for " + n + ".")
 	e.f.Func().Id(n+"PFlagHooks").Params().Qual(pkgPFlag, "Hooks").Index(Id(n)).Block(
 		Return(Qual(pkgPFlag, "Hooks").Index(Id(n)).Values(Dict{
 			Id("Register"): Id(lowerFirst(n) + "RegisterPFlags"),
@@ -65,7 +65,7 @@ func (e *emitter) emitPFlagHooks() {
 		reg = append(reg, registerFlag(ff.f, Id("names").Index(Lit(i)))...)
 	}
 	reg = append(reg, Return(Nil()))
-	e.f.Func().Id(lowerFirst(n)+"RegisterPFlags").Params(
+	e.decl().Func().Id(lowerFirst(n)+"RegisterPFlags").Params(
 		Id("fs").Op("*").Qual(pfl, "FlagSet"), Id("o").Op("*").Qual(pkgPFlag, "Options"),
 	).Error().Block(reg...)
 
@@ -74,7 +74,7 @@ func (e *emitter) emitPFlagHooks() {
 		app = append(app, e.applyFlag(ff, flagName(ff.segs)))
 	}
 	app = append(app, Return(Nil()))
-	e.f.Func().Id(lowerFirst(n)+"ApplyPFlags").Params(
+	e.decl().Func().Id(lowerFirst(n)+"ApplyPFlags").Params(
 		Id("cfg").Op("*").Id(n), Id("fs").Op("*").Qual(pfl, "FlagSet"),
 		Id("o").Op("*").Qual(pkgPFlag, "Options"), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"),
 	).Error().Block(app...)

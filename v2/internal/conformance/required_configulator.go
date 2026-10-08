@@ -5,25 +5,28 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
-	"github.com/spf13/pflag"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type rNestedShadow struct {
 	Leaf *string `json:"leaf" toml:"leaf" yaml:"leaf"`
 }
+
 type rOptShadow struct {
 	Leaf  *string `json:"leaf" toml:"leaf" yaml:"leaf"`
 	Other *string `json:"other" toml:"other" yaml:"other"`
 }
+
 type requiredShadow struct {
 	Top    *string        `json:"top" toml:"top" yaml:"top"`
 	Nested *rNestedShadow `json:"nested" toml:"nested" yaml:"nested"`
@@ -53,9 +56,11 @@ func RequiredSchema() *configulator.Schema[Required] {
 		Required:            []string{"top", "nested.leaf"},
 	}
 }
+
 func requiredApplyDefaults(cfg *Required, sep string, set configulator.SetOrigin) error {
 	return nil
 }
+
 func requiredDecodeFile(data []byte, u configulator.Unmarshal, cfg *Required, sep string, set configulator.SetOrigin, file string) error {
 	var sh requiredShadow
 	if err := u(data, &sh); err != nil {
@@ -66,6 +71,7 @@ func requiredDecodeFile(data []byte, u configulator.Unmarshal, cfg *Required, se
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *requiredShadow) applyTo(cfg *Required, sep string, set configulator.SetOrigin, file string) error {
 	if s.Top != nil {
 		cfg.Top = *s.Top
@@ -112,6 +118,7 @@ func (s *requiredShadow) applyTo(cfg *Required, sep string, set configulator.Set
 	}
 	return nil
 }
+
 func requiredApplyEnv(cfg *Required, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "top"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -163,6 +170,7 @@ func RequiredPFlagHooks() cpflag.Hooks[Required] {
 		Register: requiredRegisterPFlags,
 	}
 }
+
 func requiredRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"top"}, o.Separator), strings.Join([]string{"nested", "leaf"}, o.Separator), strings.Join([]string{"opt", "leaf"}, o.Separator), strings.Join([]string{"opt", "other"}, o.Separator)}
 	for i, name := range names {
@@ -179,6 +187,7 @@ func requiredRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.String(names[3], "", "")
 	return nil
 }
+
 func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"top"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
@@ -246,6 +255,7 @@ func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, se
 	}
 	return nil
 }
+
 func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -332,7 +342,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*requiredShadow)(nil)
+var _ json.UnmarshalerFrom = (*requiredShadow)(nil)
 
 func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -370,7 +380,7 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*rNestedShadow)(nil)
+var _ json.UnmarshalerFrom = (*rNestedShadow)(nil)
 
 func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -421,7 +431,7 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*rOptShadow)(nil)
+var _ json.UnmarshalerFrom = (*rOptShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

@@ -5,16 +5,17 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
-	"github.com/spf13/pflag"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type durationsShadow struct {
@@ -30,11 +31,13 @@ func DurationsSchema() *configulator.Schema[Durations] {
 		DecodeFile:    durationsDecodeFile,
 	}
 }
+
 func durationsApplyDefaults(cfg *Durations, sep string, set configulator.SetOrigin) error {
 	cfg.Timeout = time.Duration(int64(30000000000))
 	set("timeout", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func durationsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Durations, sep string, set configulator.SetOrigin, file string) error {
 	var sh durationsShadow
 	if err := u(data, &sh); err != nil {
@@ -45,6 +48,7 @@ func durationsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Durations, 
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *durationsShadow) applyTo(cfg *Durations, sep string, set configulator.SetOrigin, file string) error {
 	if s.Timeout != nil {
 		v, ok := s.Timeout.Value()
@@ -63,6 +67,7 @@ func (s *durationsShadow) applyTo(cfg *Durations, sep string, set configulator.S
 	}
 	return nil
 }
+
 func durationsApplyEnv(cfg *Durations, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "timeout"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -95,6 +100,7 @@ func DurationsPFlagHooks() cpflag.Hooks[Durations] {
 		Register: durationsRegisterPFlags,
 	}
 }
+
 func durationsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"timeout"}, o.Separator), strings.Join([]string{"label"}, o.Separator)}
 	for i, name := range names {
@@ -109,6 +115,7 @@ func durationsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.String(names[1], "", "")
 	return nil
 }
+
 func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"timeout"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetDuration(n)
@@ -136,6 +143,7 @@ func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, o *cpflag.Options, 
 	}
 	return nil
 }
+
 func (s *durationsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -188,7 +196,7 @@ func (s *durationsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*durationsShadow)(nil)
+var _ json.UnmarshalerFrom = (*durationsShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

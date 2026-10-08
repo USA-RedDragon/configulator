@@ -5,14 +5,15 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/spf13/pflag"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/spf13/pflag"
 )
 
 type nCRuleShadow struct {
@@ -20,9 +21,11 @@ type nCRuleShadow struct {
 	Range *int64 `json:"range" toml:"range" yaml:"range"`
 	On    *bool  `json:"on" toml:"on" yaml:"on"`
 }
+
 type nCLevelShadow struct {
 	Level *int64 `json:"level" toml:"level" yaml:"level"`
 }
+
 type nCPeerShadow struct {
 	Name  *string                  `json:"name" toml:"name" yaml:"name"`
 	Slots *int64                   `json:"slots" toml:"slots" yaml:"slots"`
@@ -31,6 +34,7 @@ type nCPeerShadow struct {
 	Inner *nCLevelShadow           `json:"inner" toml:"inner" yaml:"inner"`
 	Opt   *nCLevelShadow           `json:"opt" toml:"opt" yaml:"opt"`
 }
+
 type nestedCollectionsShadow struct {
 	Peers  *[]nCPeerShadow          `json:"peers" toml:"peers" yaml:"peers"`
 	ByName *map[string]nCPeerShadow `json:"by-name" toml:"by-name" yaml:"by-name"`
@@ -44,9 +48,11 @@ func NestedCollectionsSchema() *configulator.Schema[NestedCollections] {
 		DecodeFile:    nestedCollectionsDecodeFile,
 	}
 }
+
 func nestedCollectionsApplyDefaults(cfg *NestedCollections, sep string, set configulator.SetOrigin) error {
 	return nil
 }
+
 func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *NestedCollections, sep string, set configulator.SetOrigin, file string) error {
 	var sh nestedCollectionsShadow
 	if err := u(data, &sh); err != nil {
@@ -57,6 +63,7 @@ func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nes
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *nestedCollectionsShadow) applyTo(cfg *NestedCollections, sep string, set configulator.SetOrigin, file string) error {
 	if s.Peers != nil {
 		out := make([]NCPeer, len(*s.Peers))
@@ -246,6 +253,7 @@ func (s *nestedCollectionsShadow) applyTo(cfg *NestedCollections, sep string, se
 	}
 	return nil
 }
+
 func nestedCollectionsApplyEnv(cfg *NestedCollections, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	return nil
 }
@@ -257,12 +265,15 @@ func NestedCollectionsPFlagHooks() cpflag.Hooks[NestedCollections] {
 		Register: nestedCollectionsRegisterPFlags,
 	}
 }
+
 func nestedCollectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
+
 func nestedCollectionsApplyPFlags(cfg *NestedCollections, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	return nil
 }
+
 func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -343,7 +354,7 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nestedCollectionsShadow)(nil)
+var _ json.UnmarshalerFrom = (*nestedCollectionsShadow)(nil)
 
 func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -479,7 +490,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nCPeerShadow)(nil)
+var _ json.UnmarshalerFrom = (*nCPeerShadow)(nil)
 
 func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -551,7 +562,7 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nCRuleShadow)(nil)
+var _ json.UnmarshalerFrom = (*nCRuleShadow)(nil)
 
 func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -593,7 +604,7 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*nCLevelShadow)(nil)
+var _ json.UnmarshalerFrom = (*nCLevelShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -604,6 +615,7 @@ func (c *NestedCollections) PrintConfig() string {
 	b.WriteString(fmt.Sprintf("by-name = %v\n", c.ByName))
 	return b.String()
 }
+
 func nestedCollectionsQuoteKey(k string) string {
 	for _, c := range k {
 		if c == '.' || c == '[' {

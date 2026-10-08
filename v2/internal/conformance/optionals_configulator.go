@@ -5,23 +5,25 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
-	"github.com/spf13/pflag"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type tLSConfigShadow struct {
 	Cert       *string `json:"cert" toml:"cert" yaml:"cert"`
 	MinVersion *uint16 `json:"min-version" toml:"min-version" yaml:"min-version"`
 }
+
 type optionalsShadow struct {
 	Port *uint16          `json:"port" toml:"port" yaml:"port"`
 	Name *string          `json:"name" toml:"name" yaml:"name"`
@@ -36,6 +38,7 @@ func OptionalsSchema() *configulator.Schema[Optionals] {
 		DecodeFile:    optionalsDecodeFile,
 	}
 }
+
 func optionalsApplyDefaults(cfg *Optionals, sep string, set configulator.SetOrigin) error {
 	{
 		nameDefault := "opt-name"
@@ -44,6 +47,7 @@ func optionalsApplyDefaults(cfg *Optionals, sep string, set configulator.SetOrig
 	}
 	return nil
 }
+
 func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, sep string, set configulator.SetOrigin, file string) error {
 	var sh optionalsShadow
 	if err := u(data, &sh); err != nil {
@@ -54,6 +58,7 @@ func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, 
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *optionalsShadow) applyTo(cfg *Optionals, sep string, set configulator.SetOrigin, file string) error {
 	if s.Port != nil {
 		v := *s.Port
@@ -84,6 +89,7 @@ func (s *optionalsShadow) applyTo(cfg *Optionals, sep string, set configulator.S
 	}
 	return nil
 }
+
 func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -159,6 +165,7 @@ func OptionalsPFlagHooks() cpflag.Hooks[Optionals] {
 		Register: optionalsRegisterPFlags,
 	}
 }
+
 func optionalsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"tls", "cert"}, o.Separator), strings.Join([]string{"tls", "min-version"}, o.Separator)}
 	for i, name := range names {
@@ -175,6 +182,7 @@ func optionalsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.Uint16(names[3], uint16(12), "")
 	return nil
 }
+
 func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"port"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetUint16(n)
@@ -248,6 +256,7 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 	}
 	return nil
 }
+
 func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -316,7 +325,7 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*optionalsShadow)(nil)
+var _ json.UnmarshalerFrom = (*optionalsShadow)(nil)
 
 func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -374,7 +383,7 @@ func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*tLSConfigShadow)(nil)
+var _ json.UnmarshalerFrom = (*tLSConfigShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

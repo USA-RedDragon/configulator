@@ -16,7 +16,7 @@ const stdFlag = "flag"
 // It has no Changed either, so Bind finds set flags with flag.Visit.
 func (e *emitter) emitStdFlagHooks() {
 	n := e.m.TypeName
-	e.f.Comment(n + "StdFlagHooks returns the stdlib-flag hooks for " + n + ".")
+	e.decl().Comment(n + "StdFlagHooks returns the stdlib-flag hooks for " + n + ".")
 	e.f.Func().Id(n+"StdFlagHooks").Params().Qual(pkgStdFlag, "Hooks").Index(Id(n)).Block(
 		Return(Qual(pkgStdFlag, "Hooks").Index(Id(n)).Values(Dict{
 			Id("Register"): Id(lowerFirst(n) + "RegisterStdFlags"),
@@ -54,7 +54,7 @@ func (e *emitter) emitStdFlagHooks() {
 		reg = append(reg, stdRegister(ff.f, Id("names").Index(Lit(i))))
 	}
 	reg = append(reg, Return(Nil()))
-	e.f.Func().Id(lowerFirst(n)+"RegisterStdFlags").Params(
+	e.decl().Func().Id(lowerFirst(n)+"RegisterStdFlags").Params(
 		Id("fs").Op("*").Qual(stdFlag, "FlagSet"), Id("o").Op("*").Qual(pkgStdFlag, "Options"),
 	).Error().Block(reg...)
 
@@ -63,7 +63,7 @@ func (e *emitter) emitStdFlagHooks() {
 		app = append(app, e.stdApply(ff, name(ff.segs))...)
 	}
 	app = append(app, Return(Nil()))
-	e.f.Func().Id(lowerFirst(n)+"ApplyStdFlags").Params(
+	e.decl().Func().Id(lowerFirst(n)+"ApplyStdFlags").Params(
 		Id("cfg").Op("*").Id(n), Id("fs").Op("*").Qual(stdFlag, "FlagSet"),
 		Id("o").Op("*").Qual(pkgStdFlag, "Options"), Id("isSet").Map(String()).Bool(),
 		Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"),

@@ -5,17 +5,18 @@
 package examplestd
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"flag"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	std "github.com/USA-RedDragon/configulator/v2/flags/std"
-	"github.com/USA-RedDragon/configulator/v2/impl"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cstd "github.com/USA-RedDragon/configulator/v2/flags/std"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 )
 
 type configShadow struct {
@@ -31,6 +32,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 		DecodeFile:    configDecodeFile,
 	}
 }
+
 func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
 	cfg.Host = "localhost"
 	set("host", configulator.LayerDefault, "default tag")
@@ -38,6 +40,7 @@ func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) er
 	set("port", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
@@ -48,6 +51,7 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	if s.Host != nil {
 		cfg.Host = *s.Host
@@ -59,6 +63,7 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 	}
 	return nil
 }
+
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "host"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -85,13 +90,14 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 }
 
 // ConfigStdFlagHooks returns the stdlib-flag hooks for Config.
-func ConfigStdFlagHooks() std.Hooks[Config] {
-	return std.Hooks[Config]{
+func ConfigStdFlagHooks() cstd.Hooks[Config] {
+	return cstd.Hooks[Config]{
 		Apply:    configApplyStdFlags,
 		Register: configRegisterStdFlags,
 	}
 }
-func configRegisterStdFlags(fs *flag.FlagSet, o *std.Options) error {
+
+func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
 	names := []string{strings.Join([]string{"host"}, o.Separator), strings.Join([]string{"port"}, o.Separator)}
 	for i, fn := range names {
 		if fs.Lookup(fn) != nil || slices.Contains(names[:i], fn) {
@@ -105,7 +111,8 @@ func configRegisterStdFlags(fs *flag.FlagSet, o *std.Options) error {
 	fs.Uint64(names[1], uint64(0x1f90), "listen port")
 	return nil
 }
-func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *std.Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error {
+
+func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *cstd.Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error {
 	if fn := strings.Join([]string{"host"}, o.Separator); isSet[fn] {
 		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
 		cfg.Host = pv
@@ -126,6 +133,7 @@ func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *std.Options, isSet ma
 	}
 	return nil
 }
+
 func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -182,7 +190,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*configShadow)(nil)
+var _ json.UnmarshalerFrom = (*configShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

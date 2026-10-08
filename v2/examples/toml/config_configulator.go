@@ -5,20 +5,22 @@
 package main
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	"github.com/USA-RedDragon/configulator/v2/impl"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 )
 
 type dBConfigShadow struct {
 	URL  *string `json:"url" toml:"url" yaml:"url"`
 	Pool *uint16 `json:"pool" toml:"pool" yaml:"pool"`
 }
+
 type configShadow struct {
 	DB *dBConfigShadow `json:"db" toml:"db" yaml:"db"`
 }
@@ -31,6 +33,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 		DecodeFile:    configDecodeFile,
 	}
 }
+
 func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
 	cfg.DB.URL = "postgres://localhost/app"
 	set("db.url", configulator.LayerDefault, "default tag")
@@ -38,6 +41,7 @@ func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) er
 	set("db.pool", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
@@ -48,6 +52,7 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	if s.DB != nil {
 		if s.DB.URL != nil {
@@ -61,6 +66,7 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 	}
 	return nil
 }
+
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "url"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -85,6 +91,7 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 	}
 	return nil
 }
+
 func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -120,7 +127,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*configShadow)(nil)
+var _ json.UnmarshalerFrom = (*configShadow)(nil)
 
 func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -178,7 +185,7 @@ func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*dBConfigShadow)(nil)
+var _ json.UnmarshalerFrom = (*dBConfigShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

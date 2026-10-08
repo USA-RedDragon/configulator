@@ -28,7 +28,7 @@ func (e *emitter) emitApplyDefaults() {
 	}
 	walk(e.m.Fields, nil)
 	body = append(body, Return(Nil()))
-	e.f.Func().Id(lowerFirst(n)+"ApplyDefaults").Params(
+	e.decl().Func().Id(lowerFirst(n)+"ApplyDefaults").Params(
 		Id("cfg").Op("*").Id(n), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"),
 	).Error().Block(body...)
 }

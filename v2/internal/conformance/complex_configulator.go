@@ -5,15 +5,16 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
+	"slices"
+	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
-	"slices"
-	"strings"
 )
 
 type complexShadow struct {
@@ -31,6 +32,7 @@ func ComplexSchema() *configulator.Schema[Complex] {
 		DecodeFile:    complexDecodeFile,
 	}
 }
+
 func complexApplyDefaults(cfg *Complex, sep string, set configulator.SetOrigin) error {
 	{
 		var slot impl.Complex128
@@ -41,6 +43,7 @@ func complexApplyDefaults(cfg *Complex, sep string, set configulator.SetOrigin) 
 	}
 	return nil
 }
+
 func complexDecodeFile(data []byte, u configulator.Unmarshal, cfg *Complex, sep string, set configulator.SetOrigin, file string) error {
 	var sh complexShadow
 	if err := u(data, &sh); err != nil {
@@ -51,6 +54,7 @@ func complexDecodeFile(data []byte, u configulator.Unmarshal, cfg *Complex, sep 
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *complexShadow) applyTo(cfg *Complex, sep string, set configulator.SetOrigin, file string) error {
 	if s.Z != nil {
 		v, ok := s.Z.Value()
@@ -104,6 +108,7 @@ func (s *complexShadow) applyTo(cfg *Complex, sep string, set configulator.SetOr
 	}
 	return nil
 }
+
 func complexApplyEnv(cfg *Complex, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "z"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -185,6 +190,7 @@ func ComplexPFlagHooks() cpflag.Hooks[Complex] {
 		Register: complexRegisterPFlags,
 	}
 }
+
 func complexRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"z"}, o.Separator), strings.Join([]string{"exponent"}, o.Separator), strings.Join([]string{"w"}, o.Separator), strings.Join([]string{"zs"}, o.Separator)}
 	for i, name := range names {
@@ -201,6 +207,7 @@ func complexRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.StringSlice(names[3], nil, "")
 	return nil
 }
+
 func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"z"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
@@ -298,6 +305,7 @@ func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, o *cpflag.Options, sep 
 	}
 	return nil
 }
+
 func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -402,7 +410,7 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*complexShadow)(nil)
+var _ json.UnmarshalerFrom = (*complexShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

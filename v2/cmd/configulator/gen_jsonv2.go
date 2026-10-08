@@ -35,7 +35,7 @@ func (e *emitter) emitFastPath(shadow string, fields []*Field) {
 		Return(Qual("fmt", "Errorf").Call(Lit("unknown key %q"), Id("tok").Dot("String").Call())),
 	))
 
-	e.f.Func().Params(Id("s").Op("*").Id(shadow)).Id("UnmarshalJSONFrom").Params(
+	e.decl().Func().Params(Id("s").Op("*").Id(shadow)).Id("UnmarshalJSONFrom").Params(
 		Id("dec").Op("*").Qual(pkgJSONText, "Decoder"),
 	).Error().Block(
 		List(Id("tok"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
@@ -50,7 +50,7 @@ func (e *emitter) emitFastPath(shadow string, fields []*Field) {
 			Switch(Id("tok").Dot("String").Call()).Block(cases...),
 		),
 	)
-	e.f.Var().Id("_").Qual(pkgJSONv2, "UnmarshalerFrom").Op("=").Parens(Op("*").Id(shadow)).Call(Nil())
+	e.decl().Var().Id("_").Qual(pkgJSONv2, "UnmarshalerFrom").Op("=").Parens(Op("*").Id(shadow)).Call(Nil())
 }
 
 // redactFastErrors runs body in a closure and replaces any error it returns

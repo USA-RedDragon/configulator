@@ -5,17 +5,18 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
-	"github.com/spf13/pflag"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type scalarsShadow struct {
@@ -34,6 +35,7 @@ func ScalarsSchema() *configulator.Schema[Scalars] {
 		DecodeFile:    scalarsDecodeFile,
 	}
 }
+
 func scalarsApplyDefaults(cfg *Scalars, sep string, set configulator.SetOrigin) error {
 	cfg.Name = "svc"
 	set("name", configulator.LayerDefault, "default tag")
@@ -45,6 +47,7 @@ func scalarsApplyDefaults(cfg *Scalars, sep string, set configulator.SetOrigin) 
 	set("verbose", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, sep string, set configulator.SetOrigin, file string) error {
 	var sh scalarsShadow
 	if err := u(data, &sh); err != nil {
@@ -55,6 +58,7 @@ func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, sep 
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *scalarsShadow) applyTo(cfg *Scalars, sep string, set configulator.SetOrigin, file string) error {
 	if s.Name != nil {
 		cfg.Name = *s.Name
@@ -78,6 +82,7 @@ func (s *scalarsShadow) applyTo(cfg *Scalars, sep string, set configulator.SetOr
 	}
 	return nil
 }
+
 func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -155,6 +160,7 @@ func ScalarsPFlagHooks() cpflag.Hooks[Scalars] {
 		Register: scalarsRegisterPFlags,
 	}
 }
+
 func scalarsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"count"}, o.Separator), strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"ratio"}, o.Separator), strings.Join([]string{"verbose"}, o.Separator)}
 	for i, name := range names {
@@ -172,6 +178,7 @@ func scalarsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.Bool(names[4], false, "")
 	return nil
 }
+
 func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"name"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
@@ -235,6 +242,7 @@ func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep 
 	}
 	return nil
 }
+
 func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -338,7 +346,7 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*scalarsShadow)(nil)
+var _ json.UnmarshalerFrom = (*scalarsShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

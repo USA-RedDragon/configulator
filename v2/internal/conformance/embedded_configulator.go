@@ -5,15 +5,16 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
+	"slices"
+	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
-	"slices"
-	"strings"
 )
 
 type embeddedShadow struct {
@@ -29,6 +30,7 @@ func EmbeddedSchema() *configulator.Schema[Embedded] {
 		DecodeFile:    embeddedDecodeFile,
 	}
 }
+
 func embeddedApplyDefaults(cfg *Embedded, sep string, set configulator.SetOrigin) error {
 	cfg.Base.Region = "us-east-1"
 	set("region", configulator.LayerDefault, "default tag")
@@ -36,6 +38,7 @@ func embeddedApplyDefaults(cfg *Embedded, sep string, set configulator.SetOrigin
 	set("zone", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, sep string, set configulator.SetOrigin, file string) error {
 	var sh embeddedShadow
 	if err := u(data, &sh); err != nil {
@@ -46,6 +49,7 @@ func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, se
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *embeddedShadow) applyTo(cfg *Embedded, sep string, set configulator.SetOrigin, file string) error {
 	if s.Region != nil {
 		cfg.Base.Region = *s.Region
@@ -57,6 +61,7 @@ func (s *embeddedShadow) applyTo(cfg *Embedded, sep string, set configulator.Set
 	}
 	return nil
 }
+
 func embeddedApplyEnv(cfg *Embedded, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "region"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -80,6 +85,7 @@ func EmbeddedPFlagHooks() cpflag.Hooks[Embedded] {
 		Register: embeddedRegisterPFlags,
 	}
 }
+
 func embeddedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"region"}, o.Separator), strings.Join([]string{"zone"}, o.Separator)}
 	for i, name := range names {
@@ -94,6 +100,7 @@ func embeddedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.String(names[1], "a", "")
 	return nil
 }
+
 func embeddedApplyPFlags(cfg *Embedded, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"region"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
@@ -121,6 +128,7 @@ func embeddedApplyPFlags(cfg *Embedded, fs *pflag.FlagSet, o *cpflag.Options, se
 	}
 	return nil
 }
+
 func (s *embeddedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -170,7 +178,7 @@ func (s *embeddedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*embeddedShadow)(nil)
+var _ json.UnmarshalerFrom = (*embeddedShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

@@ -5,26 +5,29 @@
 package conformance
 
 import (
-	jsontext "encoding/json/jsontext"
-	v2 "encoding/json/v2"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	configulator "github.com/USA-RedDragon/configulator/v2"
-	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
-	"github.com/spf13/pflag"
 	"math"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/USA-RedDragon/configulator/v2"
+	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
+	"github.com/spf13/pflag"
 )
 
 type serverShadow struct {
 	Addr   *string `json:"addr" toml:"addr" yaml:"addr"`
 	Weight *uint16 `json:"weight" toml:"weight" yaml:"weight"`
 }
+
 type poolShadow struct {
 	Size *uint16 `json:"size" toml:"size" yaml:"size"`
 }
+
 type collectionsShadow struct {
 	Tags     *[]string              `json:"tags" toml:"tags" yaml:"tags"`
 	Labels   *map[string]string     `json:"labels" toml:"labels" yaml:"labels"`
@@ -41,6 +44,7 @@ func CollectionsSchema() *configulator.Schema[Collections] {
 		DecodeFile:    collectionsDecodeFile,
 	}
 }
+
 func collectionsApplyDefaults(cfg *Collections, sep string, set configulator.SetOrigin) error {
 	{
 		lst := impl.SplitList("a,b", sep)
@@ -51,6 +55,7 @@ func collectionsApplyDefaults(cfg *Collections, sep string, set configulator.Set
 	set("log-level", configulator.LayerDefault, "default tag")
 	return nil
 }
+
 func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collections, sep string, set configulator.SetOrigin, file string) error {
 	var sh collectionsShadow
 	if err := u(data, &sh); err != nil {
@@ -61,6 +66,7 @@ func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collectio
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
+
 func (s *collectionsShadow) applyTo(cfg *Collections, sep string, set configulator.SetOrigin, file string) error {
 	if s.Tags != nil {
 		cfg.Tags = *s.Tags
@@ -112,6 +118,7 @@ func (s *collectionsShadow) applyTo(cfg *Collections, sep string, set configulat
 	}
 	return nil
 }
+
 func collectionsApplyEnv(cfg *Collections, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tags"); true {
 		if v, ok := ec.Getenv(n); ok {
@@ -136,6 +143,7 @@ func CollectionsPFlagHooks() cpflag.Hooks[Collections] {
 		Register: collectionsRegisterPFlags,
 	}
 }
+
 func collectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	names := []string{strings.Join([]string{"tags"}, o.Separator), strings.Join([]string{"log-level"}, o.Separator)}
 	for i, name := range names {
@@ -151,6 +159,7 @@ func collectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.String(names[1], "info", "")
 	return nil
 }
+
 func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"tags"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetStringSlice(n)
@@ -178,6 +187,7 @@ func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, o *cpflag.Optio
 	}
 	return nil
 }
+
 func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -336,7 +346,7 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*collectionsShadow)(nil)
+var _ json.UnmarshalerFrom = (*collectionsShadow)(nil)
 
 func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -394,7 +404,7 @@ func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*serverShadow)(nil)
+var _ json.UnmarshalerFrom = (*serverShadow)(nil)
 
 func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
@@ -439,7 +449,7 @@ func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*poolShadow)(nil)
+var _ json.UnmarshalerFrom = (*poolShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -453,6 +463,7 @@ func (c *Collections) PrintConfig() string {
 	b.WriteString(fmt.Sprintf("log-level = %v\n", c.LogLevel))
 	return b.String()
 }
+
 func collectionsQuoteKey(k string) string {
 	for _, c := range k {
 		if c == '.' || c == '[' {

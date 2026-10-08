@@ -617,10 +617,8 @@ func (c *NestedCollections) PrintConfig() string {
 }
 
 func nestedCollectionsQuoteKey(k string) string {
-	for _, c := range k {
-		if c == '.' || c == '[' {
-			return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
-		}
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
 	}
 	return k
 }

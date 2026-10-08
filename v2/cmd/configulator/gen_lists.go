@@ -201,15 +201,14 @@ func (e *emitter) chainAssign(l leaf, sep Code, assign func(target *Statement) [
 		if prev != "" {
 			sel = relSel(Id(prev), h.f)
 		}
-		pre = append(pre,
-			Var().Id(v).Add(fieldGoType(h.f.Elem.Type)),
-			If(sel.Clone().Op("!=").Nil()).Block(
-				Id(v).Op("=").Op("*").Add(sel.Clone()),
-			).Else().Block(e.elemDefaults(h.f.Elem.Fields, Id(v), pathExpr{suffix: h.path}, sep)...),
-		)
+		copyIn := If(sel.Clone().Op("!=").Nil()).Block(Id(v).Op("=").Op("*").Add(sel.Clone()))
+		if defaults := e.elemDefaults(h.f.Elem.Fields, Id(v), pathExpr{suffix: h.path}, sep); len(defaults) > 0 {
+			copyIn = copyIn.Else().Block(defaults...)
+		}
+		pre = append(pre, Var().Id(v).Add(fieldGoType(h.f.Elem.Type)), copyIn)
 		post = append([]Code{sel.Clone().Op("=").Op("&").Id(v)}, post...)
 		prev = v
 	}
 	pre = append(pre, assign(relSel(Id(prev), l.f))...)
-	return []Code{Block(append(pre, post...)...)}
+	return append(pre, post...)
 }

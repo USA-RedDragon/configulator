@@ -128,27 +128,21 @@ func requiredApplyEnv(cfg *Required, ec configulator.EnvContext, set configulato
 		set("nested.leaf", configulator.LayerEnv, n)
 	}
 	if n, v, ok := ec.Lookup("opt", "leaf"); ok {
-		{
-			var e ROpt
-			if cfg.Opt != nil {
-				e = *cfg.Opt
-			} else {
-			}
-			e.Leaf = v
-			cfg.Opt = &e
+		var e ROpt
+		if cfg.Opt != nil {
+			e = *cfg.Opt
 		}
+		e.Leaf = v
+		cfg.Opt = &e
 		set("opt.leaf", configulator.LayerEnv, n)
 	}
 	if n, v, ok := ec.Lookup("opt", "other"); ok {
-		{
-			var e ROpt
-			if cfg.Opt != nil {
-				e = *cfg.Opt
-			} else {
-			}
-			e.Other = v
-			cfg.Opt = &e
+		var e ROpt
+		if cfg.Opt != nil {
+			e = *cfg.Opt
 		}
+		e.Other = v
+		cfg.Opt = &e
 		set("opt.other", configulator.LayerEnv, n)
 	}
 	return nil
@@ -224,15 +218,12 @@ func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, _ 
 				Source: "--" + n,
 			}
 		}
-		{
-			var e ROpt
-			if cfg.Opt != nil {
-				e = *cfg.Opt
-			} else {
-			}
-			e.Leaf = v
-			cfg.Opt = &e
+		var e ROpt
+		if cfg.Opt != nil {
+			e = *cfg.Opt
 		}
+		e.Leaf = v
+		cfg.Opt = &e
 		set("opt.leaf", configulator.LayerCLI, "--"+n)
 	}
 	if n := "opt" + o.Separator + "other"; fs.Changed(n) {
@@ -244,15 +235,12 @@ func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, _ 
 				Source: "--" + n,
 			}
 		}
-		{
-			var e ROpt
-			if cfg.Opt != nil {
-				e = *cfg.Opt
-			} else {
-			}
-			e.Other = v
-			cfg.Opt = &e
+		var e ROpt
+		if cfg.Opt != nil {
+			e = *cfg.Opt
 		}
+		e.Other = v
+		cfg.Opt = &e
 		set("opt.other", configulator.LayerCLI, "--"+n)
 	}
 	return nil

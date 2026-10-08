@@ -110,17 +110,15 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 		set("name", configulator.LayerEnv, n)
 	}
 	if n, v, ok := ec.Lookup("tls", "cert"); ok {
-		{
-			var e TLSConfig
-			if cfg.TLS != nil {
-				e = *cfg.TLS
-			} else {
-				e.MinVersion = uint16(12)
-				set("tls.min-version", configulator.LayerDefault, "element default")
-			}
-			e.Cert = v
-			cfg.TLS = &e
+		var e TLSConfig
+		if cfg.TLS != nil {
+			e = *cfg.TLS
+		} else {
+			e.MinVersion = uint16(12)
+			set("tls.min-version", configulator.LayerDefault, "element default")
 		}
+		e.Cert = v
+		cfg.TLS = &e
 		set("tls.cert", configulator.LayerEnv, n)
 	}
 	if n, v, ok := ec.Lookup("tls", "min-version"); ok {
@@ -133,17 +131,15 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 				Value:  v,
 			}
 		}
-		{
-			var e TLSConfig
-			if cfg.TLS != nil {
-				e = *cfg.TLS
-			} else {
-				e.MinVersion = uint16(12)
-				set("tls.min-version", configulator.LayerDefault, "element default")
-			}
-			e.MinVersion = uint16(p)
-			cfg.TLS = &e
+		var e TLSConfig
+		if cfg.TLS != nil {
+			e = *cfg.TLS
+		} else {
+			e.MinVersion = uint16(12)
+			set("tls.min-version", configulator.LayerDefault, "element default")
 		}
+		e.MinVersion = uint16(p)
+		cfg.TLS = &e
 		set("tls.min-version", configulator.LayerEnv, n)
 	}
 	return nil
@@ -221,17 +217,15 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 				Source: "--" + n,
 			}
 		}
-		{
-			var e TLSConfig
-			if cfg.TLS != nil {
-				e = *cfg.TLS
-			} else {
-				e.MinVersion = uint16(12)
-				set("tls.min-version", configulator.LayerDefault, "element default")
-			}
-			e.Cert = v
-			cfg.TLS = &e
+		var e TLSConfig
+		if cfg.TLS != nil {
+			e = *cfg.TLS
+		} else {
+			e.MinVersion = uint16(12)
+			set("tls.min-version", configulator.LayerDefault, "element default")
 		}
+		e.Cert = v
+		cfg.TLS = &e
 		set("tls.cert", configulator.LayerCLI, "--"+n)
 	}
 	if n := "tls" + o.Separator + "min-version"; fs.Changed(n) {
@@ -243,17 +237,15 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 				Source: "--" + n,
 			}
 		}
-		{
-			var e TLSConfig
-			if cfg.TLS != nil {
-				e = *cfg.TLS
-			} else {
-				e.MinVersion = uint16(12)
-				set("tls.min-version", configulator.LayerDefault, "element default")
-			}
-			e.MinVersion = v
-			cfg.TLS = &e
+		var e TLSConfig
+		if cfg.TLS != nil {
+			e = *cfg.TLS
+		} else {
+			e.MinVersion = uint16(12)
+			set("tls.min-version", configulator.LayerDefault, "element default")
 		}
+		e.MinVersion = v
+		cfg.TLS = &e
 		set("tls.min-version", configulator.LayerCLI, "--"+n)
 	}
 	return nil

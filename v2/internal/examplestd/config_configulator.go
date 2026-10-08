@@ -118,12 +118,12 @@ func configRegisterStdFlags(fs *flag.FlagSet, _ *cstd.Options) error {
 
 func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, _ *cstd.Options, isSet map[string]bool, _ string, set configulator.SetOrigin) error {
 	if fn := "host"; isSet[fn] {
-		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
+		pv := cstd.Get[string](fs, fn)
 		cfg.Host = pv
 		set("host", configulator.LayerCLI, "-"+fn)
 	}
 	if fn := "port"; isSet[fn] {
-		raw := fs.Lookup(fn).Value.(flag.Getter).Get().(uint64)
+		raw := cstd.Get[uint64](fs, fn)
 		if raw > math.MaxUint16 {
 			return &configulator.ParseError{
 				Err:    fmt.Errorf("%d overflows uint16", raw),

@@ -114,16 +114,13 @@ func stdRegister(f *Field, name *Statement) Code {
 	case KindInt:
 		v, _ := strconv.ParseInt(f.Default, 10, 64)
 		def = Lit(v)
-	case KindDuration:
-		def = durDefault(f).Assert(Id("int64")) // placeholder; fixed below
 	case KindUint:
 		v, _ := strconv.ParseUint(f.Default, 10, 64)
 		def = Lit(v)
 	default:
 	}
 	if target.Kind == KindDuration {
-		reg = "Duration"
-		def = durDefault(f)
+		reg, def = "Duration", durDefault(f)
 	}
 	return Id("fs").Dot(reg).Call(name, def, Lit(f.Desc))
 }
@@ -159,23 +156,23 @@ func (e *emitter) stdApply(l leaf, name *Statement) []Code {
 
 // stdConv emits the statements that read target's flag value into pv.
 func stdConv(target *Field, path string) []Code {
-	get := Id("fs").Dot("Lookup").Call(Id("fn")).Dot("Value").Assert(Qual(stdFlag, "Getter")).Dot("Get").Call()
+	get := func(t Code) *Statement { return Qual(pkgStdFlag, "Get").Types(t).Call(Id("fs"), Id("fn")) }
 	t := target.Type.Underlying().String()
 	switch target.Kind {
 	case KindString:
-		return []Code{Id("pv").Op(":=").Add(get).Assert(String())}
+		return []Code{Id("pv").Op(":=").Add(get(String()))}
 	case KindSliceScalar:
-		code := []Code{Id("raw").Op(":=").Add(get).Assert(String())}
+		code := []Code{Id("raw").Op(":=").Add(get(String()))}
 		code = append(code, parseList(target, Qual(pkgImpl, "SplitList").Call(Id("raw"), Lit(",")), Lit(path), Lit("-").Op("+").Id("fn"), Id("raw"))...)
 		return append(code, Id("pv").Op(":=").Id("lst"))
 	case KindBool:
-		return []Code{Id("pv").Op(":=").Add(get).Assert(Bool())}
+		return []Code{Id("pv").Op(":=").Add(get(Bool()))}
 	case KindFloat:
 		if t == "float64" {
-			return []Code{Id("pv").Op(":=").Add(get).Assert(Float64())}
+			return []Code{Id("pv").Op(":=").Add(get(Float64()))}
 		}
 		return []Code{
-			Id("raw").Op(":=").Add(get).Assert(Float64()),
+			Id("raw").Op(":=").Add(get(Float64())),
 			If(Qual("math", "Abs").Call(Id("raw")).Op(">").Qual("math", "MaxFloat32").Op("&&").Op("!").Qual("math", "IsInf").Call(Id("raw"), Lit(0))).Block(
 				Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
 					Id("Path"): Lit(path), Id("Source"): Lit("-").Op("+").Id("fn"),
@@ -184,13 +181,13 @@ func stdConv(target *Field, path string) []Code {
 			Id("pv").Op(":=").Id(t).Call(Id("raw")),
 		}
 	case KindDuration:
-		return []Code{Id("pv").Op(":=").Add(get).Assert(Qual("time", "Duration"))}
+		return []Code{Id("pv").Op(":=").Add(get(Qual("time", "Duration")))}
 	case KindStdSlot:
-		conv := append([]Code{Id("raw").Op(":=").Add(get).Assert(String())},
+		conv := append([]Code{Id("raw").Op(":=").Add(get(String()))},
 			slotParse(target, path, Lit("-").Op("+").Id("fn"), "raw", "sv")...)
 		return append(conv, Id("pv").Op(":=").Add(convNamed(target.Type, Id("sv"))))
 	case KindInt:
-		raw := Add(get).Assert(Int64())
+		raw := get(Int64())
 		switch {
 		case target.Bits != 0 && target.Bits != 64:
 			return []Code{
@@ -209,7 +206,7 @@ func stdConv(target *Field, path string) []Code {
 			return []Code{Id("pv").Op(":=").Id(t).Call(Add(raw))}
 		}
 	case KindUint:
-		raw := Add(get).Assert(Uint64())
+		raw := get(Uint64())
 		switch {
 		case target.Bits != 0 && target.Bits != 64:
 			return []Code{

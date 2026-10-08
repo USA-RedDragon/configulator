@@ -115,12 +115,12 @@ func configRegisterStdFlags(fs *flag.FlagSet, _ *cstd.Options) error {
 
 func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, _ *cstd.Options, isSet map[string]bool, _ string, set configulator.SetOrigin) error {
 	if fn := "listen"; isSet[fn] {
-		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
+		pv := cstd.Get[string](fs, fn)
 		cfg.Listen = pv
 		set("listen", configulator.LayerCLI, "-"+fn)
 	}
 	if fn := "debug"; isSet[fn] {
-		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(bool)
+		pv := cstd.Get[bool](fs, fn)
 		cfg.Debug = pv
 		set("debug", configulator.LayerCLI, "-"+fn)
 	}

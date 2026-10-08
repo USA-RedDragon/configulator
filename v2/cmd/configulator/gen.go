@@ -94,10 +94,8 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 	e.emitPrintConfig()
 	if e.needQuoteKey {
 		e.decl().Func().Id(e.quoteKeyName()).Params(Id("k").String()).String().Block(
-			For(List(Id("_"), Id("c")).Op(":=").Range().Id("k")).Block(
-				If(Id("c").Op("==").LitRune('.').Op("||").Id("c").Op("==").LitRune('[')).Block(
-					Return(Lit(`"`).Op("+").Qual("strings", "NewReplacer").Call(Lit(`\`), Lit(`\\`), Lit(`"`), Lit(`\"`)).Dot("Replace").Call(Id("k")).Op("+").Lit(`"`)),
-				),
+			If(Qual("strings", "ContainsAny").Call(Id("k"), Lit(".["))).Block(
+				Return(Lit(`"`).Op("+").Qual("strings", "NewReplacer").Call(Lit(`\`), Lit(`\\`), Lit(`"`), Lit(`\"`)).Dot("Replace").Call(Id("k")).Op("+").Lit(`"`)),
 			),
 			Return(Id("k")),
 		)

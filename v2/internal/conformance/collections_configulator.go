@@ -470,10 +470,8 @@ func (c *Collections) PrintConfig() string {
 }
 
 func collectionsQuoteKey(k string) string {
-	for _, c := range k {
-		if c == '.' || c == '[' {
-			return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
-		}
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
 	}
 	return k
 }

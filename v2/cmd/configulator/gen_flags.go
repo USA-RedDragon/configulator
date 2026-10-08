@@ -138,6 +138,9 @@ func pflagTypeOps(f *Field) (reg, get string, def *Statement, ok bool) {
 		return "Bool", "GetBool", Lit(v), true
 	case KindFloat:
 		v, _ := strconv.ParseFloat(f.Default, 64)
+		if f.Bits == 32 {
+			return "Float32", "GetFloat32", Lit(float32(v)), true
+		}
 		return "Float64", "GetFloat64", Lit(v), true
 	case KindDuration:
 		return "Duration", "GetDuration", durDefault(f), true
@@ -236,12 +239,6 @@ func zeroDefault(f *Field) *Statement {
 		return Lit(false)
 	case KindFloat:
 		return Lit(0.0)
-	case KindInt, KindUint:
-		t := f.Type.Underlying().String()
-		if t == "int" || t == "uint" {
-			return Lit(0)
-		}
-		return Id(t).Call(Lit(0))
 	default:
 		return Lit(0)
 	}

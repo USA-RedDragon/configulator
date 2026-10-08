@@ -109,7 +109,7 @@ func parseNumeric(f *Field, dst string) []Code {
 	case KindUint:
 		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseUint").Call(Id("v"), Lit(10), Lit(bits))}
 	case KindFloat:
-		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseFloat").Call(Id("v"), Lit(64))}
+		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseFloat").Call(Id("v"), Lit(bits))}
 	default:
 		panic("parseNumeric")
 	}

@@ -178,7 +178,15 @@ func stdConv(target *Field, path string) []Code {
 		if t == "float64" {
 			return []Code{Id("pv").Op(":=").Add(get).Assert(Float64())}
 		}
-		return []Code{Id("pv").Op(":=").Id(t).Call(Add(get).Assert(Float64()))}
+		return []Code{
+			Id("raw").Op(":=").Add(get).Assert(Float64()),
+			If(Qual("math", "Abs").Call(Id("raw")).Op(">").Qual("math", "MaxFloat32").Op("&&").Op("!").Qual("math", "IsInf").Call(Id("raw"), Lit(0))).Block(
+				Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
+					Id("Path"): Lit(path), Id("Source"): Lit("-").Op("+").Id("fn"),
+					Id("Err"): Qual("fmt", "Errorf").Call(Lit("%v overflows "+t), Id("raw")),
+				}))),
+			Id("pv").Op(":=").Id(t).Call(Id("raw")),
+		}
 	case KindDuration:
 		return []Code{Id("pv").Op(":=").Add(get).Assert(Qual("time", "Duration"))}
 	case KindStdSlot:

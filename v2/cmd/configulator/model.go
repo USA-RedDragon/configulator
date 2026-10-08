@@ -471,7 +471,11 @@ func checkDefault(f *Field) error {
 		_, err := strconv.ParseUint(f.Default, 10, bits)
 		return err
 	case KindFloat:
-		_, err := strconv.ParseFloat(f.Default, 64)
+		bits := f.Bits
+		if bits == 0 {
+			bits = 64
+		}
+		_, err := strconv.ParseFloat(f.Default, bits)
 		return err
 	case KindDuration:
 		_, err := time.ParseDuration(f.Default)

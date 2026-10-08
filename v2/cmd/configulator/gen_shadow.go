@@ -19,6 +19,9 @@ func convNamed(t types.Type, expr *Statement) *Statement {
 			return fieldGoType(t).Call(expr)
 		}
 	}
+	if b, ok := t.(*types.Basic); ok && b.Kind() == types.Uintptr {
+		return Id("uintptr").Call(expr)
+	}
 	return expr
 }
 

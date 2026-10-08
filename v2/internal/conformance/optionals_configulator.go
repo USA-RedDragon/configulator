@@ -169,7 +169,7 @@ func optionalsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 			}
 		}
 	}
-	fs.Uint16(names[0], uint16(0), "")
+	fs.Uint16(names[0], 0, "")
 	fs.String(names[1], "", "")
 	fs.String(names[2], "", "")
 	fs.Uint16(names[3], uint16(12), "")

@@ -14,13 +14,26 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: v2/go.mod
       - name: Test runtime, generator and conformance corpus
-        run: cd v2 && go test -race -count=1 ./...
+        run: |
+          cd v2
+          go test -race -count=1 -covermode atomic -coverpkg=./... -coverprofile coverage.raw ./...
+          grep -v -e '_configulator\.go:' -e '/internal/conformance/' coverage.raw > coverage.out
+      - uses: USA-RedDragon/reusable-actions/coverage@v2
+        with:
+          file: v2/coverage.out
+          badge: .github/badges/coverage-v2.svg
+          baseline: .github/coverage-baseline-v2.tsv
+          label: v2 coverage
+          marker: coverage-v2
       - name: Build examples
         run: |
           for d in v2/examples/*/; do

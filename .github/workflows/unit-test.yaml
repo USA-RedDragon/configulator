@@ -9,9 +9,6 @@ on:
         required: false
         default: false
     secrets:
-      codecov_token:
-        description: 'Codecov token'
-        required: false
       token:
         description: 'GitHub token'
         required: false
@@ -44,11 +41,10 @@ jobs:
         run: |
           env CGO_ENABLED=0 go test -v ./... -coverprofile coverage.out -coverpkg=./... -covermode atomic
 
-      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      - uses: USA-RedDragon/reusable-actions/coverage@v2
         if: always() && inputs.coverage
         with:
-          token: ${{ secrets.codecov_token }}
-          fail_ci_if_error: true
+          file: coverage.out
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always() && inputs.coverage

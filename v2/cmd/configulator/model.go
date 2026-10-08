@@ -360,6 +360,61 @@ func classifyStruct(f *Field, t types.Type, u *types.Struct, outPkg *types.Packa
 	return checkSiblingCollisions(sub, fieldPath)
 }
 
+// untaggedFields returns the paths of exported fields under named that
+// have no name, json or yaml tag. The generator skips them.
+func untaggedFields(named *types.Named) []string {
+	var out []string
+	seen := map[types.Type]bool{}
+	var walk func(st *types.Struct, path string)
+	walk = func(st *types.Struct, path string) {
+		for i := 0; i < st.NumFields(); i++ {
+			fv := st.Field(i)
+			tag := reflect.StructTag(st.Tag(i))
+			if fv.Embedded() && tag.Get("name") == "" {
+				if emb, ok := fv.Type().Underlying().(*types.Struct); ok {
+					walk(emb, path)
+				}
+				continue
+			}
+			if tagName(tag) == "" {
+				if fv.Exported() {
+					out = append(out, path+"."+fv.Name())
+				}
+				continue
+			}
+			if sub, ok := nestedStruct(fv.Type()); ok && !seen[fv.Type()] {
+				seen[fv.Type()] = true
+				walk(sub, path+"."+fv.Name())
+			}
+		}
+	}
+	if st, ok := named.Underlying().(*types.Struct); ok {
+		walk(st, named.Obj().Name())
+	}
+	return out
+}
+
+// nestedStruct returns the struct a config field nests: t itself, or the
+// element of a pointer, slice or map. Types decoded from text don't count.
+func nestedStruct(t types.Type) (*types.Struct, bool) {
+	switch u := types.Unalias(t).Underlying().(type) {
+	case *types.Pointer:
+		t = u.Elem()
+	case *types.Slice:
+		t = u.Elem()
+	case *types.Map:
+		t = u.Elem()
+	}
+	if implementsTextUnmarshaler(t) {
+		return nil, false
+	}
+	if n, ok := types.Unalias(t).(*types.Named); ok && isStdSlot(n) {
+		return nil, false
+	}
+	st, ok := types.Unalias(t).Underlying().(*types.Struct)
+	return st, ok
+}
+
 // namedText reports whether t is a named slice or map with UnmarshalText,
 // like net.IP, which is one text value. A named scalar type with
 // UnmarshalText uses it only when tagged opaque:"true".
@@ -441,6 +496,10 @@ func checkFieldDefault(f *Field, fieldPath string) error {
 	if err := checkDefault(f); err != nil {
 		return fmt.Errorf("%s: default:%q: %w", fieldPath, f.Default, err)
 	}
+	if f.Kind == KindBool || (f.Kind == KindPointer && f.Elem.Kind == KindBool) {
+		b, _ := strconv.ParseBool(f.Default)
+		f.Default = strconv.FormatBool(b)
+	}
 	return nil
 }
 
@@ -520,6 +579,8 @@ func checkDefault(f *Field) error {
 		return fmt.Errorf("default: on a map is not supported")
 	case KindSliceStruct:
 		return fmt.Errorf("default: on a list of structs is not supported")
+	case KindStruct:
+		return fmt.Errorf("default: on a struct is not supported; set defaults on its fields")
 	default:
 		return nil
 	}

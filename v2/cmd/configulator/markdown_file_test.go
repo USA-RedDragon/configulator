@@ -79,6 +79,14 @@ func TestUpdateSampleFile(t *testing.T) {
 	if changed, err = updateSampleFile(path, []byte("a: 1\n"), false); !changed || err != nil {
 		t.Fatalf("create: changed=%v err=%v", changed, err)
 	}
+	ref := filepath.Join(t.TempDir(), "ref")
+	if err := os.WriteFile(ref, nil, 0o644); err != nil { //nolint:gosec // the mode updateSampleFile uses
+		t.Fatal(err)
+	}
+	refInfo, _ := os.Stat(ref)
+	if info, _ := os.Stat(path); info.Mode().Perm() != refInfo.Mode().Perm() {
+		t.Fatalf("new sample file mode %v, want %v", info.Mode().Perm(), refInfo.Mode().Perm())
+	}
 	if err := os.Chmod(path, 0o640); err != nil {
 		t.Fatal(err)
 	}

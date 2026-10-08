@@ -9,6 +9,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/types"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,6 +69,7 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	warnUntagged(named)
 	if *flagsMode == flagsStd {
 		if p := findShortTag(model.Fields, ""); p != "" {
 			fatal(fmt.Errorf("%s: short: tag is not supported with -flags=std (stdlib flag has no shorthands)", p))
@@ -153,6 +155,14 @@ func sampleBytes(model *Model, format string) ([]byte, error) {
 		return emitSampleTOML(model), nil
 	default:
 		return nil, fmt.Errorf("unknown -format %q: expected yaml, json, or toml", format)
+	}
+}
+
+// warnUntagged prints a warning for each exported field the generator skips
+// because it has no name, json or yaml tag.
+func warnUntagged(named *types.Named) {
+	for _, p := range untaggedFields(named) {
+		fmt.Fprintf(os.Stderr, "configulator: warning: %s has no name: tag and is skipped\n", p)
 	}
 }
 

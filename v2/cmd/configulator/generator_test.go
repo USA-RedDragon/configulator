@@ -121,6 +121,9 @@ func TestGenerateTimeErrors(t *testing.T) {
 		{"bad-duration-default",
 			"package fixture\n\nimport \"time\"\n\ntype Cfg struct {\n\tD time.Duration `name:\"d\" default:\"30x\"`\n}\n" + validateStub,
 			"unknown unit"},
+		{"struct-default",
+			"package fixture\n\ntype Inner struct {\n\tX int `name:\"x\"`\n}\n\ntype Cfg struct {\n\tIn Inner `name:\"in\" default:\"x\"`\n}\n" + validateStub,
+			"default: on a struct is not supported"},
 		{"pointer-to-list",
 			"package fixture\n\ntype Cfg struct {\n\tD *[]string `name:\"d\"`\n}\n" + validateStub,
 			"pointer to []string is not supported"},
@@ -855,5 +858,38 @@ func TestSampleFloatsAndMarkdownEscapes(t *testing.T) {
 		if !strings.Contains(md, want) {
 			t.Errorf("markdown missing %q:\n%s", want, md)
 		}
+	}
+}
+
+func TestBoolDefaultsNormalized(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n"+
+		"\tOn bool `name:\"on\" default:\"1\"`\n"+
+		"\tOff *bool `name:\"off\" default:\"F\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# Sample configuration\non: true\noff: false\n"
+	if got := string(emitSample(m)); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+	if md := string(emitMarkdown(m, ".", "", "_", false)); !strings.Contains(md, "`true`") || !strings.Contains(md, "`false`") {
+		t.Errorf("markdown defaults not normalized:\n%s", md)
+	}
+}
+
+func TestUntaggedFieldsWarned(t *testing.T) {
+	t.Parallel()
+	dir := writeModule(t, map[string]string{fixtureFile: "package fixture\n\ntype Base struct {\n\tB string\n}\n\n" +
+		"type Inner struct {\n\tTagged string `name:\"tagged\"`\n\tLoose  string\n\thidden string\n}\n\n" +
+		"type Cfg struct {\n\tBase\n\tIn    Inner   `name:\"in\"`\n\tList  []Inner `json:\"list\"`\n\tSkip  int\n\tNamed int `yaml:\"named\"`\n}\n" + validateStub})
+	named, _, err := loadPackage(dir, "Cfg", hermeticEnv(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(untaggedFields(named), " ")
+	if want := "Cfg.B Cfg.In.Loose Cfg.List.Loose Cfg.Skip"; got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }

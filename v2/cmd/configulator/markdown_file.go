@@ -73,7 +73,7 @@ func updateSampleFile(path string, content []byte, check bool) (changed bool, er
 	if check {
 		return true, fmt.Errorf("%s %w; run configulator -sample -sample-file %s", path, errStale, path)
 	}
-	mode := os.FileMode(0o600)
+	mode := os.FileMode(0o644)
 	if info, statErr := os.Stat(path); statErr == nil {
 		mode = info.Mode().Perm()
 	}

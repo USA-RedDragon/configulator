@@ -1,5 +1,7 @@
 //go:build goexperiment.jsonv2
 
+// Package jsonv2 has JSON decoders for FileOptions.Decoders, built on
+// encoding/json/v2.
 package jsonv2
 
 import (

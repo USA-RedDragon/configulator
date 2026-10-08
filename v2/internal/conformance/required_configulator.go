@@ -163,9 +163,20 @@ func RequiredPFlagHooks() cpflag.Hooks[Required] {
 }
 
 func requiredRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"top"}, o.Separator), strings.Join([]string{"nested", "leaf"}, o.Separator), strings.Join([]string{"opt", "leaf"}, o.Separator), strings.Join([]string{"opt", "other"}, o.Separator)}
+	names := []string{
+		"top",
+		"nested" + o.Separator + "leaf",
+		"opt" + o.Separator + "leaf",
+		"opt" + o.Separator + "other",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -180,7 +191,7 @@ func requiredRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"top"}, o.Separator); fs.Changed(n) {
+	if n := "top"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -192,7 +203,7 @@ func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, se
 		cfg.Top = v
 		set("top", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"nested", "leaf"}, o.Separator); fs.Changed(n) {
+	if n := "nested" + o.Separator + "leaf"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -204,7 +215,7 @@ func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, se
 		cfg.Nested.Leaf = v
 		set("nested.leaf", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"opt", "leaf"}, o.Separator); fs.Changed(n) {
+	if n := "opt" + o.Separator + "leaf"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -224,7 +235,7 @@ func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, se
 		}
 		set("opt.leaf", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"opt", "other"}, o.Separator); fs.Changed(n) {
+	if n := "opt" + o.Separator + "other"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{

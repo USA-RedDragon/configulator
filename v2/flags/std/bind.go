@@ -58,8 +58,8 @@ func Bind[C any](c *configulator.Configulator[C], fs *flag.FlagSet, h Hooks[C], 
 			if name == "" {
 				name = "config"
 			}
-			if fs.Lookup(name) != nil {
-				regErr = &configulator.FlagConflictError{Flag: name, Existing: name}
+			if f := fs.Lookup(name); f != nil {
+				regErr = &configulator.FlagConflictError{Flag: name, Existing: f.Name}
 			} else {
 				def := ""
 				if len(fo.Search) > 0 {

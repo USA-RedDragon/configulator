@@ -156,9 +156,21 @@ func ConfigPFlagHooks() cpflag.Hooks[Config] {
 }
 
 func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"log-level"}, o.Separator), strings.Join([]string{"timeout"}, o.Separator), strings.Join([]string{"http", "host"}, o.Separator), strings.Join([]string{"http", "port"}, o.Separator), strings.Join([]string{"db", "url"}, o.Separator)}
+	names := []string{
+		"log-level",
+		"timeout",
+		"http" + o.Separator + "host",
+		"http" + o.Separator + "port",
+		"db" + o.Separator + "url",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -174,7 +186,7 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"log-level"}, o.Separator); fs.Changed(n) {
+	if n := "log-level"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -186,7 +198,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.LogLevel = v
 		set("log-level", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"timeout"}, o.Separator); fs.Changed(n) {
+	if n := "timeout"; fs.Changed(n) {
 		v, err := fs.GetDuration(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -198,7 +210,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.Timeout = v
 		set("timeout", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"http", "host"}, o.Separator); fs.Changed(n) {
+	if n := "http" + o.Separator + "host"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -210,7 +222,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.HTTP.Host = v
 		set("http.host", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"http", "port"}, o.Separator); fs.Changed(n) {
+	if n := "http" + o.Separator + "port"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -222,7 +234,7 @@ func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.HTTP.Port = v
 		set("http.port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"db", "url"}, o.Separator); fs.Changed(n) {
+	if n := "db" + o.Separator + "url"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{

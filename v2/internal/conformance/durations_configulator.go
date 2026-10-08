@@ -98,9 +98,18 @@ func DurationsPFlagHooks() cpflag.Hooks[Durations] {
 }
 
 func durationsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"timeout"}, o.Separator), strings.Join([]string{"label"}, o.Separator)}
+	names := []string{
+		"timeout",
+		"label",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -113,7 +122,7 @@ func durationsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"timeout"}, o.Separator); fs.Changed(n) {
+	if n := "timeout"; fs.Changed(n) {
 		v, err := fs.GetDuration(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -125,7 +134,7 @@ func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, o *cpflag.Options, 
 		cfg.Timeout = v
 		set("timeout", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"label"}, o.Separator); fs.Changed(n) {
+	if n := "label"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{

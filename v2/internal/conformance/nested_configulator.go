@@ -153,9 +153,21 @@ func NestedPFlagHooks() cpflag.Hooks[Nested] {
 }
 
 func nestedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"app-name"}, o.Separator), strings.Join([]string{"http", "host"}, o.Separator), strings.Join([]string{"http", "port"}, o.Separator), strings.Join([]string{"db", "url"}, o.Separator), strings.Join([]string{"db", "pool", "size"}, o.Separator)}
+	names := []string{
+		"app-name",
+		"http" + o.Separator + "host",
+		"http" + o.Separator + "port",
+		"db" + o.Separator + "url",
+		"db" + o.Separator + "pool" + o.Separator + "size",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -171,7 +183,7 @@ func nestedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"app-name"}, o.Separator); fs.Changed(n) {
+	if n := "app-name"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -183,7 +195,7 @@ func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.AppName = v
 		set("app-name", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"http", "host"}, o.Separator); fs.Changed(n) {
+	if n := "http" + o.Separator + "host"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -195,7 +207,7 @@ func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.HTTP.Host = v
 		set("http.host", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"http", "port"}, o.Separator); fs.Changed(n) {
+	if n := "http" + o.Separator + "port"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -207,7 +219,7 @@ func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.HTTP.Port = v
 		set("http.port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"db", "url"}, o.Separator); fs.Changed(n) {
+	if n := "db" + o.Separator + "url"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -219,7 +231,7 @@ func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep st
 		cfg.DB.URL = v
 		set("db.url", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"db", "pool", "size"}, o.Separator); fs.Changed(n) {
+	if n := "db" + o.Separator + "pool" + o.Separator + "size"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{

@@ -67,7 +67,7 @@ func Bind[C any](c *configulator.Configulator[C], fs *pflag.FlagSet, h Hooks[C],
 		case len(short) != 1:
 			regErr = fmt.Errorf("FileOptions.Shorthand %q must be a single ASCII character", short)
 		case fs.Lookup(name) != nil:
-			regErr = &configulator.FlagConflictError{Flag: name, Existing: name}
+			regErr = &configulator.FlagConflictError{Flag: name, Existing: fs.Lookup(name).Name}
 		case fs.ShorthandLookup(short) != nil:
 			regErr = &configulator.FlagConflictError{Flag: name, Shorthand: short, Existing: fs.ShorthandLookup(short).Name}
 		default:

@@ -21,41 +21,27 @@ func (e *emitter) emitPFlagHooks() {
 
 	flags := flagFields(e.m.Fields, pflagOK)
 
-	flagName := func(segs []string) *Statement {
-		lits := make([]Code, 0, len(segs))
-		for _, s := range segs {
-			lits = append(lits, Lit(s))
-		}
-		return Qual("strings", "Join").Call(Index().String().Values(lits...), Id("o").Dot("Separator"))
-	}
-
 	names := make([]Code, 0, len(flags))
 	shorts := make([]Code, 0, len(flags))
 	anyShort := false
 	for _, ff := range flags {
-		names = append(names, flagName(ff.segs))
+		names = append(names, flagNameCode(ff.segs))
 		shorts = append(shorts, Lit(ff.f.Short))
 		anyShort = anyShort || ff.f.Short != ""
 	}
-	check := []Code{
-		If(Id("fs").Dot("Lookup").Call(Id("name")).Op("!=").Nil().Op("||").
-			Qual("slices", "Contains").Call(Id("names").Index(Empty(), Id("i")), Id("name"))).Block(
-			Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{Id("Flag"): Id("name"), Id("Existing"): Id("name")})),
-		),
-	}
+	check := conflictChecks()
 	var reg []Code
 	if len(flags) > 0 {
-		reg = append(reg, Id("names").Op(":=").Index().String().Values(names...))
+		reg = append(reg, Id("names").Op(":=").Index().String().Custom(multiLine(), names...))
 	}
 	if anyShort {
 		reg = append(reg, Id("shorts").Op(":=").Index().String().Values(shorts...))
-		check = append(check, If(
-			Id("s").Op(":=").Id("shorts").Index(Id("i")), Id("s").Op("!=").Lit("").Op("&&").Id("fs").Dot("ShorthandLookup").Call(Id("s")).Op("!=").Nil(),
-		).Block(
-			Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{
-				Id("Flag"): Id("name"), Id("Shorthand"): Id("s"),
-				Id("Existing"): Id("fs").Dot("ShorthandLookup").Call(Id("s")).Dot("Name"),
-			})),
+		check = append(check, If(Id("s").Op(":=").Id("shorts").Index(Id("i")), Id("s").Op("!=").Lit("")).Block(
+			If(Id("f").Op(":=").Id("fs").Dot("ShorthandLookup").Call(Id("s")), Id("f").Op("!=").Nil()).Block(
+				Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{
+					Id("Flag"): Id("name"), Id("Shorthand"): Id("s"), Id("Existing"): Id("f").Dot("Name"),
+				})),
+			),
 		))
 	}
 	if len(flags) > 0 {
@@ -71,13 +57,43 @@ func (e *emitter) emitPFlagHooks() {
 
 	app := make([]Code, 0, len(flags)+1)
 	for _, ff := range flags {
-		app = append(app, e.applyFlag(ff, flagName(ff.segs)))
+		app = append(app, e.applyFlag(ff, flagNameCode(ff.segs)))
 	}
 	app = append(app, Return(Nil()))
 	e.decl().Func().Id(lowerFirst(n)+"ApplyPFlags").Params(
 		Id("cfg").Op("*").Id(n), Id("fs").Op("*").Qual(pfl, "FlagSet"),
 		Id("o").Op("*").Qual(pkgPFlag, "Options"), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"),
 	).Error().Block(app...)
+}
+
+// multiLine renders a composite literal with one element per line.
+func multiLine() Options {
+	return Options{Open: "{", Close: "}", Separator: ",", Multi: true}
+}
+
+// flagNameCode renders a flag name: its segments joined by the separator
+// from the adapter options.
+func flagNameCode(segs []string) *Statement {
+	s := Lit(segs[0])
+	for _, seg := range segs[1:] {
+		s = s.Op("+").Id("o").Dot("Separator").Op("+").Lit(seg)
+	}
+	return s
+}
+
+// conflictChecks returns the statements that reject the flag name at
+// index i of names when the FlagSet or an earlier config field already has
+// it. Existing is the name of the flag already holding it, which a pflag
+// NormalizeFunc can make different from name.
+func conflictChecks() []Code {
+	return []Code{
+		If(Id("f").Op(":=").Id("fs").Dot("Lookup").Call(Id("name")), Id("f").Op("!=").Nil()).Block(
+			Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{Id("Flag"): Id("name"), Id("Existing"): Id("f").Dot("Name")})),
+		),
+		If(Qual("slices", "Contains").Call(Id("names").Index(Empty(), Id("i")), Id("name"))).Block(
+			Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{Id("Flag"): Id("name"), Id("Existing"): Id("name")})),
+		),
+	}
 }
 
 // flagFields returns the leaves an adapter registers as flags, in order:

@@ -123,20 +123,33 @@ func AttributesPFlagHooks() cpflag.Hooks[Attributes] {
 }
 
 func attributesRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"token"}, o.Separator), strings.Join([]string{"rn"}, o.Separator), strings.Join([]string{"no-env"}, o.Separator), strings.Join([]string{"port"}, o.Separator)}
+	names := []string{
+		"token",
+		"rn",
+		"no-env",
+		"port",
+	}
 	shorts := []string{"", "", "", "p"}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
 			}
 		}
-		if s := shorts[i]; s != "" && fs.ShorthandLookup(s) != nil {
-			return &configulator.FlagConflictError{
-				Existing:  fs.ShorthandLookup(s).Name,
-				Flag:      name,
-				Shorthand: s,
+		if s := shorts[i]; s != "" {
+			if f := fs.ShorthandLookup(s); f != nil {
+				return &configulator.FlagConflictError{
+					Existing:  f.Name,
+					Flag:      name,
+					Shorthand: s,
+				}
 			}
 		}
 	}
@@ -148,7 +161,7 @@ func attributesRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"token"}, o.Separator); fs.Changed(n) {
+	if n := "token"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -169,7 +182,7 @@ func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, o *cpflag.Options
 		cfg.Token = p
 		set("token", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"rn"}, o.Separator); fs.Changed(n) {
+	if n := "rn"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -181,7 +194,7 @@ func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, o *cpflag.Options
 		cfg.Renamed = v
 		set("renamed", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"no-env"}, o.Separator); fs.Changed(n) {
+	if n := "no-env"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -193,7 +206,7 @@ func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, o *cpflag.Options
 		cfg.NoEnv = v
 		set("no-env", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"port"}, o.Separator); fs.Changed(n) {
+	if n := "port"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{

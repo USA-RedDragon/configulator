@@ -90,12 +90,21 @@ func ConfigStdFlagHooks() cstd.Hooks[Config] {
 }
 
 func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
-	names := []string{strings.Join([]string{"listen"}, o.Separator), strings.Join([]string{"debug"}, o.Separator)}
-	for i, fn := range names {
-		if fs.Lookup(fn) != nil || slices.Contains(names[:i], fn) {
+	names := []string{
+		"listen",
+		"debug",
+	}
+	for i, name := range names {
+		if f := fs.Lookup(name); f != nil {
 			return &configulator.FlagConflictError{
-				Existing: fn,
-				Flag:     fn,
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
 			}
 		}
 	}
@@ -105,12 +114,12 @@ func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
 }
 
 func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *cstd.Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error {
-	if fn := strings.Join([]string{"listen"}, o.Separator); isSet[fn] {
+	if fn := "listen"; isSet[fn] {
 		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
 		cfg.Listen = pv
 		set("listen", configulator.LayerCLI, "-"+fn)
 	}
-	if fn := strings.Join([]string{"debug"}, o.Separator); isSet[fn] {
+	if fn := "debug"; isSet[fn] {
 		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(bool)
 		cfg.Debug = pv
 		set("debug", configulator.LayerCLI, "-"+fn)

@@ -93,12 +93,21 @@ func ConfigStdFlagHooks() cstd.Hooks[Config] {
 }
 
 func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
-	names := []string{strings.Join([]string{"host"}, o.Separator), strings.Join([]string{"port"}, o.Separator)}
-	for i, fn := range names {
-		if fs.Lookup(fn) != nil || slices.Contains(names[:i], fn) {
+	names := []string{
+		"host",
+		"port",
+	}
+	for i, name := range names {
+		if f := fs.Lookup(name); f != nil {
 			return &configulator.FlagConflictError{
-				Existing: fn,
-				Flag:     fn,
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
 			}
 		}
 	}
@@ -108,12 +117,12 @@ func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
 }
 
 func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *cstd.Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error {
-	if fn := strings.Join([]string{"host"}, o.Separator); isSet[fn] {
+	if fn := "host"; isSet[fn] {
 		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
 		cfg.Host = pv
 		set("host", configulator.LayerCLI, "-"+fn)
 	}
-	if fn := strings.Join([]string{"port"}, o.Separator); isSet[fn] {
+	if fn := "port"; isSet[fn] {
 		raw := fs.Lookup(fn).Value.(flag.Getter).Get().(uint64)
 		if raw > math.MaxUint16 {
 			return &configulator.ParseError{

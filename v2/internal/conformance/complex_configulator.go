@@ -184,9 +184,20 @@ func ComplexPFlagHooks() cpflag.Hooks[Complex] {
 }
 
 func complexRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"z"}, o.Separator), strings.Join([]string{"exponent"}, o.Separator), strings.Join([]string{"w"}, o.Separator), strings.Join([]string{"zs"}, o.Separator)}
+	names := []string{
+		"z",
+		"exponent",
+		"w",
+		"zs",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -201,7 +212,7 @@ func complexRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"z"}, o.Separator); fs.Changed(n) {
+	if n := "z"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -223,7 +234,7 @@ func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, o *cpflag.Options, sep 
 		cfg.Z = sv
 		set("z", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"exponent"}, o.Separator); fs.Changed(n) {
+	if n := "exponent"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -245,7 +256,7 @@ func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, o *cpflag.Options, sep 
 		cfg.Exponent = sv
 		set("exponent", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"w"}, o.Separator); fs.Changed(n) {
+	if n := "w"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -267,7 +278,7 @@ func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, o *cpflag.Options, sep 
 		cfg.W = sv
 		set("w", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"zs"}, o.Separator); fs.Changed(n) {
+	if n := "zs"; fs.Changed(n) {
 		v, err := fs.GetStringSlice(n)
 		if err != nil {
 			return &configulator.ParseError{

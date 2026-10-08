@@ -141,9 +141,18 @@ func CollectionsPFlagHooks() cpflag.Hooks[Collections] {
 }
 
 func collectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"tags"}, o.Separator), strings.Join([]string{"log-level"}, o.Separator)}
+	names := []string{
+		"tags",
+		"log-level",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -157,7 +166,7 @@ func collectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"tags"}, o.Separator); fs.Changed(n) {
+	if n := "tags"; fs.Changed(n) {
 		v, err := fs.GetStringSlice(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -169,7 +178,7 @@ func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, o *cpflag.Optio
 		cfg.Tags = v
 		set("tags", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"log-level"}, o.Separator); fs.Changed(n) {
+	if n := "log-level"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{

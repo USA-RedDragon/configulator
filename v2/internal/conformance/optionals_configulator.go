@@ -158,9 +158,20 @@ func OptionalsPFlagHooks() cpflag.Hooks[Optionals] {
 }
 
 func optionalsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"tls", "cert"}, o.Separator), strings.Join([]string{"tls", "min-version"}, o.Separator)}
+	names := []string{
+		"port",
+		"name",
+		"tls" + o.Separator + "cert",
+		"tls" + o.Separator + "min-version",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -175,7 +186,7 @@ func optionalsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"port"}, o.Separator); fs.Changed(n) {
+	if n := "port"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -188,7 +199,7 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 		cfg.Port = &pv
 		set("port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"name"}, o.Separator); fs.Changed(n) {
+	if n := "name"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -201,7 +212,7 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 		cfg.Name = &pv
 		set("name", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"tls", "cert"}, o.Separator); fs.Changed(n) {
+	if n := "tls" + o.Separator + "cert"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -223,7 +234,7 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 		}
 		set("tls.cert", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"tls", "min-version"}, o.Separator); fs.Changed(n) {
+	if n := "tls" + o.Separator + "min-version"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{

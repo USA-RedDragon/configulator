@@ -26,28 +26,15 @@ func (e *emitter) emitStdFlagHooks() {
 
 	flags := flagFields(e.m.Fields, stdOK)
 
-	name := func(segs []string) *Statement {
-		lits := make([]Code, 0, len(segs))
-		for _, s := range segs {
-			lits = append(lits, Lit(s))
-		}
-		return Qual("strings", "Join").Call(Index().String().Values(lits...), Id("o").Dot("Separator"))
-	}
-
 	names := make([]Code, 0, len(flags))
 	for _, ff := range flags {
-		names = append(names, name(ff.segs))
+		names = append(names, flagNameCode(ff.segs))
 	}
 	reg := make([]Code, 0, len(flags)+3)
 	if len(flags) > 0 {
 		reg = append(reg,
-			Id("names").Op(":=").Index().String().Values(names...),
-			For(List(Id("i"), Id("fn")).Op(":=").Range().Id("names")).Block(
-				If(Id("fs").Dot("Lookup").Call(Id("fn")).Op("!=").Nil().Op("||").
-					Qual("slices", "Contains").Call(Id("names").Index(Empty(), Id("i")), Id("fn"))).Block(
-					Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{Id("Flag"): Id("fn"), Id("Existing"): Id("fn")})),
-				),
-			),
+			Id("names").Op(":=").Index().String().Custom(multiLine(), names...),
+			For(List(Id("i"), Id("name")).Op(":=").Range().Id("names")).Block(conflictChecks()...),
 		)
 	}
 	for i, ff := range flags {
@@ -60,7 +47,7 @@ func (e *emitter) emitStdFlagHooks() {
 
 	app := make([]Code, 0, len(flags)+1)
 	for _, ff := range flags {
-		app = append(app, e.stdApply(ff, name(ff.segs))...)
+		app = append(app, e.stdApply(ff, flagNameCode(ff.segs))...)
 	}
 	app = append(app, Return(Nil()))
 	e.decl().Func().Id(lowerFirst(n)+"ApplyStdFlags").Params(

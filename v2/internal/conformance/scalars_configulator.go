@@ -151,9 +151,21 @@ func ScalarsPFlagHooks() cpflag.Hooks[Scalars] {
 }
 
 func scalarsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	names := []string{strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"count"}, o.Separator), strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"ratio"}, o.Separator), strings.Join([]string{"verbose"}, o.Separator)}
+	names := []string{
+		"name",
+		"count",
+		"port",
+		"ratio",
+		"verbose",
+	}
 	for i, name := range names {
-		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+		if f := fs.Lookup(name); f != nil {
+			return &configulator.FlagConflictError{
+				Existing: f.Name,
+				Flag:     name,
+			}
+		}
+		if slices.Contains(names[:i], name) {
 			return &configulator.FlagConflictError{
 				Existing: name,
 				Flag:     name,
@@ -169,7 +181,7 @@ func scalarsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 }
 
 func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
-	if n := strings.Join([]string{"name"}, o.Separator); fs.Changed(n) {
+	if n := "name"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -181,7 +193,7 @@ func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep 
 		cfg.Name = v
 		set("name", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"count"}, o.Separator); fs.Changed(n) {
+	if n := "count"; fs.Changed(n) {
 		v, err := fs.GetInt64(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -193,7 +205,7 @@ func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep 
 		cfg.Count = v
 		set("count", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"port"}, o.Separator); fs.Changed(n) {
+	if n := "port"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -205,7 +217,7 @@ func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep 
 		cfg.Port = v
 		set("port", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"ratio"}, o.Separator); fs.Changed(n) {
+	if n := "ratio"; fs.Changed(n) {
 		v, err := fs.GetFloat64(n)
 		if err != nil {
 			return &configulator.ParseError{
@@ -217,7 +229,7 @@ func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep 
 		cfg.Ratio = v
 		set("ratio", configulator.LayerCLI, "--"+n)
 	}
-	if n := strings.Join([]string{"verbose"}, o.Separator); fs.Changed(n) {
+	if n := "verbose"; fs.Changed(n) {
 		v, err := fs.GetBool(n)
 		if err != nil {
 			return &configulator.ParseError{

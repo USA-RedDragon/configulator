@@ -13,14 +13,20 @@ var outPkgPath string
 // convNamed wraps expr in a conversion to t when t is a named type over a
 // basic type (e.g. `type LogLevel string`). Decoded values arrive as the
 // underlying basic type, which Go won't assign to the named type without a
-// conversion. Plain basic types pass through unchanged.
+// conversion. Plain basic types pass through unchanged, as does time.Duration,
+// which every layer already decodes as time.Duration.
 func convNamed(t types.Type, expr *Statement) *Statement {
-	if named, ok := t.(*types.Named); ok {
+	if named, ok := t.(*types.Named); ok && !isTimeDuration(named) {
 		if _, basic := named.Underlying().(*types.Basic); basic {
 			return fieldGoType(t).Call(expr)
 		}
 	}
 	return expr
+}
+
+func isTimeDuration(n *types.Named) bool {
+	pkg := n.Obj().Pkg()
+	return pkg != nil && pkg.Path() == "time" && n.Obj().Name() == "Duration"
 }
 
 func fieldGoType(t types.Type) *Statement {

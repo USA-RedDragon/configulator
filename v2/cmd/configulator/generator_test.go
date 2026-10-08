@@ -9,10 +9,22 @@ import (
 	"testing"
 )
 
-const v2Path = "/home/reddragon/projects/configulator/v2"
+// v2Path is the local configulator/v2 tree; go test runs in this package's
+// directory, two levels below it.
+var v2Path = func() string {
+	p, err := filepath.Abs("../..")
+	if err != nil {
+		panic(err)
+	}
+	return p
+}()
 
 func hermeticEnv() []string {
-	cache := os.Getenv("HOME") + "/go/pkg/mod/cache/download"
+	out, err := exec.Command("go", "env", "GOMODCACHE").Output()
+	if err != nil {
+		panic(err)
+	}
+	cache := strings.TrimSpace(string(out)) + "/cache/download"
 	return append(os.Environ(),
 		"GOWORK=off", "GOFLAGS=-mod=mod", "GOPROXY=file://"+cache, "GOPRIVATE=*",
 	)

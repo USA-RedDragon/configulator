@@ -342,10 +342,10 @@ var _ json.UnmarshalerFrom = (*scalarsShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Scalars) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("name = %v\n", c.Name))
-	b.WriteString(fmt.Sprintf("count = %v\n", c.Count))
-	b.WriteString(fmt.Sprintf("port = %v\n", c.Port))
-	b.WriteString(fmt.Sprintf("ratio = %v\n", c.Ratio))
-	b.WriteString(fmt.Sprintf("verbose = %v\n", c.Verbose))
+	fmt.Fprintf(&b, "name = %v\n", c.Name)
+	fmt.Fprintf(&b, "count = %v\n", c.Count)
+	fmt.Fprintf(&b, "port = %v\n", c.Port)
+	fmt.Fprintf(&b, "ratio = %v\n", c.Ratio)
+	fmt.Fprintf(&b, "verbose = %v\n", c.Verbose)
 	return b.String()
 }

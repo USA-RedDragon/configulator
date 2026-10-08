@@ -611,8 +611,8 @@ var _ json.UnmarshalerFrom = (*nCLevelShadow)(nil)
 // so this is the only place redaction happens.
 func (c *NestedCollections) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("peers = %v\n", c.Peers))
-	b.WriteString(fmt.Sprintf("by-name = %v\n", c.ByName))
+	fmt.Fprintf(&b, "peers = %v\n", c.Peers)
+	fmt.Fprintf(&b, "by-name = %v\n", c.ByName)
 	return b.String()
 }
 

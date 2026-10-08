@@ -144,7 +144,7 @@ var _ json.UnmarshalerFrom = (*configShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Config) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("name = %v\n", c.Name))
-	b.WriteString(fmt.Sprintf("port = %v\n", c.Port))
+	fmt.Fprintf(&b, "name = %v\n", c.Name)
+	fmt.Fprintf(&b, "port = %v\n", c.Port)
 	return b.String()
 }

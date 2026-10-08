@@ -199,7 +199,7 @@ var _ json.UnmarshalerFrom = (*durationsShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Durations) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("timeout = %v\n", c.Timeout))
-	b.WriteString(fmt.Sprintf("label = %v\n", c.Label))
+	fmt.Fprintf(&b, "timeout = %v\n", c.Timeout)
+	fmt.Fprintf(&b, "label = %v\n", c.Label)
 	return b.String()
 }

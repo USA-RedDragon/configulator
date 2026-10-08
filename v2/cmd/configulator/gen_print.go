@@ -52,15 +52,13 @@ func printFieldsAt(fields []*Field, prefix string, sel func(*Field) *Statement, 
 				continue
 			}
 			out = append(out, If(sel(f).Op("==").Nil()).Block(unset).Else().Block(
-				Id("b").Dot("WriteString").Call(Qual("fmt", "Sprintf").Call(
-					Lit(path+" = %v\n"), Op("*").Add(sel(f)))),
+				Qual("fmt", "Fprintf").Call(Op("&").Id("b"), Lit(path+" = %v\n"), Op("*").Add(sel(f))),
 			))
 			continue
 		default:
 			val = sel(f)
 		}
-		out = append(out, Id("b").Dot("WriteString").Call(
-			Qual("fmt", "Sprintf").Call(Lit(path+" = %v\n"), val)))
+		out = append(out, Qual("fmt", "Fprintf").Call(Op("&").Id("b"), Lit(path+" = %v\n"), val))
 	}
 	return out
 }

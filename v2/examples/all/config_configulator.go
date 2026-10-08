@@ -335,9 +335,9 @@ var _ json.UnmarshalerFrom = (*hTTPConfigShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Config) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("http.host = %v\n", c.HTTP.Host))
-	b.WriteString(fmt.Sprintf("http.port = %v\n", c.HTTP.Port))
-	b.WriteString(fmt.Sprintf("http.stuff = %v\n", c.HTTP.Stuff))
-	b.WriteString(fmt.Sprintf("enable = %v\n", c.Enable))
+	fmt.Fprintf(&b, "http.host = %v\n", c.HTTP.Host)
+	fmt.Fprintf(&b, "http.port = %v\n", c.HTTP.Port)
+	fmt.Fprintf(&b, "http.stuff = %v\n", c.HTTP.Stuff)
+	fmt.Fprintf(&b, "enable = %v\n", c.Enable)
 	return b.String()
 }

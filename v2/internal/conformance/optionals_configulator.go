@@ -384,18 +384,18 @@ func (c *Optionals) PrintConfig() string {
 	if c.Port == nil {
 		b.WriteString("port = <unset>\n")
 	} else {
-		b.WriteString(fmt.Sprintf("port = %v\n", *c.Port))
+		fmt.Fprintf(&b, "port = %v\n", *c.Port)
 	}
 	if c.Name == nil {
 		b.WriteString("name = <unset>\n")
 	} else {
-		b.WriteString(fmt.Sprintf("name = %v\n", *c.Name))
+		fmt.Fprintf(&b, "name = %v\n", *c.Name)
 	}
 	if p := c.TLS; p == nil {
 		b.WriteString("tls = <unset>\n")
 	} else {
-		b.WriteString(fmt.Sprintf("tls.cert = %v\n", p.Cert))
-		b.WriteString(fmt.Sprintf("tls.min-version = %v\n", p.MinVersion))
+		fmt.Fprintf(&b, "tls.cert = %v\n", p.Cert)
+		fmt.Fprintf(&b, "tls.min-version = %v\n", p.MinVersion)
 	}
 	return b.String()
 }

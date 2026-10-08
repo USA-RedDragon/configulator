@@ -409,9 +409,9 @@ var _ json.UnmarshalerFrom = (*complexShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Complex) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("z = %v\n", c.Z))
-	b.WriteString(fmt.Sprintf("exponent = %v\n", c.Exponent))
-	b.WriteString(fmt.Sprintf("w = %v\n", c.W))
-	b.WriteString(fmt.Sprintf("zs = %v\n", c.Zs))
+	fmt.Fprintf(&b, "z = %v\n", c.Z)
+	fmt.Fprintf(&b, "exponent = %v\n", c.Exponent)
+	fmt.Fprintf(&b, "w = %v\n", c.W)
+	fmt.Fprintf(&b, "zs = %v\n", c.Zs)
 	return b.String()
 }

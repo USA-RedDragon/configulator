@@ -320,9 +320,9 @@ var _ json.UnmarshalerFrom = (*attributesShadow)(nil)
 func (c *Attributes) PrintConfig() string {
 	var b strings.Builder
 	b.WriteString("token = (redacted)\n")
-	b.WriteString(fmt.Sprintf("renamed = %v\n", c.Renamed))
-	b.WriteString(fmt.Sprintf("no-env = %v\n", c.NoEnv))
-	b.WriteString(fmt.Sprintf("no-flag = %v\n", c.NoFlag))
-	b.WriteString(fmt.Sprintf("port = %v\n", c.Port))
+	fmt.Fprintf(&b, "renamed = %v\n", c.Renamed)
+	fmt.Fprintf(&b, "no-env = %v\n", c.NoEnv)
+	fmt.Fprintf(&b, "no-flag = %v\n", c.NoFlag)
+	fmt.Fprintf(&b, "port = %v\n", c.Port)
 	return b.String()
 }

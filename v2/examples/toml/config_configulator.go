@@ -187,7 +187,7 @@ var _ json.UnmarshalerFrom = (*dBConfigShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Config) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("db.url = %v\n", c.DB.URL))
-	b.WriteString(fmt.Sprintf("db.pool = %v\n", c.DB.Pool))
+	fmt.Fprintf(&b, "db.url = %v\n", c.DB.URL)
+	fmt.Fprintf(&b, "db.pool = %v\n", c.DB.Pool)
 	return b.String()
 }

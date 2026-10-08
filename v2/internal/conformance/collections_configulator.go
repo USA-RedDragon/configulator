@@ -452,11 +452,11 @@ var _ json.UnmarshalerFrom = (*poolShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Collections) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("tags = %v\n", c.Tags))
-	b.WriteString(fmt.Sprintf("labels = %v\n", c.Labels))
-	b.WriteString(fmt.Sprintf("servers = %v\n", c.Servers))
-	b.WriteString(fmt.Sprintf("pools = %v\n", c.Pools))
-	b.WriteString(fmt.Sprintf("log-level = %v\n", c.LogLevel))
+	fmt.Fprintf(&b, "tags = %v\n", c.Tags)
+	fmt.Fprintf(&b, "labels = %v\n", c.Labels)
+	fmt.Fprintf(&b, "servers = %v\n", c.Servers)
+	fmt.Fprintf(&b, "pools = %v\n", c.Pools)
+	fmt.Fprintf(&b, "log-level = %v\n", c.LogLevel)
 	return b.String()
 }
 

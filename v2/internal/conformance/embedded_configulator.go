@@ -180,7 +180,7 @@ var _ json.UnmarshalerFrom = (*embeddedShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Embedded) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("region = %v\n", c.Base.Region))
-	b.WriteString(fmt.Sprintf("zone = %v\n", c.Zone))
+	fmt.Fprintf(&b, "region = %v\n", c.Base.Region)
+	fmt.Fprintf(&b, "zone = %v\n", c.Zone)
 	return b.String()
 }

@@ -454,10 +454,10 @@ var _ json.UnmarshalerFrom = (*nPoolShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Nested) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("app-name = %v\n", c.AppName))
-	b.WriteString(fmt.Sprintf("http.host = %v\n", c.HTTP.Host))
-	b.WriteString(fmt.Sprintf("http.port = %v\n", c.HTTP.Port))
-	b.WriteString(fmt.Sprintf("db.url = %v\n", c.DB.URL))
-	b.WriteString(fmt.Sprintf("db.pool.size = %v\n", c.DB.Pool.Size))
+	fmt.Fprintf(&b, "app-name = %v\n", c.AppName)
+	fmt.Fprintf(&b, "http.host = %v\n", c.HTTP.Host)
+	fmt.Fprintf(&b, "http.port = %v\n", c.HTTP.Port)
+	fmt.Fprintf(&b, "db.url = %v\n", c.DB.URL)
+	fmt.Fprintf(&b, "db.pool.size = %v\n", c.DB.Pool.Size)
 	return b.String()
 }

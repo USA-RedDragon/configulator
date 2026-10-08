@@ -421,10 +421,10 @@ var _ json.UnmarshalerFrom = (*dBShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Config) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("log-level = %v\n", c.LogLevel))
-	b.WriteString(fmt.Sprintf("timeout = %v\n", c.Timeout))
-	b.WriteString(fmt.Sprintf("http.host = %v\n", c.HTTP.Host))
-	b.WriteString(fmt.Sprintf("http.port = %v\n", c.HTTP.Port))
+	fmt.Fprintf(&b, "log-level = %v\n", c.LogLevel)
+	fmt.Fprintf(&b, "timeout = %v\n", c.Timeout)
+	fmt.Fprintf(&b, "http.host = %v\n", c.HTTP.Host)
+	fmt.Fprintf(&b, "http.port = %v\n", c.HTTP.Port)
 	b.WriteString("db.url = (redacted)\n")
 	return b.String()
 }

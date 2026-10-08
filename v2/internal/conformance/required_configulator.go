@@ -429,14 +429,14 @@ var _ json.UnmarshalerFrom = (*rOptShadow)(nil)
 // so this is the only place redaction happens.
 func (c *Required) PrintConfig() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("top = %v\n", c.Top))
-	b.WriteString(fmt.Sprintf("nested.leaf = %v\n", c.Nested.Leaf))
+	fmt.Fprintf(&b, "top = %v\n", c.Top)
+	fmt.Fprintf(&b, "nested.leaf = %v\n", c.Nested.Leaf)
 	if p := c.Opt; p == nil {
 		b.WriteString("opt = <unset>\n")
 	} else {
-		b.WriteString(fmt.Sprintf("opt.leaf = %v\n", p.Leaf))
-		b.WriteString(fmt.Sprintf("opt.other = %v\n", p.Other))
+		fmt.Fprintf(&b, "opt.leaf = %v\n", p.Leaf)
+		fmt.Fprintf(&b, "opt.other = %v\n", p.Other)
 	}
-	b.WriteString(fmt.Sprintf("items = %v\n", c.Items))
+	fmt.Fprintf(&b, "items = %v\n", c.Items)
 	return b.String()
 }

@@ -882,7 +882,7 @@ func main() {
 			"[5 6] [7] [9] [2.5] [0.5] [false] [1h0m0s] [z]"},
 		{"env-bad-element", []string{"FX_INTS=1,x"}, nil, `error: ints: cannot parse "1,x" from FX_INTS: strconv.ParseInt: parsing "x": invalid syntax`},
 		{"env-overflow", []string{"FX_I8=300"}, nil, `error: i8: cannot parse "300" from FX_I8: strconv.ParseInt: parsing "300": value out of range`},
-		{"env-secret-redacted", []string{"FX_SECRET=1,hunter2"}, nil, `error: secret: cannot parse "(redacted)" from FX_SECRET: strconv.ParseInt: parsing "hunter2": invalid syntax`},
+		{"env-secret-redacted", []string{"FX_SECRET=1,hunter2"}, nil, `error: secret: cannot parse "(redacted)" from FX_SECRET: strconv.ParseInt: parsing "(redacted)": invalid syntax`},
 		{"file-overflow", []string{"CFG_FILE=overflow.json"}, nil, "error: decoding overflow.json"},
 	}
 	for _, mode := range []string{flagsPFlag, flagsStd} {

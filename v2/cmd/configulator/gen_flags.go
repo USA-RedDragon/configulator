@@ -258,6 +258,12 @@ func registerFlag(f *Field, name *Statement) []Code {
 	if !ok {
 		return nil
 	}
+	switch {
+	case secretText(f):
+		reg, def = "String", Lit("")
+	case f.Secret && f.Kind == KindSliceScalar:
+		reg, def = "StringSlice", Nil()
+	}
 	call := Id("fs").Dot(reg).Call(name.Clone(), def, Lit(f.Desc))
 	if f.Short != "" {
 		call = Id("fs").Dot(reg+"P").Call(name.Clone(), Lit(f.Short), def, Lit(f.Desc))
@@ -279,6 +285,13 @@ func (e *emitter) applyFlag(l leaf, name *Statement) Code {
 	var prep []Code
 	var val *Statement
 	switch {
+	case secretText(f):
+		get = "GetString"
+		prep, val = e.textValue(f, path, func() Code { return source() })
+	case f.Kind == KindSliceScalar && f.Secret:
+		get = "GetStringSlice"
+		prep = parseList(f, Id("v"), Lit(path), source(), Qual("strings", "Join").Call(Id("v"), Lit(",")))
+		val = Id("lst")
 	case f.Kind == KindStdSlot:
 		prep, val = slotParse(f, path, source(), "v", "sv"), convNamed(f.Type, Id("sv"))
 	case f.Kind == KindSliceScalar && pflagNativeSlice(f.Elem) == "":
@@ -310,18 +323,37 @@ func (e *emitter) applyFlag(l leaf, name *Statement) Code {
 	).Block(body...)
 }
 
+// secretText reports whether f is a secret field that a flag adapter takes
+// as a string and parses itself, so the flag library's parse errors can't
+// echo the value.
+func secretText(f *Field) bool {
+	if !f.Secret {
+		return false
+	}
+	k := f.Kind
+	if k == KindPointer {
+		k = f.Elem.Kind
+	}
+	switch k {
+	case KindInt, KindUint, KindFloat, KindDuration:
+		return true
+	default:
+		return false
+	}
+}
+
 // slotParse decodes the string variable in through f's wrapper type into a
 // new variable out, returning a ParseError on failure.
 func slotParse(f *Field, path string, source *Statement, in, out string) []Code {
-	val := Id(in)
+	val, cause := Id(in), Err()
 	if f.Secret {
-		val = Lit("(redacted)")
+		val, cause = Lit("(redacted)"), Qual(pkgImpl, "Redact").Call(Err(), Id(in))
 	}
 	return []Code{
 		Var().Id("slot").Add(slotCode(f)),
 		If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Id(in))), Err().Op("!=").Nil()).Block(
 			Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
-				Id("Path"): Lit(path), Id("Source"): source, Id("Value"): val, Id("Err"): Err(),
+				Id("Path"): Lit(path), Id("Source"): source, Id("Value"): val, Id("Err"): cause,
 			})),
 		),
 		List(Id(out), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),

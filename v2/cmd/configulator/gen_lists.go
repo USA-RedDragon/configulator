@@ -78,12 +78,13 @@ func parseList(f *Field, parts Code, path, source, raw Code) []Code {
 	if elem.Kind == KindString && !listNeedsConv(elem) {
 		return []Code{Id("lst").Op(":=").Add(parts)}
 	}
+	cause := Err()
 	if f.Secret {
-		raw = Lit("(redacted)")
+		raw, cause = Lit("(redacted)"), Qual(pkgImpl, "Redact").Call(Err(), Id("ls"))
 	}
 	fail := func() Code {
 		return Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
-			Id("Path"): path, Id("Source"): source, Id("Value"): raw, Id("Err"): Err(),
+			Id("Path"): path, Id("Source"): source, Id("Value"): raw, Id("Err"): cause.Clone(),
 		}))
 	}
 	body := append(parseElem(elem, "ls", "lx", fail), Id("lst").Index(Id("li")).Op("=").Id("lx"))

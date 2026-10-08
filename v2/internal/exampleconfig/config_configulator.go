@@ -7,6 +7,7 @@ package exampleconfig
 import (
 	jsontext "encoding/json/jsontext"
 	v2 "encoding/json/v2"
+	"errors"
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
@@ -390,17 +391,22 @@ func (s *dBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		}
 		switch tok.String() {
 		case "url":
-			v, err := dec.ReadToken()
-			if err != nil {
-				return err
-			}
-			switch v.Kind() {
-			case 'n':
-			case '"':
-				str := v.String()
-				s.URL = &str
-			default:
-				return fmt.Errorf("url: expected a string, got %v", v.Kind())
+			if err := func() error {
+				v, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				switch v.Kind() {
+				case 'n':
+				case '"':
+					str := v.String()
+					s.URL = &str
+				default:
+					return fmt.Errorf("url: expected a string, got %v", v.Kind())
+				}
+				return nil
+			}(); err != nil {
+				return errors.New("url: invalid value (redacted)")
 			}
 		default:
 			return fmt.Errorf("unknown key %q", tok.String())

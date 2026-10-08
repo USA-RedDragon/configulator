@@ -149,3 +149,84 @@ func TestOpaqueGenerateErrors(t *testing.T) {
 		})
 	}
 }
+
+const secretErrFixture = `package fixture
+
+import (
+	"net"
+	"time"
+)
+
+type Cfg struct {
+	Port  int           'name:"port" secret:"true"'
+	Wait  time.Duration 'name:"wait" secret:"true"'
+	Opt   *uint8        'name:"opt" secret:"true"'
+	List  []int         'name:"list" secret:"true"'
+	Net   net.IPNet     'name:"net" secret:"true"'
+	Plain int           'name:"plain"'
+}
+
+func (Cfg) Validate() error { return nil }
+`
+
+// TestSecretValuesNotLeaked checks that no layer's parse error for a
+// secret field quotes the value.
+func TestSecretValuesNotLeaked(t *testing.T) {
+	t.Parallel()
+	stdMain := strings.NewReplacer(
+		`cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"`, `cstd "github.com/USA-RedDragon/configulator/v2/flags/std"`,
+		`"github.com/spf13/pflag"`, `"flag"`,
+		"pflag.NewFlagSet(\"x\", pflag.ContinueOnError)", "flag.NewFlagSet(\"x\", flag.ContinueOnError)",
+		"cpflag.Bind(c, fs, fixture.CfgPFlagHooks(), nil)", "cstd.Bind(c, fs, fixture.CfgStdFlagHooks(), nil)",
+	).Replace(widthsMain)
+	main := strings.Replace(widthsMain, `	fmt.Println(cfg.I, cfg.I8, cfg.I16, cfg.I32, cfg.I64, cfg.U, cfg.U8, cfg.U16, cfg.U32, cfg.U64, cfg.UP, cfg.F32, cfg.F64, cfg.C64, cfg.C128)
+	if cfg.PI8 != nil && cfg.PU64 != nil && cfg.PF32 != nil && cfg.PUP != nil {
+		fmt.Println(*cfg.PI8, *cfg.PU64, *cfg.PF32, *cfg.PUP)
+	}
+`, "\tfmt.Println(cfg.Port)\n", 1)
+	stdMain = strings.Replace(stdMain, `	fmt.Println(cfg.I, cfg.I8, cfg.I16, cfg.I32, cfg.I64, cfg.U, cfg.U8, cfg.U16, cfg.U32, cfg.U64, cfg.UP, cfg.F32, cfg.F64, cfg.C64, cfg.C128)
+	if cfg.PI8 != nil && cfg.PU64 != nil && cfg.PF32 != nil && cfg.PUP != nil {
+		fmt.Println(*cfg.PI8, *cfg.PU64, *cfg.PF32, *cfg.PUP)
+	}
+`, "\tfmt.Println(cfg.Port)\n", 1)
+	files := map[string]string{fixtureFile: bt(secretErrFixture)}
+	secretFields := []string{"port", "wait", "opt", "list", "net"}
+	for _, field := range secretFields {
+		files[field+".json"] = `{"` + field + `": "hunter2"}`
+	}
+	for _, mode := range []string{flagsPFlag, flagsStd} {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			m := main
+			if mode == flagsStd {
+				m = stdMain
+			}
+			dir, bin := buildFixture(t, files, mode, m)
+			for _, field := range secretFields {
+				dash := "--"
+				if mode == flagsStd {
+					dash = "-"
+				}
+				runs := map[string]struct {
+					env  []string
+					args []string
+				}{
+					"an env var": {env: []string{"FX_" + strings.ToUpper(field) + "=hunter2"}},
+					"a flag":     {args: []string{dash + field + "=hunter2"}},
+					"a file":     {env: []string{"CFG_FILE=" + field + ".json"}},
+				}
+				for layer, r := range runs {
+					res := runBin(t, dir, bin, append(hermeticEnv(t), r.env...), r.args...)
+					out := res.stdout + res.stderr
+					if !strings.Contains(out, field) || !strings.Contains(out, "redacted") || strings.Contains(out, "hunter2") {
+						t.Errorf("%s from %s: want an error naming the field without the value, got %q", field, layer, out)
+					}
+				}
+			}
+			res := runBin(t, dir, bin, append(hermeticEnv(t), "FX_PLAIN=oops"))
+			if !strings.Contains(res.stdout, `"oops"`) {
+				t.Errorf("a field that isn't secret should still quote its value: %q", res.stdout)
+			}
+		})
+	}
+}

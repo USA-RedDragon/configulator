@@ -25,7 +25,7 @@ func (e *emitter) envFields(fields []*Field) []Code {
 	ls := leaves(fields, (*Field).envSeg, func(f *Field) bool { return f.EnvSkip })
 	out := make([]Code, 0, len(ls))
 	for _, l := range ls {
-		inner, val := e.envValue(l.f, l.path)
+		inner, val := e.textValue(l.f, l.path, func() Code { return Id("n") })
 		inner = append(inner, e.chainAssign(l, Id("ec").Dot("ArraySeparator"), func(t *Statement) []Code {
 			return []Code{t.Op("=").Add(val)}
 		})...)
@@ -39,18 +39,17 @@ func (e *emitter) envFields(fields []*Field) []Code {
 	return out
 }
 
-// envValue returns statements that parse the env value v, returning a
-// ParseError on failure, and the expression to assign to the field.
-func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
-	errVal := func() Code {
-		if f.Secret {
-			return Lit("(redacted)")
-		}
-		return Id("v")
+// textValue returns statements that parse the string variable v, returning
+// a ParseError naming source on failure, and the expression to assign to
+// the field. Env vars and secret flags use it.
+func (e *emitter) textValue(f *Field, path string, source func() Code) ([]Code, *Statement) {
+	errVal, errCause := Id("v"), Err()
+	if f.Secret {
+		errVal, errCause = Lit("(redacted)"), Qual(pkgImpl, "Redact").Call(Err(), Id("v"))
 	}
 	parseErr := func() Code {
 		return Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
-			Id("Path"): Lit(path), Id("Source"): Id("n"), Id("Value"): errVal(), Id("Err"): Err(),
+			Id("Path"): Lit(path), Id("Source"): source(), Id("Value"): errVal.Clone(), Id("Err"): errCause.Clone(),
 		}))
 	}
 	switch f.Kind {
@@ -76,7 +75,7 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, convNamed(f.Type, Id("sv"))
 	case KindSliceScalar:
-		return parseList(f, Qual(pkgImpl, "SplitList").Call(Id("v"), Id("ec").Dot("ArraySeparator")), Lit(path), Id("n"), Id("v")),
+		return parseList(f, Qual(pkgImpl, "SplitList").Call(Id("v"), Id("ec").Dot("ArraySeparator")), Lit(path), source(), Id("v")),
 			Id("lst")
 	case KindPointer:
 		switch f.Elem.Kind {
@@ -89,7 +88,7 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 		default:
 			elem := *f.Elem
 			elem.Secret = f.Secret
-			prep, val := e.envValue(&elem, path)
+			prep, val := e.textValue(&elem, path, source)
 			return append(prep, Id("pv").Op(":=").Add(val)), Op("&").Id("pv")
 		}
 	default:

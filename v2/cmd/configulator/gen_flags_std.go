@@ -107,6 +107,9 @@ func stdRegister(f *Field, name *Statement) Code {
 	if !ok {
 		return Null()
 	}
+	if secretText(f) {
+		return Id("fs").Dot("String").Call(name, Lit(""), Lit(f.Desc))
+	}
 	var def *Statement
 	target := f
 	if f.Kind == KindPointer {
@@ -152,7 +155,11 @@ func (e *emitter) stdApply(l leaf, name *Statement) []Code {
 	}
 	conv := stdConv(target, path)
 	val := convNamed(f.Type, Id("pv"))
-	if f.Kind == KindPointer {
+	if secretText(f) {
+		prep, tv := e.textValue(f, path, func() Code { return Lit("-").Op("+").Id("fn") })
+		conv = append([]Code{Id("v").Op(":=").Id("fs").Dot("Lookup").Call(Id("fn")).Dot("Value").Dot("String").Call()}, prep...)
+		val = tv
+	} else if f.Kind == KindPointer {
 		conv = append(conv, Id("pp").Op(":=").Add(convNamed(f.Elem.Type, Id("pv"))))
 		val = Op("&").Id("pp")
 	}

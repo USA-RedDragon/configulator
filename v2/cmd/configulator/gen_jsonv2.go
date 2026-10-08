@@ -25,7 +25,11 @@ func (e *emitter) emitFastPaths() {
 func (e *emitter) emitFastPath(shadow string, fields []*Field) {
 	cases := make([]Code, 0, len(fields)+1)
 	for _, f := range fields {
-		cases = append(cases, Case(Lit(f.Tag)).Block(e.fastField(f)...))
+		body := e.fastField(f)
+		if f.Secret {
+			body = redactFastErrors(f, body)
+		}
+		cases = append(cases, Case(Lit(f.Tag)).Block(body...))
 	}
 	cases = append(cases, Default().Block(
 		Return(Qual("fmt", "Errorf").Call(Lit("unknown key %q"), Id("tok").Dot("String").Call())),
@@ -47,6 +51,15 @@ func (e *emitter) emitFastPath(shadow string, fields []*Field) {
 		),
 	)
 	e.f.Var().Id("_").Qual(pkgJSONv2, "UnmarshalerFrom").Op("=").Parens(Op("*").Id(shadow)).Call(Nil())
+}
+
+// redactFastErrors runs body in a closure and replaces any error it returns
+// with a fixed message, since decode errors can quote a secret value.
+func redactFastErrors(f *Field, body []Code) []Code {
+	run := Func().Params().Error().Block(append(body, Return(Nil()))...).Call()
+	return []Code{If(Err().Op(":=").Add(run), Err().Op("!=").Nil()).Block(
+		Return(Qual("errors", "New").Call(Lit(f.Tag + ": invalid value (redacted)"))),
+	)}
 }
 
 // fastField emits one case body that decodes the next value into

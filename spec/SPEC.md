@@ -136,6 +136,8 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
 - Decoder-map keys (Go) are lowercased extensions matched literally — no
   aliasing; register both `.yml` and `.yaml` to accept both. An
   extension-less path is an error naming the path.
+- An empty default (Go `default:""`, Rust `default = ""`) is a
+  generate-time error. Leave the tag out instead.
 - File scalar types are strict, as in Go's `encoding/json/v2`: a number for
   a string field, a string for a number or bool field, and a fraction for an
   integer field are errors. An integer for a float field is fine.

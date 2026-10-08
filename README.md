@@ -118,7 +118,7 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
 | Tag | Meaning |
 | --- | --- |
 | `name:"key"` | Key in files, env and flags. Falls back to the `json` or `yaml` tag |
-| `default:"value"` | Default value, checked when generating. A list default is split with `WithArraySeparator` (default `,`) and parsed at load |
+| `default:"value"` | Default value, checked when generating. A list default is split with `WithArraySeparator` (default `,`) and parsed at load. An empty `default:""` is an error |
 | `description:"text"` | Flag help text, and the description in generated docs |
 | `env:"NAME"` | Use `NAME` for this field's part of the env var name. `env:"-"` skips env |
 | `flag:"name"` | Use `name` for this field's part of the flag name. `flag:"-"` skips flags |

@@ -167,6 +167,9 @@ func walkStruct(st *types.Struct, outPkg *types.Package, path string) ([]*Field,
 		if !fv.Exported() {
 			return nil, fmt.Errorf("%s.%s: unexported field carries a name: tag", path, fv.Name())
 		}
+		if def, ok := tag.Lookup("default"); ok && def == "" {
+			return nil, fmt.Errorf("%s.%s: empty default:\"\" tag; remove it", path, fv.Name())
+		}
 
 		f := &Field{
 			GoName:   fv.Name(),

@@ -14,7 +14,6 @@ v2/cmd/configulator/load.go	29	17
 v2/cmd/configulator/main.go	127	11
 v2/cmd/configulator/markdown_file.go	43	39
 v2/cmd/configulator/model.go	348	300
-v2/compat.go	2	0
 v2/configulator.go	114	100
 v2/decoders/jsonv2/jsonv2.go	2	2
 v2/errors.go	27	20

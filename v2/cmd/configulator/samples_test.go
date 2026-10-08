@@ -53,3 +53,26 @@ func TestSampleUnparseableListDefault(t *testing.T) {
 		t.Errorf("schema has a default:\n%s", schema)
 	}
 }
+
+// TestTOMLTooLargeCommentQuotesKey checks that the comment on a uint64 too
+// large for TOML quotes the key, so a key holding a newline can't break
+// the file.
+func TestTOMLTooLargeCommentQuotesKey(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n"+
+		"\tBig uint64 `name:\"a\\nb\" default:\"18446744073709551615\"`\n"+
+		"\tBigs []uint64 `name:\"c\\nd\" default:\"18446744073709551615\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(emitSampleTOML(m))
+	for _, want := range []string{
+		"# \"a\\nb\" is too large for a TOML integer, so it's written as a string\n",
+		"# \"c\\nd\" holds a number too large for a TOML integer, written as a string\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("toml sample:\n%s\nwant %q", got, want)
+		}
+	}
+}

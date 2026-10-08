@@ -151,12 +151,12 @@ func writeTOMLTable(b *strings.Builder, pairs []kv, path []string) {
 				parts[i] = tomlScalar(item)
 			}
 			if tomlTooBig(v...) {
-				fmt.Fprintf(b, "# %s holds a number too large for a TOML integer, written as a string\n", pair.k)
+				fmt.Fprintf(b, "# %s holds a number too large for a TOML integer, written as a string\n", tomlKey(pair.k))
 			}
 			fmt.Fprintf(b, "%s = [%s]\n", tomlKey(pair.k), strings.Join(parts, ", "))
 		default:
 			if tomlTooBig(pair.v) {
-				fmt.Fprintf(b, "# %s is too large for a TOML integer, so it's written as a string\n", pair.k)
+				fmt.Fprintf(b, "# %s is too large for a TOML integer, so it's written as a string\n", tomlKey(pair.k))
 			}
 			fmt.Fprintf(b, "%s = %s\n", tomlKey(pair.k), tomlScalar(pair.v))
 		}

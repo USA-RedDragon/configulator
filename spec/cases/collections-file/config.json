@@ -1,0 +1,1 @@
+{"servers":[{"addr":"a:1"},{"addr":"b:2","weight":5}],"pools":{"primary":{}},"labels":{"team":"infra"}}

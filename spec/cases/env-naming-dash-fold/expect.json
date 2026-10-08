@@ -1,0 +1,1 @@
+{"app-name":"from-env","http":{"host":"localhost","port":8080},"db":{"url":"postgres://localhost/db","pool":{"size":10}}}

@@ -1,0 +1,1 @@
+{"servers[0].addr":{"layer":"file"},"servers[0].weight":{"layer":"default","detail":"element default"},"servers[1].weight":{"layer":"file"},"pools.primary.size":{"layer":"default","detail":"element default"},"log-level":{"layer":"env","detail":"APP_LOG_LEVEL"}}

@@ -1,0 +1,1 @@
+{"tags":["a","b"],"labels":{"team":"infra"},"servers":[{"addr":"a:1","weight":1},{"addr":"b:2","weight":5}],"pools":{"primary":{"size":5}},"log-level":"debug"}

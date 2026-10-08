@@ -9,3 +9,6 @@ github_checks:
 parsers:
     go:
         partials_as_hits: true
+ignore:
+    - "**/*_configulator.go"
+    - "v2/internal/conformance/**"

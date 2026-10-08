@@ -365,7 +365,7 @@ func TestSchemaAndSample(t *testing.T) {
 		}
 	}
 	sm := string(emitSample(m))
-	for _, want := range []string{"port: 8080", `key: "(secret)"`, "# bind host", `host: "localhost"`, "tags: [a,b]"} {
+	for _, want := range []string{"port: 8080", `key: "(secret)"`, "# bind host", `host: "localhost"`, `tags: ["a", "b"]`} {
 		if !strings.Contains(sm, want) {
 			t.Errorf("sample missing %q:\n%s", want, sm)
 		}

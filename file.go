@@ -60,9 +60,8 @@ func (c *Configulator[C]) loadMap(configFile map[string]any, nest []string) erro
 			continue
 		}
 
-		switch val := val.(type) {
-		case map[string]any:
-			err := c.loadMap(val, nest)
+		if m, ok := val.(map[string]any); ok {
+			err := c.loadMap(m, nest)
 			if err != nil {
 				return fmt.Errorf("failed to load nested map for key %s: %w", key, err)
 			}

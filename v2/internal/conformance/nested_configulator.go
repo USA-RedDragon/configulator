@@ -176,9 +176,9 @@ func nestedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	}
 	fs.String(names[0], "myapp", "")
 	fs.String(names[1], "localhost", "")
-	fs.Uint16(names[2], uint16(8080), "")
+	fs.Uint16(names[2], 8080, "")
 	fs.String(names[3], "postgres://localhost/db", "")
-	fs.Uint16(names[4], uint16(10), "")
+	fs.Uint16(names[4], 10, "")
 	return nil
 }
 

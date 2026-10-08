@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"strconv"
 
 	. "github.com/dave/jennifer/jen"
 )
@@ -195,17 +195,17 @@ func (e *emitter) fastNumeric(f *Field, sel func() *Statement) []Code {
 // rangeCheck returns an error for a decoded number v that overflows f's
 // sized integer type.
 func rangeCheck(f *Field, v string) []Code {
-	if f.Bits == 0 || f.Bits == 64 {
+	if f.Bits == 64 {
 		return nil
 	}
 	t := f.Type.Underlying().String()
 	switch f.Kind {
 	case KindInt:
-		return []Code{If(Id(v).Op("<").Qual("math", fmt.Sprintf("MinInt%d", f.Bits)).
-			Op("||").Id(v).Op(">").Qual("math", fmt.Sprintf("MaxInt%d", f.Bits))).Block(
+		return []Code{If(Id(v).Op("<").Qual("math", "Min"+intLimit(f)).
+			Op("||").Id(v).Op(">").Qual("math", "Max"+intLimit(f))).Block(
 			Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id(v))))}
 	case KindUint:
-		return []Code{If(Id(v).Op(">").Qual("math", fmt.Sprintf("MaxUint%d", f.Bits))).Block(
+		return []Code{If(Id(v).Op(">").Qual("math", "Max"+intLimit(f))).Block(
 			Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id(v))))}
 	case KindFloat:
 		return []Code{If(Qual("math", "Abs").Call(Id(v)).Op(">").Qual("math", "MaxFloat32")).Block(
@@ -213,6 +213,19 @@ func rangeCheck(f *Field, v string) []Code {
 	default:
 		return nil
 	}
+}
+
+// intLimit names the math constants that bound f's integer type, without
+// the Min or Max: "Int16", or "Int" and "Uint" for the platform types.
+func intLimit(f *Field) string {
+	name := "Int"
+	if f.Kind == KindUint {
+		name = "Uint"
+	}
+	if f.Bits == 0 {
+		return name
+	}
+	return name + strconv.Itoa(f.Bits)
 }
 
 // numMethod returns the jsontext.Token method that reads a number of kind k.

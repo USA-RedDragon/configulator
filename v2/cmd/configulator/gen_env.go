@@ -90,20 +90,27 @@ func (e *emitter) textValue(f *Field, path string, source func() Code) ([]Code, 
 }
 
 func parseNumeric(f *Field, dst string) []Code {
-	bits := f.Bits
-	if bits == 0 {
-		bits = 64
-	}
+	bits := bitSize(f)
 	switch f.Kind {
 	case KindInt:
-		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseInt").Call(Id("v"), Lit(10), Lit(bits))}
+		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseInt").Call(Id("v"), Lit(10), bits)}
 	case KindUint:
-		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseUint").Call(Id("v"), Lit(10), Lit(bits))}
+		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseUint").Call(Id("v"), Lit(10), bits)}
 	case KindFloat:
-		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseFloat").Call(Id("v"), Lit(bits))}
+		return []Code{List(Id(dst), Err()).Op(":=").Qual("strconv", "ParseFloat").Call(Id("v"), bits)}
 	default:
 		panic("parseNumeric")
 	}
+}
+
+// bitSize renders the bitSize argument strconv needs to parse a number of
+// f's type: its width, or strconv.IntSize for a plain int or uint, which is
+// 32 bits on 32-bit platforms.
+func bitSize(f *Field) *Statement {
+	if f.Bits == 0 {
+		return Qual("strconv", "IntSize")
+	}
+	return Lit(f.Bits)
 }
 
 func parseNumericOrBool(f *Field, dst string) []Code {

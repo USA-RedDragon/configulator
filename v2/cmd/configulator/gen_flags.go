@@ -163,31 +163,11 @@ func pflagTypeOps(f *Field) (reg, get string, def *Statement, ok bool) {
 	case KindStdSlot:
 		return "String", "GetString", Lit(f.Default), true
 	case KindInt:
-		v, _ := strconv.ParseInt(f.Default, 10, 64)
-		switch f.Bits {
-		case 8:
-			return "Int8", "GetInt8", Id("int8").Call(Lit(int(v))), true
-		case 16:
-			return "Int16", "GetInt16", Id("int16").Call(Lit(int(v))), true
-		case 32:
-			return "Int32", "GetInt32", Id("int32").Call(Lit(int(v))), true
-		case 64:
-			return "Int64", "GetInt64", Lit(v), true
-		}
-		return "Int", "GetInt", Lit(int(v)), true
+		reg := intFlagType("Int", f.Bits)
+		return reg, "Get" + reg, intLit(KindInt, f.Default), true
 	case KindUint:
-		v, _ := strconv.ParseUint(f.Default, 10, 64)
-		switch f.Bits {
-		case 8:
-			return "Uint8", "GetUint8", Id("uint8").Call(intLit(KindUint, f.Default)), true
-		case 16:
-			return "Uint16", "GetUint16", Id("uint16").Call(intLit(KindUint, f.Default)), true
-		case 32:
-			return "Uint32", "GetUint32", Id("uint32").Call(intLit(KindUint, f.Default)), true
-		case 64:
-			return "Uint64", "GetUint64", Lit(v), true
-		}
-		return "Uint", "GetUint", Lit(uint(v)), true
+		reg := intFlagType("Uint", f.Bits)
+		return reg, "Get" + reg, intLit(KindUint, f.Default), true
 	case KindPointer:
 		// no pflag default for *scalar, so an unset optional stays nil
 		reg, get, _, ok := pflagTypeOps(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, Type: f.Elem.Type, SlotType: f.Elem.SlotType, Elem: f.Elem.Elem})
@@ -203,6 +183,15 @@ func pflagTypeOps(f *Field) (reg, get string, def *Statement, ok bool) {
 	default:
 		return "", "", nil, false
 	}
+}
+
+// intFlagType returns the pflag type name for an integer of the given
+// width: base itself for a plain int or uint, or base followed by bits.
+func intFlagType(base string, bits int) string {
+	if bits == 0 {
+		return base
+	}
+	return base + strconv.Itoa(bits)
 }
 
 // pflagNativeSlice names the pflag slice type for elem, like "Int" for
@@ -283,6 +272,14 @@ func registerFlag(f *Field, name *Statement) []Code {
 	call := Id("fs").Dot(reg).Call(name.Clone(), def, Lit(f.Desc))
 	if f.Short != "" {
 		call = Id("fs").Dot(reg+"P").Call(name.Clone(), Lit(f.Short), def, Lit(f.Desc))
+	}
+	// pflag's own int and uint flags wrap on 32-bit platforms.
+	if reg == "Int" || reg == "Uint" {
+		value := Qual(pkgPFlag, "New"+reg).Call(def)
+		call = Id("fs").Dot("Var").Call(value, name.Clone(), Lit(f.Desc))
+		if f.Short != "" {
+			call = Id("fs").Dot("VarP").Call(value, name.Clone(), Lit(f.Short), Lit(f.Desc))
+		}
 	}
 	out := []Code{call}
 	if f.Kind == KindSliceScalar && f.Default != "" {

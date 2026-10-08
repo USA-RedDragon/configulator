@@ -173,8 +173,8 @@ func scalarsRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 		}
 	}
 	fs.String(names[0], "svc", "")
-	fs.Int64(names[1], int64(0), "")
-	fs.Uint16(names[2], uint16(8080), "")
+	fs.Int64(names[1], 0, "")
+	fs.Uint16(names[2], 8080, "")
 	fs.Float64(names[3], 1.5, "")
 	fs.Bool(names[4], false, "")
 	return nil

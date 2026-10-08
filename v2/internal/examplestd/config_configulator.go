@@ -112,7 +112,7 @@ func configRegisterStdFlags(fs *flag.FlagSet, _ *cstd.Options) error {
 		}
 	}
 	fs.String(names[0], "localhost", "listen address")
-	fs.Uint64(names[1], uint64(0x1f90), "listen port")
+	fs.Uint64(names[1], 8080, "listen port")
 	return nil
 }
 

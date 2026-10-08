@@ -180,7 +180,7 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	fs.String(names[0], "info", "log level")
 	fs.Duration(names[1], time.Duration(int64(30000000000)), "request timeout")
 	fs.String(names[2], "localhost", "listen address")
-	fs.Uint16(names[3], uint16(8080), "listen port")
+	fs.Uint16(names[3], 8080, "listen port")
 	fs.String(names[4], "", "database URL")
 	return nil
 }

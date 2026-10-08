@@ -66,6 +66,10 @@ func main() {
 }
 `
 
+// wantFail stands for any parse or load error in the flag cases, since
+// pflag rejects a bad value while parsing and std flag at Load.
+const wantFail = "fail"
+
 // TestScalarWidths loads every scalar width, and pointers to some, from
 // each layer with both flag adapters.
 func TestScalarWidths(t *testing.T) {
@@ -96,7 +100,7 @@ func TestScalarWidths(t *testing.T) {
 		{"from-flags", nil, []string{"--i=1", "--i8=2", "--i16=3", "--i32=4", "--i64=5", "--u=6", "--u8=7", "--u16=8", "--u32=9", "--u64=10", "--up=11",
 			"--f32=1.25", "--f64=2.5", "--c64=1i", "--c128=2", "--pi8=-1", "--pu64=1", "--pf32=0.5", "--pup=2"}, fromFile},
 		{"env-f32-overflow", []string{"FX_F32=1e300"}, nil, `error: f32: cannot parse "1e300" from FX_F32`},
-		{"flag-f32-overflow", nil, []string{"--f32=1e300"}, "fail"},
+		{"flag-f32-overflow", nil, []string{"--f32=1e300"}, wantFail},
 		{"file-f32-overflow", []string{"CFG_FILE=f32.json"}, nil, "error: decoding f32.json"},
 		{"env-i8-overflow", []string{"FX_I8=300"}, nil, `error: i8: cannot parse "300" from FX_I8`},
 	}
@@ -119,7 +123,7 @@ func TestScalarWidths(t *testing.T) {
 				res := runBin(t, dir, bin, append(hermeticEnv(t), tc.env...), args...)
 				got := strings.TrimSpace(res.stdout)
 				ok := strings.HasPrefix(got, tc.want)
-				if tc.want == "fail" {
+				if tc.want == wantFail {
 					// pflag rejects the value while parsing, std flag at Load.
 					ok = (strings.HasPrefix(got, "parse:") || strings.HasPrefix(got, "error:")) && strings.Contains(got, "f32")
 				}

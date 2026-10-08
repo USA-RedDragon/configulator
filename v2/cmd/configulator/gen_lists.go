@@ -100,10 +100,7 @@ func parseList(f *Field, parts Code, path, source, raw Code) []Code {
 func parseElem(elem *Field, in, out string, fail func() Code) []Code {
 	s := Id(in)
 	check := func() Code { return If(Err().Op("!=").Nil()).Block(fail()) }
-	bits := elem.Bits
-	if bits == 0 {
-		bits = 64
-	}
+	bits := bitSize(elem)
 	switch elem.Kind {
 	case KindString:
 		return []Code{Id(out).Op(":=").Add(convNamed(elem.Type, s))}
@@ -114,17 +111,17 @@ func parseElem(elem *Field, in, out string, fail func() Code) []Code {
 		}
 	case KindInt:
 		return []Code{
-			List(Id("pn"), Err()).Op(":=").Qual("strconv", "ParseInt").Call(s, Lit(10), Lit(bits)), check(),
+			List(Id("pn"), Err()).Op(":=").Qual("strconv", "ParseInt").Call(s, Lit(10), bits), check(),
 			Id(out).Op(":=").Add(fieldGoType(elem.Type)).Call(Id("pn")),
 		}
 	case KindUint:
 		return []Code{
-			List(Id("pn"), Err()).Op(":=").Qual("strconv", "ParseUint").Call(s, Lit(10), Lit(bits)), check(),
+			List(Id("pn"), Err()).Op(":=").Qual("strconv", "ParseUint").Call(s, Lit(10), bits), check(),
 			Id(out).Op(":=").Add(fieldGoType(elem.Type)).Call(Id("pn")),
 		}
 	case KindFloat:
 		return []Code{
-			List(Id("pn"), Err()).Op(":=").Qual("strconv", "ParseFloat").Call(s, Lit(bits)), check(),
+			List(Id("pn"), Err()).Op(":=").Qual("strconv", "ParseFloat").Call(s, bits), check(),
 			Id(out).Op(":=").Add(fieldGoType(elem.Type)).Call(Id("pn")),
 		}
 	case KindDuration:

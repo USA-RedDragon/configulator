@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 
 	. "github.com/dave/jennifer/jen"
@@ -57,8 +56,9 @@ func (e *emitter) emitStdFlagHooks() {
 	).Error().Block(app...)
 }
 
-// stdKind maps a field to its stdlib flag register method. Sized ints use
-// Int64/Uint64 and are range checked in Apply.
+// stdKind maps a field to its stdlib flag register method. Every integer
+// uses Int64 or Uint64 and is range checked in Apply, including int and
+// uint, which are 32 bits on 32-bit platforms.
 func stdKind(f *Field) (reg string, ok bool) {
 	k := f.Kind
 	if k == KindPointer {
@@ -111,12 +111,8 @@ func stdRegister(f *Field, name *Statement) Code {
 	case KindFloat:
 		v, _ := strconv.ParseFloat(f.Default, 64)
 		def = Lit(v)
-	case KindInt:
-		v, _ := strconv.ParseInt(f.Default, 10, 64)
-		def = Lit(v)
-	case KindUint:
-		v, _ := strconv.ParseUint(f.Default, 10, 64)
-		def = Lit(v)
+	case KindInt, KindUint:
+		def = intLit(target.Kind, f.Default)
 	default:
 	}
 	if target.Kind == KindDuration {
@@ -189,39 +185,35 @@ func stdConv(target *Field, path string) []Code {
 	case KindInt:
 		raw := get(Int64())
 		switch {
-		case target.Bits != 0 && target.Bits != 64:
+		case target.Bits != 64:
 			return []Code{
 				Id("raw").Op(":=").Add(raw),
-				If(Id("raw").Op("<").Qual("math", fmt.Sprintf("MinInt%d", target.Bits)).Op("||").
-					Id("raw").Op(">").Qual("math", fmt.Sprintf("MaxInt%d", target.Bits))).Block(
+				If(Id("raw").Op("<").Qual("math", "Min"+intLimit(target)).Op("||").
+					Id("raw").Op(">").Qual("math", "Max"+intLimit(target))).Block(
 					Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
 						Id("Path"): Lit(path), Id("Source"): Lit("-").Op("+").Id("fn"),
 						Id("Err"): Qual("fmt", "Errorf").Call(Lit("%d overflows "+t), Id("raw")),
 					}))),
 				Id("pv").Op(":=").Id(t).Call(Id("raw")),
 			}
-		case t == "int64":
-			return []Code{Id("pv").Op(":=").Add(raw)}
 		default:
-			return []Code{Id("pv").Op(":=").Id(t).Call(Add(raw))}
+			return []Code{Id("pv").Op(":=").Add(raw)}
 		}
 	case KindUint:
 		raw := get(Uint64())
 		switch {
-		case target.Bits != 0 && target.Bits != 64:
+		case target.Bits != 64:
 			return []Code{
 				Id("raw").Op(":=").Add(raw),
-				If(Id("raw").Op(">").Qual("math", fmt.Sprintf("MaxUint%d", target.Bits))).Block(
+				If(Id("raw").Op(">").Qual("math", "Max"+intLimit(target))).Block(
 					Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
 						Id("Path"): Lit(path), Id("Source"): Lit("-").Op("+").Id("fn"),
 						Id("Err"): Qual("fmt", "Errorf").Call(Lit("%d overflows "+t), Id("raw")),
 					}))),
 				Id("pv").Op(":=").Id(t).Call(Id("raw")),
 			}
-		case t == "uint64":
-			return []Code{Id("pv").Op(":=").Add(raw)}
 		default:
-			return []Code{Id("pv").Op(":=").Id(t).Call(Add(raw))}
+			return []Code{Id("pv").Op(":=").Add(raw)}
 		}
 	default:
 		return nil

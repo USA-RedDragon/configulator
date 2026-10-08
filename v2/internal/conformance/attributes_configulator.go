@@ -156,7 +156,7 @@ func attributesRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 	fs.String(names[0], "", "")
 	fs.String(names[1], "", "")
 	fs.String(names[2], "", "")
-	fs.Uint16P(names[3], "p", uint16(0), "")
+	fs.Uint16P(names[3], "p", 0, "")
 	return nil
 }
 

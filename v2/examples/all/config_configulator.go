@@ -8,6 +8,7 @@ import (
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -85,7 +86,7 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 		set("http.host", configulator.LayerEnv, n)
 	}
 	if n, v, ok := ec.Lookup("http", "port"); ok {
-		p, err := strconv.ParseInt(v, 10, 64)
+		p, err := strconv.ParseInt(v, 10, strconv.IntSize)
 		if err != nil {
 			return &configulator.ParseError{
 				Err:    err,
@@ -148,7 +149,7 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 		}
 	}
 	fs.String(names[0], "localhost", "host to listen on")
-	fs.Int(names[1], 8080, "port to listen on")
+	fs.Var(cpflag.NewInt(8080), names[1], "port to listen on")
 	fs.StringSlice(names[2], nil, "some stuff")
 	fs.Bool(names[3], false, "enable the service")
 	return nil
@@ -302,6 +303,9 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				num, err := v.Int()
 				if err != nil {
 					return fmt.Errorf("port: %w", err)
+				}
+				if num < math.MinInt || num > math.MaxInt {
+					return fmt.Errorf("port: %d overflows int", num)
 				}
 				val := int(num)
 				s.Port = &val

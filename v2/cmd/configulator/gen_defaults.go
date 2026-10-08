@@ -89,7 +89,7 @@ func intLit(k Kind, def string) *Statement {
 		return Op(strconv.FormatUint(v, 10))
 	}
 	v, _ := strconv.ParseInt(def, 10, 64)
-	return Lit(int(v))
+	return Op(strconv.FormatInt(v, 10))
 }
 
 // castLit wraps an integer literal in a conversion for sized types.

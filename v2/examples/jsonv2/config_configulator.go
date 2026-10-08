@@ -40,10 +40,7 @@ func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) erro
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -94,7 +91,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -104,7 +101,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "listen":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -116,7 +113,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Listen = &str
 			default:
-				return fmt.Errorf("listen: expected a string, got %v", v.Kind())
+				return configJSONError("listen", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "timeout":
 			v, err := dec.ReadToken()
@@ -128,15 +125,15 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindString:
 				var slot impl.Duration
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
-					return err
+					return configJSONError("timeout", v, err)
 				}
 				s.Timeout = &slot
 			default:
-				return fmt.Errorf("timeout: expected a text scalar (e.g. \"30s\"), got %v", v.Kind())
+				return configJSONError("timeout", v, fmt.Errorf("expected a text scalar (e.g. \"30s\"), got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: configQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -147,6 +144,15 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ json.UnmarshalerFrom = (*configShadow)(nil)
 
+// configJSONError returns a ParseError for the JSON token v at path.
+func configJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
+
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
@@ -155,4 +161,11 @@ func (c Config) PrintConfig() string {
 	fmt.Fprintf(&b, "listen = %v\n", c.Listen)
 	fmt.Fprintf(&b, "timeout = %v\n", c.Timeout)
 	return b.String()
+}
+
+func configQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

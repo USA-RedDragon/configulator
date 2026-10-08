@@ -2,7 +2,10 @@
 
 package configulator
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // ParseError reports a value that could not be parsed into its field.
 type ParseError struct {
@@ -80,15 +83,53 @@ func (e *BadEnvOptionsError) Error() string {
 }
 
 // DecodeError wraps an error from the Unmarshal function for a config file.
+// When the generated JSON decoding finds a bad value or an unknown key, Err
+// is a *ParseError with the file as its Source, or an *UnknownKeyError.
 type DecodeError struct {
 	Path string
 	Err  error
 }
 
+// NewDecodeError returns the DecodeError for err, the error the decoder
+// returned for the config file path. Generated code calls it. A ParseError
+// or UnknownKeyError from the generated JSON decoding is taken out of the
+// decoder's own error, and the ParseError gets path as its Source.
+func NewDecodeError(path string, err error) *DecodeError {
+	var pe *ParseError
+	var ue *UnknownKeyError
+	switch {
+	case errors.As(err, &pe):
+		if pe.Source == "" {
+			pe.Source = path
+		}
+		err = pe
+	case errors.As(err, &ue):
+		err = ue
+	}
+	return &DecodeError{Path: path, Err: err}
+}
+
 func (e *DecodeError) Error() string {
+	var pe *ParseError
+	if errors.As(e.Err, &pe) && pe.Source == e.Path {
+		return pe.Error()
+	}
 	return fmt.Sprintf("decoding %s: %v", e.Path, e.Err)
 }
 func (e *DecodeError) Unwrap() error { return e.Err }
+
+// UnknownKeyError reports a key in a JSON config file that matches no
+// field, from a decoder that rejects unknown members, like StrictJSON. It
+// comes wrapped in a DecodeError.
+type UnknownKeyError struct {
+	// Path is the dotted path of the key, with map keys quoted as in
+	// origin paths.
+	Path string
+}
+
+func (e *UnknownKeyError) Error() string {
+	return fmt.Sprintf("%s: unknown key", e.Path)
+}
 
 // OpaqueSpellingError reports a config file that wrote a text value (like a
 // CIDR or duration) as a nested table/mapping instead of a string.

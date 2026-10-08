@@ -64,10 +64,7 @@ func nestedApplyDefaults(cfg *Nested, _ string, set configulator.SetOrigin) erro
 func nestedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nested, sep string, set configulator.SetOrigin, file string) error {
 	var sh nestedShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -252,7 +249,7 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -262,7 +259,7 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "app-name":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -274,7 +271,7 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.AppName = &str
 			default:
-				return fmt.Errorf("app-name: expected a string, got %v", v.Kind())
+				return nestedJSONError("app-name", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "http":
 			if dec.PeekKind() == jsontext.KindNull {
@@ -282,8 +279,15 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return nestedJSONError("http", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub nHTTPShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "http"); err != nil {
 					return err
 				}
 				s.HTTP = &sub
@@ -294,15 +298,22 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return nestedJSONError("db", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub nDBShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "db"); err != nil {
 					return err
 				}
 				s.DB = &sub
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: nestedQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -313,14 +324,9 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ json.UnmarshalerFrom = (*nestedShadow)(nil)
 
-func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *nHTTPShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -329,7 +335,7 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "host":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -341,7 +347,7 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Host = &str
 			default:
-				return fmt.Errorf("host: expected a string, got %v", v.Kind())
+				return nestedJSONError(path+".host", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "port":
 			v, err := dec.ReadToken()
@@ -351,21 +357,21 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("port: %w", err)
+					return nestedJSONError(path+".port", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("port: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return nestedJSONError(path+".port", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Port = &val
+				num := uint16(raw)
+				s.Port = &num
 			default:
-				return fmt.Errorf("port: expected a number, got %v", v.Kind())
+				return nestedJSONError(path+".port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + nestedQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -374,16 +380,9 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*nHTTPShadow)(nil)
-
-func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *nDBShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -392,7 +391,7 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "url":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -404,7 +403,7 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.URL = &str
 			default:
-				return fmt.Errorf("url: expected a string, got %v", v.Kind())
+				return nestedJSONError(path+".url", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "pool":
 			if dec.PeekKind() == jsontext.KindNull {
@@ -412,15 +411,22 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return nestedJSONError(path+".pool", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub nPoolShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, path+".pool"); err != nil {
 					return err
 				}
 				s.Pool = &sub
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + nestedQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -429,16 +435,9 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*nDBShadow)(nil)
-
-func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *nPoolShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -447,7 +446,7 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "size":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -456,21 +455,21 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("size: %w", err)
+					return nestedJSONError(path+".size", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("size: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return nestedJSONError(path+".size", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Size = &val
+				num := uint16(raw)
+				s.Size = &num
 			default:
-				return fmt.Errorf("size: expected a number, got %v", v.Kind())
+				return nestedJSONError(path+".size", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + nestedQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -479,7 +478,14 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*nPoolShadow)(nil)
+// nestedJSONError returns a ParseError for the JSON token v at path.
+func nestedJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -492,4 +498,11 @@ func (c Nested) PrintConfig() string {
 	fmt.Fprintf(&b, "db.url = %v\n", c.DB.URL)
 	fmt.Fprintf(&b, "db.pool.size = %v\n", c.DB.Pool.Size)
 	return b.String()
+}
+
+func nestedQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

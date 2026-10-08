@@ -41,10 +41,7 @@ func embeddedApplyDefaults(cfg *Embedded, _ string, set configulator.SetOrigin) 
 func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, sep string, set configulator.SetOrigin, file string) error {
 	var sh embeddedShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -139,7 +136,7 @@ func (s *embeddedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -149,7 +146,7 @@ func (s *embeddedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "region":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -161,7 +158,7 @@ func (s *embeddedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Region = &str
 			default:
-				return fmt.Errorf("region: expected a string, got %v", v.Kind())
+				return embeddedJSONError("region", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "zone":
 			v, err := dec.ReadToken()
@@ -174,11 +171,11 @@ func (s *embeddedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Zone = &str
 			default:
-				return fmt.Errorf("zone: expected a string, got %v", v.Kind())
+				return embeddedJSONError("zone", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: embeddedQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -189,6 +186,15 @@ func (s *embeddedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ json.UnmarshalerFrom = (*embeddedShadow)(nil)
 
+// embeddedJSONError returns a ParseError for the JSON token v at path.
+func embeddedJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
+
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
@@ -197,4 +203,11 @@ func (c Embedded) PrintConfig() string {
 	fmt.Fprintf(&b, "region = %v\n", c.Region)
 	fmt.Fprintf(&b, "zone = %v\n", c.Zone)
 	return b.String()
+}
+
+func embeddedQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

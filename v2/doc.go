@@ -68,9 +68,11 @@
 // # Errors
 //
 // Load returns these error types, which errors.As can match:
-// ParseError, DecodeError, OpaqueSpellingError, MissingFileError,
-// SearchPathError, NoFileFoundError, RequiredError, BadEnvOptionsError and
-// FlagConflictError. An error from Validate is returned as it is.
+// ParseError, DecodeError, UnknownKeyError, OpaqueSpellingError,
+// MissingFileError, SearchPathError, NoFileFoundError, RequiredError,
+// BadEnvOptionsError and FlagConflictError. An error from Validate is
+// returned as it is. A bad value in a JSON file is a ParseError inside the
+// DecodeError, with the full dotted path of the field.
 //
 // # Generated docs
 //

@@ -101,7 +101,7 @@ func TestScalarWidths(t *testing.T) {
 			"--f32=1.25", "--f64=2.5", "--c64=1i", "--c128=2", "--pi8=-1", "--pu64=1", "--pf32=0.5", "--pup=2"}, fromFile},
 		{"env-f32-overflow", []string{"FX_F32=1e300"}, nil, `error: f32: cannot parse "1e300" from FX_F32`},
 		{"flag-f32-overflow", nil, []string{"--f32=1e300"}, wantFail},
-		{"file-f32-overflow", []string{"CFG_FILE=f32.json"}, nil, "error: decoding f32.json"},
+		{"file-f32-overflow", []string{"CFG_FILE=f32.json"}, nil, `error: f32: cannot parse "1e300" from f32.json: 1e+300 overflows float32`},
 		{"env-i8-overflow", []string{"FX_I8=300"}, nil, `error: i8: cannot parse "300" from FX_I8`},
 	}
 	for _, mode := range []string{flagsPFlag, flagsStd} {

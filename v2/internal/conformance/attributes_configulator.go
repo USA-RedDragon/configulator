@@ -44,10 +44,7 @@ func attributesApplyDefaults(_ *Attributes, _ string, _ configulator.SetOrigin) 
 func attributesDecodeFile(data []byte, u configulator.Unmarshal, cfg *Attributes, sep string, set configulator.SetOrigin, file string) error {
 	var sh attributesShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -227,7 +224,7 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -237,7 +234,7 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "token":
 			if err := func() error {
 				v, err := dec.ReadToken()
@@ -249,16 +246,19 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				case jsontext.KindNumber:
 					num, err := v.Int()
 					if err != nil {
-						return fmt.Errorf("token: %w", err)
+						return attributesJSONError("token", v, err)
 					}
-					val := num
-					s.Token = &val
+					s.Token = &num
 				default:
-					return fmt.Errorf("token: expected a number, got %v", v.Kind())
+					return attributesJSONError("token", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 				}
 				return nil
 			}(); err != nil {
-				return errors.New("token: invalid value (redacted)")
+				return &configulator.ParseError{
+					Err:   errors.New("invalid value"),
+					Path:  "token",
+					Value: "(redacted)",
+				}
 			}
 		case "renamed":
 			v, err := dec.ReadToken()
@@ -271,7 +271,7 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Renamed = &str
 			default:
-				return fmt.Errorf("renamed: expected a string, got %v", v.Kind())
+				return attributesJSONError("renamed", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "no-env":
 			v, err := dec.ReadToken()
@@ -284,7 +284,7 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.NoEnv = &str
 			default:
-				return fmt.Errorf("no-env: expected a string, got %v", v.Kind())
+				return attributesJSONError("no-env", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "no-flag":
 			v, err := dec.ReadToken()
@@ -297,7 +297,7 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.NoFlag = &str
 			default:
-				return fmt.Errorf("no-flag: expected a string, got %v", v.Kind())
+				return attributesJSONError("no-flag", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "port":
 			v, err := dec.ReadToken()
@@ -307,21 +307,21 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("port: %w", err)
+					return attributesJSONError("port", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("port: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return attributesJSONError("port", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Port = &val
+				num := uint16(raw)
+				s.Port = &num
 			default:
-				return fmt.Errorf("port: expected a number, got %v", v.Kind())
+				return attributesJSONError("port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: attributesQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -331,6 +331,15 @@ func (s *attributesShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 }
 
 var _ json.UnmarshalerFrom = (*attributesShadow)(nil)
+
+// attributesJSONError returns a ParseError for the JSON token v at path.
+func attributesJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -343,4 +352,11 @@ func (c Attributes) PrintConfig() string {
 	fmt.Fprintf(&b, "no-flag = %v\n", c.NoFlag)
 	fmt.Fprintf(&b, "port = %v\n", c.Port)
 	return b.String()
+}
+
+func attributesQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

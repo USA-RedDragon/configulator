@@ -63,10 +63,7 @@ func requiredApplyDefaults(_ *Required, _ string, _ configulator.SetOrigin) erro
 func requiredDecodeFile(data []byte, u configulator.Unmarshal, cfg *Required, sep string, set configulator.SetOrigin, file string) error {
 	var sh requiredShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -252,7 +249,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -262,7 +259,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "top":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -274,7 +271,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Top = &str
 			default:
-				return fmt.Errorf("top: expected a string, got %v", v.Kind())
+				return requiredJSONError("top", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "nested":
 			if dec.PeekKind() == jsontext.KindNull {
@@ -282,8 +279,15 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return requiredJSONError("nested", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub rNestedShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "nested"); err != nil {
 					return err
 				}
 				s.Nested = &sub
@@ -294,8 +298,15 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return requiredJSONError("opt", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub rOptShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "opt"); err != nil {
 					return err
 				}
 				s.Opt = &sub
@@ -306,17 +317,25 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginArray {
-					return fmt.Errorf("items: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return requiredJSONError("items", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []rOptShadow{}
 				for dec.PeekKind() != jsontext.KindEndArray {
+					ep := "items" + "[" + strconv.Itoa(len(out)) + "]"
+					et, err := dec.ReadToken()
+					if err != nil {
+						return err
+					}
+					if et.Kind() != jsontext.KindBeginObject {
+						return requiredJSONError(ep, et, fmt.Errorf("expected an object, got %v", et.Kind()))
+					}
 					var el rOptShadow
-					if err := el.UnmarshalJSONFrom(dec); err != nil {
+					if err := el.decodeJSON(dec, ep); err != nil {
 						return err
 					}
 					out = append(out, el)
@@ -328,7 +347,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: requiredQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -339,14 +358,9 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ json.UnmarshalerFrom = (*requiredShadow)(nil)
 
-func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *rNestedShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -355,7 +369,7 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "leaf":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -367,11 +381,11 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Leaf = &str
 			default:
-				return fmt.Errorf("leaf: expected a string, got %v", v.Kind())
+				return requiredJSONError(path+".leaf", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + requiredQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -380,16 +394,9 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*rNestedShadow)(nil)
-
-func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *rOptShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -398,7 +405,7 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "leaf":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -410,7 +417,7 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Leaf = &str
 			default:
-				return fmt.Errorf("leaf: expected a string, got %v", v.Kind())
+				return requiredJSONError(path+".leaf", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "other":
 			v, err := dec.ReadToken()
@@ -423,11 +430,11 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Other = &str
 			default:
-				return fmt.Errorf("other: expected a string, got %v", v.Kind())
+				return requiredJSONError(path+".other", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + requiredQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -436,7 +443,14 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*rOptShadow)(nil)
+// requiredJSONError returns a ParseError for the JSON token v at path.
+func requiredJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -453,4 +467,11 @@ func (c Required) PrintConfig() string {
 	}
 	fmt.Fprintf(&b, "items = %v\n", c.Items)
 	return b.String()
+}
+
+func requiredQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

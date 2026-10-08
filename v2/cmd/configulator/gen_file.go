@@ -16,7 +16,7 @@ func (e *emitter) emitDecodeFile() {
 	).Error().Block(
 		Var().Id("sh").Id(shadowName(n)),
 		If(Err().Op(":=").Id("u").Call(Id("data"), Op("&").Id("sh")), Err().Op("!=").Nil()).Block(
-			Return(Op("&").Qual(pkgCfg, "DecodeError").Values(Dict{Id("Path"): Id("file"), Id("Err"): Err()})),
+			Return(Qual(pkgCfg, "NewDecodeError").Call(Id("file"), Err())),
 		),
 		Return(Id("sh").Dot("applyTo").Call(Id("cfg"), Id("sep"), Id("set"), Id("file"))),
 	)

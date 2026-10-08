@@ -59,10 +59,7 @@ func collectionsApplyDefaults(cfg *Collections, sep string, set configulator.Set
 func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collections, sep string, set configulator.SetOrigin, file string) error {
 	var sh collectionsShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -199,7 +196,7 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -209,19 +206,19 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "tags":
 			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginArray {
-					return fmt.Errorf("tags: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return collectionsJSONError("tags", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []string{}
 				for dec.PeekKind() != jsontext.KindEndArray {
@@ -230,7 +227,7 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 						return err
 					}
 					if v.Kind() != jsontext.KindString {
-						return fmt.Errorf("tags: expected a string element, got %v", v.Kind())
+						return collectionsJSONError("tags"+"["+strconv.Itoa(len(out))+"]", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 					}
 					el := v.String()
 					out = append(out, el)
@@ -246,12 +243,12 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginObject {
-					return fmt.Errorf("labels: expected an object, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginObject {
+					return collectionsJSONError("labels", open, fmt.Errorf("expected an object, got %v", open.Kind()))
 				}
 				out := map[string]string{}
 				for dec.PeekKind() != jsontext.KindEndObject {
@@ -259,16 +256,16 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					if err != nil {
 						return err
 					}
-					mk := kt.String()
+					key := kt.String()
 					v, err := dec.ReadToken()
 					if err != nil {
 						return err
 					}
 					if v.Kind() != jsontext.KindString {
-						return fmt.Errorf("labels: expected a string element, got %v", v.Kind())
+						return collectionsJSONError("labels"+"."+collectionsQuoteKey(key), v, fmt.Errorf("expected a string, got %v", v.Kind()))
 					}
 					el := v.String()
-					out[mk] = el
+					out[key] = el
 				}
 				if _, err := dec.ReadToken(); err != nil {
 					return err
@@ -281,17 +278,25 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginArray {
-					return fmt.Errorf("servers: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return collectionsJSONError("servers", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []serverShadow{}
 				for dec.PeekKind() != jsontext.KindEndArray {
+					ep := "servers" + "[" + strconv.Itoa(len(out)) + "]"
+					et, err := dec.ReadToken()
+					if err != nil {
+						return err
+					}
+					if et.Kind() != jsontext.KindBeginObject {
+						return collectionsJSONError(ep, et, fmt.Errorf("expected an object, got %v", et.Kind()))
+					}
 					var el serverShadow
-					if err := el.UnmarshalJSONFrom(dec); err != nil {
+					if err := el.decodeJSON(dec, ep); err != nil {
 						return err
 					}
 					out = append(out, el)
@@ -307,12 +312,12 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginObject {
-					return fmt.Errorf("pools: expected an object, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginObject {
+					return collectionsJSONError("pools", open, fmt.Errorf("expected an object, got %v", open.Kind()))
 				}
 				out := map[string]poolShadow{}
 				for dec.PeekKind() != jsontext.KindEndObject {
@@ -320,12 +325,20 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					if err != nil {
 						return err
 					}
-					mk := kt.String()
-					var el poolShadow
-					if err := el.UnmarshalJSONFrom(dec); err != nil {
+					key := kt.String()
+					ep := "pools" + "." + collectionsQuoteKey(key)
+					et, err := dec.ReadToken()
+					if err != nil {
 						return err
 					}
-					out[mk] = el
+					if et.Kind() != jsontext.KindBeginObject {
+						return collectionsJSONError(ep, et, fmt.Errorf("expected an object, got %v", et.Kind()))
+					}
+					var el poolShadow
+					if err := el.decodeJSON(dec, ep); err != nil {
+						return err
+					}
+					out[key] = el
 				}
 				if _, err := dec.ReadToken(); err != nil {
 					return err
@@ -343,11 +356,11 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.LogLevel = &str
 			default:
-				return fmt.Errorf("log-level: expected a string, got %v", v.Kind())
+				return collectionsJSONError("log-level", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: collectionsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -358,14 +371,9 @@ func (s *collectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ json.UnmarshalerFrom = (*collectionsShadow)(nil)
 
-func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *serverShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -374,7 +382,7 @@ func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "addr":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -386,7 +394,7 @@ func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Addr = &str
 			default:
-				return fmt.Errorf("addr: expected a string, got %v", v.Kind())
+				return collectionsJSONError(path+".addr", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "weight":
 			v, err := dec.ReadToken()
@@ -396,21 +404,21 @@ func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("weight: %w", err)
+					return collectionsJSONError(path+".weight", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("weight: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return collectionsJSONError(path+".weight", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Weight = &val
+				num := uint16(raw)
+				s.Weight = &num
 			default:
-				return fmt.Errorf("weight: expected a number, got %v", v.Kind())
+				return collectionsJSONError(path+".weight", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + collectionsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -419,16 +427,9 @@ func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*serverShadow)(nil)
-
-func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *poolShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -437,7 +438,7 @@ func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "size":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -446,21 +447,21 @@ func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("size: %w", err)
+					return collectionsJSONError(path+".size", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("size: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return collectionsJSONError(path+".size", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Size = &val
+				num := uint16(raw)
+				s.Size = &num
 			default:
-				return fmt.Errorf("size: expected a number, got %v", v.Kind())
+				return collectionsJSONError(path+".size", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + collectionsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -469,7 +470,14 @@ func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*poolShadow)(nil)
+// collectionsJSONError returns a ParseError for the JSON token v at path.
+func collectionsJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

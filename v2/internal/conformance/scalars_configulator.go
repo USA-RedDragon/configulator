@@ -50,10 +50,7 @@ func scalarsApplyDefaults(cfg *Scalars, _ string, set configulator.SetOrigin) er
 func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, sep string, set configulator.SetOrigin, file string) error {
 	var sh scalarsShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -250,7 +247,7 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -260,7 +257,7 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "name":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -272,7 +269,7 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Name = &str
 			default:
-				return fmt.Errorf("name: expected a string, got %v", v.Kind())
+				return scalarsJSONError("name", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "count":
 			v, err := dec.ReadToken()
@@ -284,12 +281,11 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
-					return fmt.Errorf("count: %w", err)
+					return scalarsJSONError("count", v, err)
 				}
-				val := num
-				s.Count = &val
+				s.Count = &num
 			default:
-				return fmt.Errorf("count: expected a number, got %v", v.Kind())
+				return scalarsJSONError("count", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "port":
 			v, err := dec.ReadToken()
@@ -299,17 +295,17 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("port: %w", err)
+					return scalarsJSONError("port", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("port: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return scalarsJSONError("port", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Port = &val
+				num := uint16(raw)
+				s.Port = &num
 			default:
-				return fmt.Errorf("port: expected a number, got %v", v.Kind())
+				return scalarsJSONError("port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "ratio":
 			v, err := dec.ReadToken()
@@ -321,12 +317,11 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindNumber:
 				num, err := v.Float()
 				if err != nil {
-					return fmt.Errorf("ratio: %w", err)
+					return scalarsJSONError("ratio", v, err)
 				}
-				val := num
-				s.Ratio = &val
+				s.Ratio = &num
 			default:
-				return fmt.Errorf("ratio: expected a number, got %v", v.Kind())
+				return scalarsJSONError("ratio", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "verbose":
 			v, err := dec.ReadToken()
@@ -339,11 +334,11 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				b := v.Bool()
 				s.Verbose = &b
 			default:
-				return fmt.Errorf("verbose: expected a bool, got %v", v.Kind())
+				return scalarsJSONError("verbose", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: scalarsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -353,6 +348,15 @@ func (s *scalarsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 }
 
 var _ json.UnmarshalerFrom = (*scalarsShadow)(nil)
+
+// scalarsJSONError returns a ParseError for the JSON token v at path.
+func scalarsJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -365,4 +369,11 @@ func (c Scalars) PrintConfig() string {
 	fmt.Fprintf(&b, "ratio = %v\n", c.Ratio)
 	fmt.Fprintf(&b, "verbose = %v\n", c.Verbose)
 	return b.String()
+}
+
+func scalarsQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

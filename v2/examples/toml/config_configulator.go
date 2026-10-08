@@ -44,10 +44,7 @@ func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) erro
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -93,7 +90,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -103,22 +100,29 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "db":
 			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return configJSONError("db", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub dBConfigShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "db"); err != nil {
 					return err
 				}
 				s.DB = &sub
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: configQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -129,14 +133,9 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ json.UnmarshalerFrom = (*configShadow)(nil)
 
-func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *dBConfigShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -145,7 +144,7 @@ func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "url":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -157,7 +156,7 @@ func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.URL = &str
 			default:
-				return fmt.Errorf("url: expected a string, got %v", v.Kind())
+				return configJSONError(path+".url", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "pool":
 			v, err := dec.ReadToken()
@@ -167,21 +166,21 @@ func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("pool: %w", err)
+					return configJSONError(path+".pool", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("pool: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return configJSONError(path+".pool", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Pool = &val
+				num := uint16(raw)
+				s.Pool = &num
 			default:
-				return fmt.Errorf("pool: expected a number, got %v", v.Kind())
+				return configJSONError(path+".pool", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + configQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -190,7 +189,14 @@ func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*dBConfigShadow)(nil)
+// configJSONError returns a ParseError for the JSON token v at path.
+func configJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -200,4 +206,11 @@ func (c Config) PrintConfig() string {
 	fmt.Fprintf(&b, "db.url = %v\n", c.DB.URL)
 	fmt.Fprintf(&b, "db.pool = %v\n", c.DB.Pool)
 	return b.String()
+}
+
+func configQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

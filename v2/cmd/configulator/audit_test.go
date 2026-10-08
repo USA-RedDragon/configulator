@@ -883,7 +883,7 @@ func main() {
 		{"env-bad-element", []string{"FX_INTS=1,x"}, nil, `error: ints: cannot parse "1,x" from FX_INTS: strconv.ParseInt: parsing "x": invalid syntax`},
 		{"env-overflow", []string{"FX_I8=300"}, nil, `error: i8: cannot parse "300" from FX_I8: strconv.ParseInt: parsing "300": value out of range`},
 		{"env-secret-redacted", []string{"FX_SECRET=1,hunter2"}, nil, `error: secret: cannot parse "(redacted)" from FX_SECRET: strconv.ParseInt: parsing "(redacted)": invalid syntax`},
-		{"file-overflow", []string{"CFG_FILE=overflow.json"}, nil, "error: decoding overflow.json"},
+		{"file-overflow", []string{"CFG_FILE=overflow.json"}, nil, `error: i8[0]: cannot parse "300" from overflow.json: 300 overflows int8`},
 	}
 	for _, mode := range []string{flagsPFlag, flagsStd} {
 		t.Run(mode, func(t *testing.T) {
@@ -1223,8 +1223,8 @@ func main() {
 			want := map[string]string{
 				"cfg.json":    "map[a:debug] map[a:80] map[a:3s] 10.0.0.0/8 AB map[a:-3]",
 				cfgYAML:       "map[a:debug] map[a:80] map[a:3s] 10.0.0.0/8 AB map[a:-3]",
-				overflowJSON:  "error: decoding overflow.json",
-				"opaque.json": "error: decoding opaque.json",
+				overflowJSON:  `error: small.a: cannot parse "300" from overflow.json: 300 overflows int8`,
+				"opaque.json": `error: waits.a: cannot parse "3" from opaque.json: expected a text scalar (e.g. "30s"), got number`,
 			}
 			for file, w := range want {
 				res := runBin(t, dir, bin, hermeticEnv(t), file)

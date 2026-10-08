@@ -50,10 +50,7 @@ func optionalsApplyDefaults(cfg *Optionals, _ string, set configulator.SetOrigin
 func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, sep string, set configulator.SetOrigin, file string) error {
 	var sh optionalsShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -257,7 +254,7 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -267,7 +264,7 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "port":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -276,17 +273,17 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("port: %w", err)
+					return optionalsJSONError("port", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("port: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return optionalsJSONError("port", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.Port = &val
+				num := uint16(raw)
+				s.Port = &num
 			default:
-				return fmt.Errorf("port: expected a number, got %v", v.Kind())
+				return optionalsJSONError("port", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "name":
 			v, err := dec.ReadToken()
@@ -299,7 +296,7 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Name = &str
 			default:
-				return fmt.Errorf("name: expected a string, got %v", v.Kind())
+				return optionalsJSONError("name", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "tls":
 			if dec.PeekKind() == jsontext.KindNull {
@@ -307,15 +304,22 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return optionalsJSONError("tls", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub tLSConfigShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, "tls"); err != nil {
 					return err
 				}
 				s.TLS = &sub
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: optionalsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -326,14 +330,9 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ json.UnmarshalerFrom = (*optionalsShadow)(nil)
 
-func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *tLSConfigShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -342,7 +341,7 @@ func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "cert":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -354,7 +353,7 @@ func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Cert = &str
 			default:
-				return fmt.Errorf("cert: expected a string, got %v", v.Kind())
+				return optionalsJSONError(path+".cert", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "min-version":
 			v, err := dec.ReadToken()
@@ -364,21 +363,21 @@ func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case jsontext.KindNull:
 			case jsontext.KindNumber:
-				num, err := v.Uint()
+				raw, err := v.Uint()
 				if err != nil {
-					return fmt.Errorf("min-version: %w", err)
+					return optionalsJSONError(path+".min-version", v, err)
 				}
-				if num > math.MaxUint16 {
-					return fmt.Errorf("min-version: %d overflows uint16", num)
+				if raw > math.MaxUint16 {
+					return optionalsJSONError(path+".min-version", v, fmt.Errorf("%d overflows uint16", raw))
 				}
-				val := uint16(num)
-				s.MinVersion = &val
+				num := uint16(raw)
+				s.MinVersion = &num
 			default:
-				return fmt.Errorf("min-version: expected a number, got %v", v.Kind())
+				return optionalsJSONError(path+".min-version", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + optionalsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -387,7 +386,14 @@ func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*tLSConfigShadow)(nil)
+// optionalsJSONError returns a ParseError for the JSON token v at path.
+func optionalsJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -411,4 +417,11 @@ func (c Optionals) PrintConfig() string {
 		fmt.Fprintf(&b, "tls.min-version = %v\n", p.MinVersion)
 	}
 	return b.String()
+}
+
+func optionalsQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

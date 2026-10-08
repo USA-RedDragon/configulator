@@ -56,10 +56,7 @@ func nestedCollectionsApplyDefaults(_ *NestedCollections, _ string, _ configulat
 func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *NestedCollections, sep string, set configulator.SetOrigin, file string) error {
 	var sh nestedCollectionsShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -280,7 +277,7 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -290,24 +287,32 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "peers":
 			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginArray {
-					return fmt.Errorf("peers: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return nestedCollectionsJSONError("peers", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []nCPeerShadow{}
 				for dec.PeekKind() != jsontext.KindEndArray {
+					ep := "peers" + "[" + strconv.Itoa(len(out)) + "]"
+					et, err := dec.ReadToken()
+					if err != nil {
+						return err
+					}
+					if et.Kind() != jsontext.KindBeginObject {
+						return nestedCollectionsJSONError(ep, et, fmt.Errorf("expected an object, got %v", et.Kind()))
+					}
 					var el nCPeerShadow
-					if err := el.UnmarshalJSONFrom(dec); err != nil {
+					if err := el.decodeJSON(dec, ep); err != nil {
 						return err
 					}
 					out = append(out, el)
@@ -323,12 +328,12 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginObject {
-					return fmt.Errorf("by-name: expected an object, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginObject {
+					return nestedCollectionsJSONError("by-name", open, fmt.Errorf("expected an object, got %v", open.Kind()))
 				}
 				out := map[string]nCPeerShadow{}
 				for dec.PeekKind() != jsontext.KindEndObject {
@@ -336,12 +341,20 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 					if err != nil {
 						return err
 					}
-					mk := kt.String()
-					var el nCPeerShadow
-					if err := el.UnmarshalJSONFrom(dec); err != nil {
+					key := kt.String()
+					ep := "by-name" + "." + nestedCollectionsQuoteKey(key)
+					et, err := dec.ReadToken()
+					if err != nil {
 						return err
 					}
-					out[mk] = el
+					if et.Kind() != jsontext.KindBeginObject {
+						return nestedCollectionsJSONError(ep, et, fmt.Errorf("expected an object, got %v", et.Kind()))
+					}
+					var el nCPeerShadow
+					if err := el.decodeJSON(dec, ep); err != nil {
+						return err
+					}
+					out[key] = el
 				}
 				if _, err := dec.ReadToken(); err != nil {
 					return err
@@ -350,7 +363,7 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: nestedCollectionsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -361,14 +374,9 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 
 var _ json.UnmarshalerFrom = (*nestedCollectionsShadow)(nil)
 
-func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *nCPeerShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -377,7 +385,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "name":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -389,7 +397,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				str := v.String()
 				s.Name = &str
 			default:
-				return fmt.Errorf("name: expected a string, got %v", v.Kind())
+				return nestedCollectionsJSONError(path+".name", v, fmt.Errorf("expected a string, got %v", v.Kind()))
 			}
 		case "slots":
 			v, err := dec.ReadToken()
@@ -401,12 +409,11 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
-					return fmt.Errorf("slots: %w", err)
+					return nestedCollectionsJSONError(path+".slots", v, err)
 				}
-				val := num
-				s.Slots = &val
+				s.Slots = &num
 			default:
-				return fmt.Errorf("slots: expected a number, got %v", v.Kind())
+				return nestedCollectionsJSONError(path+".slots", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "rules":
 			if dec.PeekKind() == jsontext.KindNull {
@@ -414,17 +421,25 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginArray {
-					return fmt.Errorf("rules: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return nestedCollectionsJSONError(path+".rules", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []nCRuleShadow{}
 				for dec.PeekKind() != jsontext.KindEndArray {
+					ep := path + ".rules" + "[" + strconv.Itoa(len(out)) + "]"
+					et, err := dec.ReadToken()
+					if err != nil {
+						return err
+					}
+					if et.Kind() != jsontext.KindBeginObject {
+						return nestedCollectionsJSONError(ep, et, fmt.Errorf("expected an object, got %v", et.Kind()))
+					}
 					var el nCRuleShadow
-					if err := el.UnmarshalJSONFrom(dec); err != nil {
+					if err := el.decodeJSON(dec, ep); err != nil {
 						return err
 					}
 					out = append(out, el)
@@ -440,12 +455,12 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginObject {
-					return fmt.Errorf("tags: expected an object, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginObject {
+					return nestedCollectionsJSONError(path+".tags", open, fmt.Errorf("expected an object, got %v", open.Kind()))
 				}
 				out := map[string]nCRuleShadow{}
 				for dec.PeekKind() != jsontext.KindEndObject {
@@ -453,12 +468,20 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					if err != nil {
 						return err
 					}
-					mk := kt.String()
-					var el nCRuleShadow
-					if err := el.UnmarshalJSONFrom(dec); err != nil {
+					key := kt.String()
+					ep := path + ".tags" + "." + nestedCollectionsQuoteKey(key)
+					et, err := dec.ReadToken()
+					if err != nil {
 						return err
 					}
-					out[mk] = el
+					if et.Kind() != jsontext.KindBeginObject {
+						return nestedCollectionsJSONError(ep, et, fmt.Errorf("expected an object, got %v", et.Kind()))
+					}
+					var el nCRuleShadow
+					if err := el.decodeJSON(dec, ep); err != nil {
+						return err
+					}
+					out[key] = el
 				}
 				if _, err := dec.ReadToken(); err != nil {
 					return err
@@ -471,8 +494,15 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return nestedCollectionsJSONError(path+".inner", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub nCLevelShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, path+".inner"); err != nil {
 					return err
 				}
 				s.Inner = &sub
@@ -483,15 +513,22 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
+				open, err := dec.ReadToken()
+				if err != nil {
+					return err
+				}
+				if open.Kind() != jsontext.KindBeginObject {
+					return nestedCollectionsJSONError(path+".opt", open, fmt.Errorf("expected an object, got %v", open.Kind()))
+				}
 				var sub nCLevelShadow
-				if err := sub.UnmarshalJSONFrom(dec); err != nil {
+				if err := sub.decodeJSON(dec, path+".opt"); err != nil {
 					return err
 				}
 				s.Opt = &sub
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + nestedCollectionsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -500,16 +537,9 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*nCPeerShadow)(nil)
-
-func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *nCRuleShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -518,7 +548,7 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "from":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -529,12 +559,11 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
-					return fmt.Errorf("from: %w", err)
+					return nestedCollectionsJSONError(path+".from", v, err)
 				}
-				val := num
-				s.From = &val
+				s.From = &num
 			default:
-				return fmt.Errorf("from: expected a number, got %v", v.Kind())
+				return nestedCollectionsJSONError(path+".from", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "range":
 			v, err := dec.ReadToken()
@@ -546,12 +575,11 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
-					return fmt.Errorf("range: %w", err)
+					return nestedCollectionsJSONError(path+".range", v, err)
 				}
-				val := num
-				s.Range = &val
+				s.Range = &num
 			default:
-				return fmt.Errorf("range: expected a number, got %v", v.Kind())
+				return nestedCollectionsJSONError(path+".range", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		case "on":
 			v, err := dec.ReadToken()
@@ -564,11 +592,11 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				b := v.Bool()
 				s.On = &b
 			default:
-				return fmt.Errorf("on: expected a bool, got %v", v.Kind())
+				return nestedCollectionsJSONError(path+".on", v, fmt.Errorf("expected a bool, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + nestedCollectionsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -577,16 +605,9 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*nCRuleShadow)(nil)
-
-func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
-	tok, err := dec.ReadToken()
-	if err != nil {
-		return err
-	}
-	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
-	}
+// decodeJSON decodes the members of an object whose opening brace has
+// been read. path is the object's dotted path.
+func (s *nCLevelShadow) decodeJSON(dec *jsontext.Decoder, path string) error {
 	for {
 		tok, err := dec.ReadToken()
 		if err != nil {
@@ -595,7 +616,7 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "level":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -606,16 +627,15 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
-					return fmt.Errorf("level: %w", err)
+					return nestedCollectionsJSONError(path+".level", v, err)
 				}
-				val := num
-				s.Level = &val
+				s.Level = &num
 			default:
-				return fmt.Errorf("level: expected a number, got %v", v.Kind())
+				return nestedCollectionsJSONError(path+".level", v, fmt.Errorf("expected a number, got %v", v.Kind()))
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: path + "." + nestedCollectionsQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -624,7 +644,14 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ json.UnmarshalerFrom = (*nCLevelShadow)(nil)
+// nestedCollectionsJSONError returns a ParseError for the JSON token v at path.
+func nestedCollectionsJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

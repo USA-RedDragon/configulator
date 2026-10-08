@@ -9,6 +9,7 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/USA-RedDragon/configulator/v2"
@@ -47,10 +48,7 @@ func complexApplyDefaults(cfg *Complex, _ string, set configulator.SetOrigin) er
 func complexDecodeFile(data []byte, u configulator.Unmarshal, cfg *Complex, sep string, set configulator.SetOrigin, file string) error {
 	var sh complexShadow
 	if err := u(data, &sh); err != nil {
-		return &configulator.DecodeError{
-			Err:  err,
-			Path: file,
-		}
+		return configulator.NewDecodeError(file, err)
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -315,7 +313,7 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		return err
 	}
 	if tok.Kind() != jsontext.KindBeginObject {
-		return fmt.Errorf("expected object, got %v", tok.Kind())
+		return fmt.Errorf("expected an object, got %v", tok.Kind())
 	}
 	for {
 		tok, err := dec.ReadToken()
@@ -325,7 +323,7 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
-		switch tok.String() {
+		switch key := tok.String(); key {
 		case "z":
 			v, err := dec.ReadToken()
 			if err != nil {
@@ -336,11 +334,11 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindString, jsontext.KindNumber:
 				var slot impl.Complex128
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
-					return err
+					return complexJSONError("z", v, err)
 				}
 				s.Z = &slot
 			default:
-				return fmt.Errorf("z: expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind())
+				return complexJSONError("z", v, fmt.Errorf("expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind()))
 			}
 		case "exponent":
 			v, err := dec.ReadToken()
@@ -352,11 +350,11 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindString, jsontext.KindNumber:
 				var slot impl.Complex128
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
-					return err
+					return complexJSONError("exponent", v, err)
 				}
 				s.Exponent = &slot
 			default:
-				return fmt.Errorf("exponent: expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind())
+				return complexJSONError("exponent", v, fmt.Errorf("expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind()))
 			}
 		case "w":
 			v, err := dec.ReadToken()
@@ -368,11 +366,11 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case jsontext.KindString, jsontext.KindNumber:
 				var slot impl.Complex64
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
-					return err
+					return complexJSONError("w", v, err)
 				}
 				s.W = &slot
 			default:
-				return fmt.Errorf("w: expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind())
+				return complexJSONError("w", v, fmt.Errorf("expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind()))
 			}
 		case "zs":
 			if dec.PeekKind() == jsontext.KindNull {
@@ -380,12 +378,12 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				tok, err := dec.ReadToken()
+				open, err := dec.ReadToken()
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != jsontext.KindBeginArray {
-					return fmt.Errorf("zs: expected an array, got %v", tok.Kind())
+				if open.Kind() != jsontext.KindBeginArray {
+					return complexJSONError("zs", open, fmt.Errorf("expected an array, got %v", open.Kind()))
 				}
 				out := []impl.Complex128{}
 				for dec.PeekKind() != jsontext.KindEndArray {
@@ -394,11 +392,11 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 						return err
 					}
 					if v.Kind() != jsontext.KindString && v.Kind() != jsontext.KindNumber {
-						return fmt.Errorf("zs: expected a text element (e.g. \"1+2i\"), got %v", v.Kind())
+						return complexJSONError("zs"+"["+strconv.Itoa(len(out))+"]", v, fmt.Errorf("expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind()))
 					}
 					var el impl.Complex128
 					if err := el.UnmarshalText([]byte(v.String())); err != nil {
-						return err
+						return complexJSONError("zs"+"["+strconv.Itoa(len(out))+"]", v, err)
 					}
 					out = append(out, el)
 				}
@@ -409,7 +407,7 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			}
 		default:
 			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
-				return fmt.Errorf("unknown key %q", tok.String())
+				return &configulator.UnknownKeyError{Path: complexQuoteKey(key)}
 			}
 			if err := dec.SkipValue(); err != nil {
 				return err
@@ -419,6 +417,15 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 }
 
 var _ json.UnmarshalerFrom = (*complexShadow)(nil)
+
+// complexJSONError returns a ParseError for the JSON token v at path.
+func complexJSONError(path string, v jsontext.Token, err error) error {
+	return &configulator.ParseError{
+		Err:   err,
+		Path:  path,
+		Value: v.String(),
+	}
+}
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
@@ -430,4 +437,11 @@ func (c Complex) PrintConfig() string {
 	fmt.Fprintf(&b, "w = %v\n", c.W)
 	fmt.Fprintf(&b, "zs = %v\n", c.Zs)
 	return b.String()
+}
+
+func complexQuoteKey(k string) string {
+	if strings.ContainsAny(k, ".[") {
+		return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
+	}
+	return k
 }

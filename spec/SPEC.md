@@ -1,6 +1,6 @@
 # configulator behavioral specification
 
-Version: 0.2.0 (see `SPEC_VERSION`)
+Version: 0.3.0 (see `SPEC_VERSION`)
 
 This document governs two implementations:
 
@@ -141,6 +141,9 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
 - File scalar types are strict, as in Go's `encoding/json/v2`: a number for
   a string field, a string for a number or bool field, and a fraction for an
   integer field are errors. An integer for a float field is fine.
+- A file error about a bad value or an unknown key names the full dotted
+  path of the value or key, in the origin path grammar of rule 9:
+  `http.port`, `servers[1].weight`, `db.pool.zz`.
 - Bools in env vars, flag values and defaults use Go's `strconv.ParseBool`
   spellings: `1`, `t`, `T`, `TRUE`, `true`, `True`, `0`, `f`, `F`, `FALSE`,
   `false`, `False`. Anything else is a parse error.

@@ -4,6 +4,7 @@ package pflag_test
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -36,6 +37,29 @@ func TestConflictNamesExistingFlag(t *testing.T) {
 		}
 		if fc.Flag != tc.flag || fc.Existing != tc.existing {
 			t.Errorf("got Flag %q Existing %q, want %q and %q", fc.Flag, fc.Existing, tc.flag, tc.existing)
+		}
+	}
+}
+
+// TestConfigFlagCompletion checks that --config carries cobra's filename
+// extension annotation, built from the registered decoders.
+func TestConfigFlagCompletion(t *testing.T) {
+	t.Parallel()
+	const key = "cobra_annotation_bash_completion_filename_extensions"
+	yaml := func([]byte, any) error { return nil }
+	for _, tc := range []struct {
+		decoders configulator.Decoders
+		want     []string
+	}{
+		{nil, []string{"json"}},
+		{configulator.Decoders{".yml": yaml, ".yaml": yaml, ".json": configulator.StrictJSON}, []string{"json", "yaml", "yml"}},
+		{configulator.Decoders{}, nil},
+	} {
+		fs := pflag.NewFlagSet("x", pflag.ContinueOnError)
+		c := configulator.New(exampleconfig.ConfigSchema()).WithFile(&configulator.FileOptions{Decoders: tc.decoders})
+		cpflag.Bind(c, fs, exampleconfig.ConfigPFlagHooks(), nil)
+		if got := fs.Lookup("config").Annotations[key]; !slices.Equal(got, tc.want) {
+			t.Errorf("decoders %v: annotation %q, want %q", tc.decoders, got, tc.want)
 		}
 	}
 }

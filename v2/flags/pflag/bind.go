@@ -6,6 +6,8 @@ package pflag
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	"github.com/USA-RedDragon/configulator/v2/internal/seam"
@@ -29,9 +31,29 @@ type Hooks[C any] struct {
 	Apply func(cfg *C, fs *pflag.FlagSet, o *Options, sep string, set configulator.SetOrigin) error
 }
 
+// cobraFilenameExt is the flag annotation cobra's MarkFlagFilename sets. Its
+// shell completion offers only files with the listed extensions.
+const cobraFilenameExt = "cobra_annotation_bash_completion_filename_extensions"
+
+// decoderExtensions returns the file extensions d has decoders for, sorted
+// and without the dot. A nil d means the default ".json" decoder.
+func decoderExtensions(d configulator.Decoders) []string {
+	if d == nil {
+		return []string{"json"}
+	}
+	exts := make([]string, 0, len(d))
+	for ext := range d {
+		exts = append(exts, strings.TrimPrefix(ext, "."))
+	}
+	slices.Sort(exts)
+	return exts
+}
+
 // Bind adds the config flags to fs right away (cobra parses args before
 // RunE) and applies them at Load. Call it after WithFile so --config gets
-// the right default.
+// the right default. --config is annotated the way cobra's MarkFlagFilename
+// does it, so cobra's shell completion offers files with the extensions in
+// FileOptions.Decoders.
 func Bind[C any](c *configulator.Configulator[C], fs *pflag.FlagSet, h Hooks[C], o *Options) *configulator.Configulator[C] {
 	if o == nil {
 		o = &Options{}
@@ -73,6 +95,9 @@ func Bind[C any](c *configulator.Configulator[C], fs *pflag.FlagSet, h Hooks[C],
 		default:
 			fs.StringP(name, short, def, "config file")
 			configFlag = name
+			if exts := decoderExtensions(fo.Decoders); len(exts) > 0 {
+				regErr = fs.SetAnnotation(name, cobraFilenameExt, exts)
+			}
 		}
 	}
 

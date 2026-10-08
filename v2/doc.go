@@ -64,6 +64,8 @@
 // The flags/pflag package binds the config to a spf13/pflag FlagSet, and
 // flags/std binds it to a standard library flag.FlagSet. Pick one with the
 // generator's -flags option. With -flags none there are no flags.
+// Cobra's shell completion works for the pflag flags, and --config
+// completes files with the extensions in FileOptions.Decoders.
 //
 // # Errors
 //

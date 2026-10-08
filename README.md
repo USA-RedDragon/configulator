@@ -101,6 +101,8 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
     - `os.FileMode` (`0644`)
   - Any other struct, slice or map type with an `UnmarshalText` method,
     such as `netip.Addr` or `net.IP`
+- Shell completion works with cobra: it completes the config flags, and
+  `--config` completes files with the extensions you registered decoders for
 - `Report()` lists where each field's value came from: its default, the
   config file, an environment variable or a flag, naming which one
 - Fields tagged `secret:"true"` are redacted in `PrintConfig()` output and in

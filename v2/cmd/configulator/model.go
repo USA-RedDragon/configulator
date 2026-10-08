@@ -274,35 +274,23 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 			return err
 		}
 	case *types.Struct:
-		if implementsTextUnmarshaler(t) {
-			return fmt.Errorf("%s: struct-kind TextUnmarshaler %s has no built-in wrapper; wrap it in your own type or tag the field opaque:\"true\"", fieldPath, t)
-		}
-		f.Kind = KindStruct
-		sub, err := walkStruct(u, outPkg, fieldPath)
-		if err != nil {
-			return err
-		}
-		// Each level prepends its own name once, giving full paths like
-		// DB.Pool.Size.
-		prefixSubtree(sub, f.GoName)
-		f.Fields = sub
-		if err := checkSiblingCollisions(sub, fieldPath); err != nil {
+		if err := classifyStruct(f, t, u, outPkg, fieldPath); err != nil || f.Kind == KindStdSlot {
 			return err
 		}
 	case *types.Pointer:
 		f.Kind = KindPointer
-		elem := &Field{GoName: f.GoName, Tag: f.Tag, Type: u.Elem()}
+		elem := &Field{GoName: f.GoName, Tag: f.Tag, Type: u.Elem(), Opaque: f.Opaque}
 		if err := classify(elem, outPkg, path); err != nil {
 			return err
 		}
 		switch elem.Kind {
-		case KindString, KindBool, KindInt, KindUint, KindFloat, KindStruct:
+		case KindString, KindBool, KindInt, KindUint, KindFloat, KindStruct, KindDuration, KindStdSlot, KindTextLeaf:
 		default:
 			return fmt.Errorf("%s: pointer to %s is not supported", fieldPath, types.TypeString(u.Elem(), nil))
 		}
 		f.Elem = elem
 	case *types.Slice:
-		elem := &Field{GoName: f.GoName, Tag: f.Tag, Type: u.Elem()}
+		elem := &Field{GoName: f.GoName, Tag: f.Tag, Type: u.Elem(), Opaque: f.Opaque}
 		if err := classify(elem, outPkg, path); err != nil {
 			return err
 		}
@@ -322,7 +310,7 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 		if b, ok := u.Key().Underlying().(*types.Basic); !ok || b.Info()&types.IsString == 0 {
 			return fmt.Errorf("%s: map keys must be strings", fieldPath)
 		}
-		elem := &Field{GoName: f.GoName, Tag: f.Tag, Type: u.Elem()}
+		elem := &Field{GoName: f.GoName, Tag: f.Tag, Type: u.Elem(), Opaque: f.Opaque}
 		if err := classify(elem, outPkg, path); err != nil {
 			return err
 		}
@@ -347,6 +335,32 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 	}
 
 	return checkFieldDefault(f, fieldPath)
+}
+
+// classifyStruct classifies a struct-kind field as a nested struct, or as
+// an opaque:"true" leaf decoded with its UnmarshalText.
+func classifyStruct(f *Field, t types.Type, u *types.Struct, outPkg *types.Package, fieldPath string) error {
+	if f.Opaque {
+		if !implementsTextUnmarshaler(t) {
+			return fmt.Errorf("%s: opaque:\"true\" needs a type with an UnmarshalText method", fieldPath)
+		}
+		f.Kind = KindStdSlot
+		f.SlotType = slotText
+		return checkFieldDefault(f, fieldPath)
+	}
+	if implementsTextUnmarshaler(t) {
+		return fmt.Errorf("%s: struct-kind TextUnmarshaler %s has no built-in wrapper; wrap it in your own type or tag the field opaque:\"true\"", fieldPath, t)
+	}
+	f.Kind = KindStruct
+	sub, err := walkStruct(u, outPkg, fieldPath)
+	if err != nil {
+		return err
+	}
+	// Each level prepends its own name once, giving full paths like
+	// DB.Pool.Size.
+	prefixSubtree(sub, f.GoName)
+	f.Fields = sub
+	return checkSiblingCollisions(sub, fieldPath)
 }
 
 // classifySlot classifies named as a sentinel slot. handled reports whether
@@ -481,8 +495,11 @@ func checkDefault(f *Field) error {
 		_, err := time.ParseDuration(f.Default)
 		return err
 	case KindPointer:
-		return checkDefault(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, Default: f.Default, Elem: f.Elem.Elem})
+		return checkDefault(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, SlotType: f.Elem.SlotType, Default: f.Default, Elem: f.Elem.Elem})
 	case KindStdSlot:
+		if f.SlotType == slotText {
+			return fmt.Errorf("default: on an opaque:\"true\" type is not supported; set it in code")
+		}
 		return parseStdSlot(f.SlotType, []byte(f.Default))
 	case KindTextLeaf:
 		return fmt.Errorf("default: on a custom TextUnmarshaler type is a generate-time error; set it in code")
@@ -537,6 +554,9 @@ func isNamed(t types.Type, pkgPath, name string) bool {
 	n, ok := types.Unalias(t).(*types.Named)
 	return ok && n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == pkgPath && n.Obj().Name() == name
 }
+
+// slotText is the SlotType of an opaque:"true" field, decoded by impl.Text.
+const slotText = "Text"
 
 // parseStdSlot validates a default: value for slot with the same code the
 // generated loader runs.

@@ -146,7 +146,9 @@ func (e *emitter) stdApply(l leaf, name *Statement) []Code {
 	}
 	target := f
 	if f.Kind == KindPointer {
-		target = f.Elem
+		elem := *f.Elem
+		elem.Secret = f.Secret
+		target = &elem
 	}
 	conv := stdConv(target, path)
 	val := convNamed(f.Type, Id("pv"))

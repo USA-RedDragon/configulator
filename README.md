@@ -86,7 +86,8 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
 - No reflection at runtime: `go generate` writes the loading code
 - Supported types:
   - Every scalar, including complex numbers (`1+2i`)
-  - Nested structs, and pointers to scalars or structs for optional values
+  - Nested structs
+  - Pointers to any of the scalar or struct types here, for optional values
   - Slices of scalars
   - Maps and slices of structs (files only)
   - These standard library types:
@@ -98,6 +99,8 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
     - `net.HardwareAddr` (`aa:bb:cc:dd:ee:ff`)
     - `url.URL`
     - `os.FileMode` (`0644`)
+  - Any other type with an `UnmarshalText` method. A struct type, such as
+    `netip.Addr`, needs the `opaque:"true"` tag
 - `Report()` lists where each field's value came from: its default, the
   config file, an environment variable or a flag, naming which one
 - Fields tagged `secret:"true"` are redacted in `PrintConfig()` output and in

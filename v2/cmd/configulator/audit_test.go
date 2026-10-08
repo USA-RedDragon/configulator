@@ -74,6 +74,7 @@ func runBin(t *testing.T, dir, bin string, env []string, args ...string) runResu
 
 const (
 	cfgJSON      = "cfg.json"
+	cfgFileJSON  = "CFG_FILE=cfg.json"
 	cfgYAML      = "cfg.yaml"
 	overflowJSON = "overflow.json"
 )
@@ -873,7 +874,7 @@ func main() {
 		want string
 	}{
 		{"defaults", nil, nil, "[1 2] [] [80 443] [] [] [] [1s 2m0s] []"},
-		{"json", []string{"CFG_FILE=cfg.json"}, nil, fromFile},
+		{"json", []string{cfgFileJSON}, nil, fromFile},
 		{"yaml", []string{"CFG_FILE=cfg.yaml"}, nil, fromFile},
 		{"env", []string{"FX_INTS=3,4", "FX_I8=-1", "FX_PORTS=1", "FX_F64=0.5", "FX_F32=1.25", "FX_BOOLS=true", "FX_DURS=5s", "FX_LEVELS=x,y"}, nil,
 			"[3 4] [-1] [1] [0.5] [1.25] [true] [5s] [x y]"},

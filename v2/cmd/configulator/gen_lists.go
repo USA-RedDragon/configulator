@@ -22,7 +22,7 @@ func listElemOK(elem *Field) bool {
 func listShadowElem(elem *Field) *Statement {
 	switch elem.Kind {
 	case KindDuration, KindStdSlot:
-		return Qual(pkgImpl, elem.SlotType)
+		return slotCode(elem)
 	case KindTextLeaf:
 		return fieldGoType(elem.Type)
 	default:
@@ -135,7 +135,7 @@ func parseElem(elem *Field, in, out string, fail func() Code) []Code {
 		return []Code{List(Id(out), Err()).Op(":=").Qual("time", "ParseDuration").Call(s), check()}
 	case KindStdSlot:
 		return []Code{
-			Var().Id("slot").Qual(pkgImpl, elem.SlotType),
+			Var().Id("slot").Add(slotCode(elem)),
 			If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(s)), Err().Op("!=").Nil()).Block(fail()),
 			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 			Id(out).Op(":=").Add(convNamed(elem.Type, Id("sv"))),

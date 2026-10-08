@@ -243,10 +243,22 @@ func (e *emitter) elemApply(fields []*Field, src, dst *Statement, p pathExpr, de
 func (e *emitter) pointerApply(f *Field, sel, target *Statement, p pathExpr, depth int) []Code {
 	rec := Id("set").Call(p.code(), Qual(pkgCfg, "LayerFile"), Id("file"))
 	switch f.Elem.Kind {
-	case KindString, KindBool, KindInt, KindUint, KindFloat:
+	case KindString, KindBool, KindInt, KindUint, KindFloat, KindTextLeaf:
 		return []Code{If(sel.Clone().Op("!=").Nil()).Block(
-			Id("v").Op(":=").Op("*").Add(sel.Clone()),
+			Id("v").Op(":=").Add(convNamed(f.Elem.Type, Op("*").Add(sel.Clone()))),
 			target.Clone().Op("=").Op("&").Id("v"),
+			rec,
+		)}
+	case KindDuration, KindStdSlot:
+		return []Code{If(sel.Clone().Op("!=").Nil()).Block(
+			List(Id("v"), Id("ok")).Op(":=").Add(sel.Clone()).Dot("Value").Call(),
+			If(Op("!").Id("ok")).Block(
+				Return(Op("&").Qual(pkgCfg, "OpaqueSpellingError").Values(Dict{
+					Id("Path"): p.code(), Id("Hint"): Lit(slotHint(f.Elem.SlotType)),
+				})),
+			),
+			Id("pv").Op(":=").Add(castStd(f.Elem)),
+			target.Clone().Op("=").Op("&").Id("pv"),
 			rec,
 		)}
 	case KindStruct:

@@ -90,7 +90,7 @@ func (e *emitter) fastField(f *Field) []Code {
 			Switch(Id("v").Dot("Kind").Call()).Block(
 				Case(LitRune('n')).Block(),
 				Case(kinds...).Block(
-					Var().Id("slot").Qual(pkgImpl, f.SlotType),
+					Var().Id("slot").Add(slotCode(f)),
 					If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(
 						Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
 					sel().Op("=").Op("&").Id("slot"),
@@ -252,7 +252,7 @@ func scalarElemReader(f *Field, dst string) []Code {
 		read = append(read,
 			If(notText).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a text element (e.g. "+slotHint(f.SlotType)+"), got %v"), Id("v").Dot("Kind").Call()))),
-			Var().Id(dst).Qual(pkgImpl, f.SlotType),
+			Var().Id(dst).Add(slotCode(f)),
 			If(Err().Op(":=").Id(dst).Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
 		)
 	case KindTextLeaf:

@@ -89,7 +89,7 @@ func TestScalarWidths(t *testing.T) {
 		want string
 	}{
 		{"from-defaults", nil, nil, "-1 -8 -16 -32 -64 1 8 16 32 64 7 3.5 6.5 (1+2i) (3+4i)"},
-		{"from-file", []string{"CFG_FILE=cfg.json"}, nil, fromFile},
+		{"from-file", []string{cfgFileJSON}, nil, fromFile},
 		{"from-env", []string{"FX_I=1", "FX_I8=2", "FX_I16=3", "FX_I32=4", "FX_I64=5", "FX_U=6", "FX_U8=7", "FX_U16=8", "FX_U32=9", "FX_U64=10", "FX_UP=11",
 			"FX_F32=1.25", "FX_F64=2.5", "FX_C64=1i", "FX_C128=2", "FX_PI8=-1", "FX_PU64=1", "FX_PF32=0.5", "FX_PUP=2"}, nil, fromFile},
 		{"from-flags", nil, []string{"--i=1", "--i8=2", "--i16=3", "--i32=4", "--i64=5", "--u=6", "--u8=7", "--u16=8", "--u32=9", "--u64=10", "--up=11",

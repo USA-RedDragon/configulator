@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"encoding"
 	"fmt"
 	"net"
 	"net/url"
@@ -209,3 +210,24 @@ func (s *Complex64) UnmarshalText(b []byte) error {
 }
 
 func (s *Complex64) Value() (complex64, bool) { return s.v, s.ok }
+
+// Text decodes a field tagged opaque:"true" with the type's own
+// UnmarshalText.
+type Text[T any, PT interface {
+	*T
+	encoding.TextUnmarshaler
+}] struct {
+	v  T
+	ok bool
+}
+
+func (s *Text[T, PT]) UnmarshalText(b []byte) error {
+	var v T
+	if err := PT(&v).UnmarshalText(b); err != nil {
+		return err
+	}
+	s.v, s.ok = v, true
+	return nil
+}
+
+func (s *Text[T, PT]) Value() (T, bool) { return s.v, s.ok }

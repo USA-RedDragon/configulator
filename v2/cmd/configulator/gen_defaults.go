@@ -70,7 +70,7 @@ func defaultValue(f *Field, def string, path, sep Code) ([]Code, *Statement) {
 		return nil, Qual("time", "Duration").Call(Lit(int64(d)))
 	case KindStdSlot:
 		return []Code{
-			Var().Id("slot").Qual(pkgImpl, f.SlotType),
+			Var().Id("slot").Add(slotCode(f)),
 			Id("_").Op("=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Lit(def))),
 			List(Id("v"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, convNamed(f.Type, Id("v"))

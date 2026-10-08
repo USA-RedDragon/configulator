@@ -174,7 +174,7 @@ func pflagTypeOps(f *Field) (reg, get string, def *Statement, ok bool) {
 		return "Uint", "GetUint", Lit(uint(v)), true
 	case KindPointer:
 		// no pflag default for *scalar, so an unset optional stays nil
-		reg, get, _, ok := pflagTypeOps(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, Type: f.Elem.Type, Elem: f.Elem.Elem})
+		reg, get, _, ok := pflagTypeOps(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, Type: f.Elem.Type, SlotType: f.Elem.SlotType, Elem: f.Elem.Elem})
 		if !ok || f.Elem.Kind == KindStruct {
 			return "", "", nil, false
 		}
@@ -233,7 +233,7 @@ func durDefault(f *Field) *Statement {
 // zeroDefault renders the zero value for a pointer flag's element.
 func zeroDefault(f *Field) *Statement {
 	switch f.Kind {
-	case KindString:
+	case KindString, KindStdSlot:
 		return Lit("")
 	case KindBool:
 		return Lit(false)
@@ -284,6 +284,11 @@ func (e *emitter) applyFlag(l leaf, name *Statement) Code {
 	case f.Kind == KindSliceScalar && pflagNativeSlice(f.Elem) == "":
 		prep = parseList(f, Id("v"), Lit(path), source(), Qual("strings", "Join").Call(Id("v"), Lit(",")))
 		val = Id("lst")
+	case f.Kind == KindPointer && f.Elem.Kind == KindStdSlot:
+		elem := *f.Elem
+		elem.Secret = f.Secret
+		prep = append(slotParse(&elem, path, source(), "v", "sv"), Id("pv").Op(":=").Add(convNamed(f.Elem.Type, Id("sv"))))
+		val = Op("&").Id("pv")
 	case f.Kind == KindPointer:
 		prep, val = []Code{Id("pv").Op(":=").Add(convNamed(f.Elem.Type, Id("v")))}, Op("&").Id("pv")
 	default:
@@ -313,7 +318,7 @@ func slotParse(f *Field, path string, source *Statement, in, out string) []Code 
 		val = Lit("(redacted)")
 	}
 	return []Code{
-		Var().Id("slot").Qual(pkgImpl, f.SlotType),
+		Var().Id("slot").Add(slotCode(f)),
 		If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Id(in))), Err().Op("!=").Nil()).Block(
 			Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
 				Id("Path"): Lit(path), Id("Source"): source, Id("Value"): val, Id("Err"): Err(),

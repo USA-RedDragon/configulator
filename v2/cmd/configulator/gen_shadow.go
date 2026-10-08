@@ -25,6 +25,14 @@ func convNamed(t types.Type, expr *Statement) *Statement {
 	return expr
 }
 
+// slotCode renders the impl slot type that decodes f.
+func slotCode(f *Field) *Statement {
+	if f.SlotType == slotText {
+		return Qual(pkgImpl, slotText).Types(fieldGoType(f.Type), Op("*").Add(fieldGoType(f.Type)))
+	}
+	return Qual(pkgImpl, f.SlotType)
+}
+
 // isStdSlot reports whether n is decoded by a configulator wrapper type, whose
 // Value already returns n.
 func isStdSlot(n *types.Named) bool {
@@ -67,7 +75,7 @@ func (e *emitter) shadowFieldType(f *Field) *Statement {
 	case KindInt, KindUint, KindFloat:
 		return Op("*").Add(fieldGoType(f.Type.Underlying()))
 	case KindDuration, KindStdSlot:
-		return Op("*").Qual(pkgImpl, f.SlotType)
+		return Op("*").Add(slotCode(f))
 	case KindTextLeaf:
 		return Op("*").Add(fieldGoType(f.Type))
 	case KindStruct:

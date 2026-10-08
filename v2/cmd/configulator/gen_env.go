@@ -71,7 +71,7 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 		}, Id("d")
 	case KindStdSlot:
 		return []Code{
-			Var().Id("slot").Qual(pkgImpl, f.SlotType),
+			Var().Id("slot").Add(slotCode(f)),
 			If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v"))), Err().Op("!=").Nil()).Block(parseErr()),
 			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, convNamed(f.Type, Id("sv"))
@@ -92,6 +92,10 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 				If(Err().Op("!=").Nil()).Block(parseErr()),
 				Id("pv").Op(":=").Add(convNamed(f.Elem.Type, numConv(f.Elem, "p")))), Op("&").Id("pv")
 		default:
+			elem := *f.Elem
+			elem.Secret = f.Secret
+			prep, val := e.envValue(&elem, path)
+			return append(prep, Id("pv").Op(":=").Add(val)), Op("&").Id("pv")
 		}
 	default:
 	}

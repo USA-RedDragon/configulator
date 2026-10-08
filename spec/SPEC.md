@@ -1,6 +1,6 @@
 # configulator behavioral specification
 
-Version: 0.1.1 (see `SPEC_VERSION`)
+Version: 0.1.2 (see `SPEC_VERSION`)
 
 This document governs two implementations:
 
@@ -102,7 +102,8 @@ independent YAML parsers, not configulator.
 |---|---|---|---|
 | Repeated-flag accumulation | arg parser | `--x a --x b` → `[a,b]`; `--x a,b` also splits (CSV) | `--x a --x b` → `[a,b]`; `--x a,b` is one element |
 | List separator on CLI | arg parser | comma, fixed | none (repeat the flag) |
-| List separator on env/defaults | configulator | configurable | configurable (0.2) |
+| List separator on env/defaults | configulator | configurable | configurable |
+| Bool flag value | arg parser | `--x` or `--x=false`; in `--x false`, `false` is a positional argument | `--x`, `--x=false` and `--x false` |
 | File-key case sensitivity | decoder | json/v2: sensitive; goccy: sensitive; go-toml: **insensitive** | serde_json: sensitive; serde_yaml_ng: sensitive; toml: sensitive |
 | Unknown-key rejection | decoder | json/v2: available (`RejectUnknownMembers`); goccy: opt-in; go-toml: decoder-level | `deny_unknown_fields`, derive-time, file layer only |
 | Duplicate keys in one file | decoder | json/v2 rejects; goccy last-wins; go-toml errors | serde_json last-wins; yaml/toml per parser |
@@ -115,8 +116,8 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
 
 - Empty-string env values: the variable is **present**; it parses as the
   empty string (strings), an empty list (lists), or a parse error (numerics).
-- Whitespace in list elements: not trimmed in Go; Rust trims and drops
-  empties today — divergence recorded, converges on **no trimming** in 0.2.
+- Whitespace in list elements: not trimmed, and empty elements are kept
+  (`" a ,,b"` is `[" a ", "", "b"]`).
 - Separator escaping: unsupported, documented.
 - `WithX` call ordering: none required.
 - `--config` default value: the first search path, shown in help; using the
@@ -125,8 +126,8 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
 - Symlinks/relative paths: OS semantics, not normalized.
 - Complex numbers: a leaf decoded from text like `1+2i`, `(1+2i)`, `2i` or
   `3`, as Go's `strconv.ParseComplex` reads it. A file may also hold a plain
-  number. `j` in place of `i` is a parse error. Rust support is optional
-  (`num-complex`).
+  number. `j` in place of `i` is a parse error. Go: `complex64` and
+  `complex128`. Rust: `configulator::Complex64` and `Complex128`.
 - Decoder-map keys are lowercased extensions matched literally — no
   aliasing; register both `.yml` and `.yaml` to accept both. An
   extension-less path is an error naming the path.
@@ -145,8 +146,6 @@ Layout: `spec/cases/<case>/` containing:
 - `expect.json` — expected config as a nested JSON object, **or**
 - `expect_errors.json` — `{"kind": "<logical kind>", "contains": [..]}`
 - `expect_origins.json` — optional; dotted path → `{"layer", "detail"}`.
-  Excluded from the release gate for collection-shaped cases until Rust
-  origin support lands.
 
 Error kinds: `ExplicitFileMissing`, `SearchPathUnreadable`, `ParseError`,
 `UnknownKey`, `ValidationError`, `BadEnvOptions`.
@@ -159,6 +158,7 @@ Error kinds: `ExplicitFileMissing`, `SearchPathUnreadable`, `ParseError`,
 - `nested-collections`: lists and maps of structs inside list and map elements, with defaults at each level
 - `optionals`: optional u16, optional string (with default), optional struct
 - `durations`: duration leaf plus a plain string
+- `complex`: complex128 and complex64 leaves and a list of complex128
 
 Shape definitions live in `spec/shapes.md`; each has a `defaults-only` case
 pinning every default and a boundary case pinning integer widths.

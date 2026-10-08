@@ -560,7 +560,7 @@ func TestComplexTypes(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(dir, "cfg.json"), []byte(`{"z": "3-4i", "seeds": ["1i", "5"]}`), 0o600); err != nil {
+			if err := os.WriteFile(filepath.Join(dir, "cfg.json"), []byte(`{"z": "3-4i", "seeds": ["1i", 5]}`), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			main := "package main\n\nimport (\n\t\"fmt\"\n\t\"os\"\n\n\tconfigulator \"github.com/USA-RedDragon/configulator/v2\"\n\tfixture \"fixture\"\n\t" + bind[0] + "\n)\n\n" +

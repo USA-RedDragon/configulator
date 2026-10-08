@@ -1,6 +1,6 @@
 //go:build goexperiment.jsonv2
 
-// Package conformance holds the five spec shapes (spec/shapes.md) plus
+// Package conformance holds the spec shapes (spec/shapes.md) plus
 // extra cases for embedded structs and UnmarshalJSONFrom. The
 // *_configulator.go files here are both the generator's golden fixture and
 // the shape implementations the corpus runner uses.
@@ -104,6 +104,15 @@ type Durations struct {
 }
 
 func (Durations) Validate() error { return nil }
+
+type Complex struct {
+	Z        complex128   `name:"z" json:"z" default:"1+2i"`
+	Exponent complex128   `name:"exponent" json:"exponent"`
+	W        complex64    `name:"w" json:"w"`
+	Zs       []complex128 `name:"zs" json:"zs"`
+}
+
+func (Complex) Validate() error { return nil }
 
 // golden fixture only, not a corpus shape
 

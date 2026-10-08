@@ -285,6 +285,9 @@ func toFloat(v any) (float64, bool) {
 	return 0, false
 }
 
+// complexPair is a complex number as the corpus spells it: [real, imag].
+func complexPair(z complex128) []float64 { return []float64{real(z), imag(z)} }
+
 func TestCorpus(t *testing.T) {
 	t.Parallel()
 	spec := specDir(t)
@@ -334,6 +337,15 @@ func TestCorpus(t *testing.T) {
 			case "durations":
 				runShape[Durations](t, tc, DurationsSchema(), nil, func(c *Durations) any {
 					return map[string]any{"timeout": c.Timeout.String(), "label": c.Label}
+				})
+			case "complex":
+				h := ComplexPFlagHooks()
+				runShape(t, tc, ComplexSchema(), &h, func(c *Complex) any {
+					zs := make([]any, len(c.Zs))
+					for i, z := range c.Zs {
+						zs[i] = complexPair(z)
+					}
+					return map[string]any{"z": complexPair(c.Z), "exponent": complexPair(c.Exponent), "w": complexPair(complex128(c.W)), "zs": zs}
 				})
 			default:
 				t.Fatalf("case %s: unknown shape %q", name, tc.shape)

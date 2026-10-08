@@ -7,7 +7,7 @@ Types are given as Go / Rust pairs. A missing default means none.
 Comparison normalization (runner contract): JSON numbers compare by value;
 a nil/empty slice or map compares equal to `[]` / `{}`; absent optionals
 appear as `null` in `expect.json`; durations appear as Go duration strings
-(`"30s"`).
+(`"30s"`); complex numbers appear as `[real, imag]` (`1+2i` is `[1, 2]`).
 
 ## scalars
 
@@ -77,3 +77,12 @@ it — the same element-constructor mechanism as collection element defaults.
 |---|---|---|
 | `timeout` | time.Duration / Duration wrapper | `30s` |
 | `label` | string / String | — |
+
+## complex
+
+| tag | type | default |
+|---|---|---|
+| `z` | complex128 / Complex128 | `1+2i` |
+| `exponent` | complex128 / Complex128 | — |
+| `w` | complex64 / Complex64 | — |
+| `zs` | []complex128 / Vec<Complex128> | — |

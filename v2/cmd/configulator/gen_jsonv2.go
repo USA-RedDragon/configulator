@@ -80,12 +80,16 @@ func (e *emitter) fastField(f *Field) []Code {
 		return e.fastNumeric(f, sel)
 	case KindDuration, KindStdSlot:
 		hint := slotHint(f.SlotType)
+		kinds := []Code{LitRune('"')}
+		if isComplexSlot(f) {
+			kinds = append(kinds, LitRune('0'))
+		}
 		return []Code{
 			List(Id("v"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())),
 			Switch(Id("v").Dot("Kind").Call()).Block(
 				Case(LitRune('n')).Block(),
-				Case(LitRune('"')).Block(
+				Case(kinds...).Block(
 					Var().Id("slot").Qual(pkgImpl, f.SlotType),
 					If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(
 						Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
@@ -200,6 +204,12 @@ func numMethod(k Kind) string {
 	}
 }
 
+// isComplexSlot reports whether f is a complex number, which a file may
+// also spell as a plain JSON number.
+func isComplexSlot(f *Field) bool {
+	return f.Kind == KindStdSlot && (f.SlotType == "Complex64" || f.SlotType == "Complex128")
+}
+
 // scalarElemReader emits code that reads one scalar token into a new
 // variable dst, for a slice or map element of the given kind.
 func scalarElemReader(f *Field, dst string) []Code {
@@ -235,8 +245,12 @@ func scalarElemReader(f *Field, dst string) []Code {
 			read = append(read, Id(dst).Op(":=").Id(t).Call(Id("raw")))
 		}
 	case KindDuration, KindStdSlot:
+		notText := Id("v").Dot("Kind").Call().Op("!=").LitRune('"')
+		if isComplexSlot(f) {
+			notText = notText.Op("&&").Id("v").Dot("Kind").Call().Op("!=").LitRune('0')
+		}
 		read = append(read,
-			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('"')).Block(
+			If(notText).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a text element (e.g. "+slotHint(f.SlotType)+"), got %v"), Id("v").Dot("Kind").Call()))),
 			Var().Id(dst).Qual(pkgImpl, f.SlotType),
 			If(Err().Op(":=").Id(dst).Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),

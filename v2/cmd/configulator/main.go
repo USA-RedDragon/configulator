@@ -7,6 +7,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"go/types"
@@ -136,6 +137,9 @@ func writeOutput(path string, b []byte, check bool, update func(string, []byte, 
 		return
 	}
 	changed, err := update(path, b, check)
+	if errors.Is(err, errStale) {
+		fatal(fmt.Errorf("%w; run %s", err, rerunCommand(os.Args[1:])))
+	}
 	if err != nil {
 		fatal(err)
 	}

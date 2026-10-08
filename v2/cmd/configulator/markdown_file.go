@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 )
 
 const (
@@ -50,7 +51,7 @@ func updateMarkdownFile(path string, table []byte, check bool) (changed bool, er
 		return false, nil
 	}
 	if check {
-		return true, fmt.Errorf("%s %w; run configulator -markdown -markdown-file %s", path, errStale, path)
+		return true, fmt.Errorf("%s %w", path, errStale)
 	}
 	info, err := os.Stat(path)
 	if err != nil {
@@ -71,11 +72,27 @@ func updateSampleFile(path string, content []byte, check bool) (changed bool, er
 		return false, nil
 	}
 	if check {
-		return true, fmt.Errorf("%s %w; run configulator -sample -sample-file %s", path, errStale, path)
+		return true, fmt.Errorf("%s %w", path, errStale)
 	}
 	mode := os.FileMode(0o644)
 	if info, statErr := os.Stat(path); statErr == nil {
 		mode = info.Mode().Perm()
 	}
 	return true, os.WriteFile(path, content, mode)
+}
+
+// rerunCommand is the command that updates a stale file: this run's
+// arguments without -check, shell-quoted where needed.
+func rerunCommand(args []string) string {
+	parts := []string{"go", "tool", "configulator"}
+	for _, a := range args {
+		switch {
+		case a == "-check" || a == "--check" || strings.HasPrefix(a, "-check=") || strings.HasPrefix(a, "--check="):
+		case strings.Trim(a, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-./=:@%+,") == "" && a != "":
+			parts = append(parts, a)
+		default:
+			parts = append(parts, "'"+strings.ReplaceAll(a, "'", `'\''`)+"'")
+		}
+	}
+	return strings.Join(parts, " ")
 }

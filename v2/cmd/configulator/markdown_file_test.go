@@ -104,3 +104,13 @@ func TestUpdateSampleFile(t *testing.T) {
 		t.Fatalf("got %q mode %v", b, info.Mode().Perm())
 	}
 }
+
+func TestRerunCommand(t *testing.T) {
+	t.Parallel()
+	got := rerunCommand([]string{"-dir", "internal/config", "-type", "Config", "-check", "-markdown",
+		"-markdown-file", "README.md", "-env-prefix", "MY APP_", "-env-separator", "__", "-flag-separator=-", "-check=true", "it's"})
+	want := `go tool configulator -dir internal/config -type Config -markdown -markdown-file README.md -env-prefix 'MY APP_' -env-separator __ -flag-separator=- 'it'\''s'`
+	if got != want {
+		t.Errorf("got  %s\nwant %s", got, want)
+	}
+}

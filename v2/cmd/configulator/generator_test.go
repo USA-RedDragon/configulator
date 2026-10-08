@@ -617,3 +617,42 @@ func TestMarkdownSkippedSubtree(t *testing.T) {
 		}
 	}
 }
+
+func TestSampleCollectionExamples(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\n"+
+		"type Rule struct {\n\tFrom int `name:\"from\"`\n\tOn bool `name:\"on\" default:\"true\"`\n}\n\n"+
+		"type Peer struct {\n"+
+		"\tName  string          `name:\"name\"`\n"+
+		"\tRules []Rule          `name:\"rules\"`\n"+
+		"\tTags  map[string]Rule `name:\"tags\"`\n"+
+		"}\n\n"+
+		"type Cfg struct {\n"+
+		"\tPeers []Peer            `name:\"peers\"`\n"+
+		"\tLabels map[string]string `name:\"labels\"`\n"+
+		"\tOpt   *Rule             `name:\"opt\"`\n"+
+		"\tNick  *string           `name:\"nick\" default:\"x\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# Sample configuration for Cfg.\n" +
+		"# peers:\n" +
+		"#   - name: \"\"\n" +
+		"#     rules:\n" +
+		"#       - from: 0\n" +
+		"#         on: true\n" +
+		"#     tags:\n" +
+		"#       example:\n" +
+		"#         from: 0\n" +
+		"#         on: true\n" +
+		"# labels:\n" +
+		"#   example: \"\"\n" +
+		"# opt:\n" +
+		"#   from: 0\n" +
+		"#   on: true\n" +
+		"nick: \"x\"\n"
+	if got := string(emitSample(m)); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}

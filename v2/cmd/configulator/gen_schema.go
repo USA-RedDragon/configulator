@@ -134,15 +134,22 @@ func sampleFields(b *strings.Builder, fields []*Field, depth int) {
 		case KindStruct:
 			fmt.Fprintf(b, "%s%s:\n", ind, f.Tag)
 			sampleFields(b, f.Fields, depth+1)
-		case KindSliceStruct:
-			fmt.Fprintf(b, "%s# %s: []  # list of objects:\n", ind, f.Tag)
-			fmt.Fprintf(b, "%s# %s:\n", ind, f.Tag)
-			for _, ef := range f.Elem.Fields {
-				fmt.Fprintf(b, "%s#   - %s: %s\n", ind, ef.Tag, sampleValue(ef))
-				break
+		case KindSliceStruct, KindMapStruct, KindMapScalar:
+			for _, line := range exampleField(f) {
+				fmt.Fprintf(b, "%s# %s\n", ind, line)
 			}
-		case KindMapStruct, KindMapScalar:
-			fmt.Fprintf(b, "%s# %s: {}  # map\n", ind, f.Tag)
+		case KindPointer:
+			if f.Elem.Kind == KindStruct {
+				for _, line := range exampleField(f) {
+					fmt.Fprintf(b, "%s# %s\n", ind, line)
+				}
+				continue
+			}
+			if f.Default != "" {
+				fmt.Fprintf(b, "%s%s: %s\n", ind, f.Tag, sampleValue(f))
+				continue
+			}
+			fmt.Fprintf(b, "%s# %s: %s\n", ind, f.Tag, sampleValue(f))
 		default:
 			val := sampleValue(f)
 			if f.Secret {
@@ -157,7 +164,60 @@ func sampleFields(b *strings.Builder, fields []*Field, depth int) {
 	}
 }
 
+// exampleField renders f as uncommented YAML lines showing one example
+// element for every collection, at any depth.
+func exampleField(f *Field) []string {
+	switch f.Kind {
+	case KindStruct:
+		return append([]string{f.Tag + ":"}, indentLines(exampleFields(f.Fields), "  ")...)
+	case KindPointer:
+		if f.Elem.Kind == KindStruct {
+			return append([]string{f.Tag + ":"}, indentLines(exampleFields(f.Elem.Fields), "  ")...)
+		}
+		return []string{f.Tag + ": " + sampleValue(f)}
+	case KindSliceStruct:
+		item := exampleFields(f.Elem.Fields)
+		if len(item) == 0 {
+			return []string{f.Tag + ": []"}
+		}
+		lines := make([]string, 0, len(item)+1)
+		lines = append(lines, f.Tag+":", "  - "+item[0])
+		return append(lines, indentLines(item[1:], "    ")...)
+	case KindMapStruct:
+		elem := exampleFields(f.Elem.Fields)
+		lines := make([]string, 0, len(elem)+2)
+		lines = append(lines, f.Tag+":", "  example:")
+		return append(lines, indentLines(elem, "    ")...)
+	case KindMapScalar:
+		return []string{f.Tag + ":", "  example: " + sampleValue(f.Elem)}
+	default:
+		if f.Secret {
+			return []string{f.Tag + `: "(secret)"`}
+		}
+		return []string{f.Tag + ": " + sampleValue(f)}
+	}
+}
+
+func exampleFields(fields []*Field) []string {
+	lines := make([]string, 0, len(fields))
+	for _, f := range fields {
+		lines = append(lines, exampleField(f)...)
+	}
+	return lines
+}
+
+func indentLines(lines []string, prefix string) []string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = prefix + l
+	}
+	return out
+}
+
 func sampleValue(f *Field) string {
+	if f.Kind == KindPointer {
+		return sampleValue(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: f.Default, Elem: f.Elem.Elem})
+	}
 	if f.Default != "" {
 		switch f.Kind {
 		case KindString, KindDuration, KindStdSlot:

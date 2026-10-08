@@ -102,7 +102,7 @@ func schemaDefault(f *Field) any {
 		parts := strings.Split(f.Default, ",")
 		out := make([]any, len(parts))
 		for i, p := range parts {
-			out[i] = p
+			out[i] = schemaDefault(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: p})
 		}
 		return out
 	case KindPointer:

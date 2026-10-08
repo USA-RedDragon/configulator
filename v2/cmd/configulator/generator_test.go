@@ -718,3 +718,29 @@ func TestSampleListDefaultsQuoted(t *testing.T) {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestSchemaListDefaultsTyped(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n"+
+		"\tPorts []uint16 `name:\"ports\" default:\"80,443\"`\n"+
+		"\tOn []bool `name:\"on\" default:\"true,false\"`\n"+
+		"\tTags []string `name:\"tags\" default:\"a,b\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := emitJSONSchema(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var squeezed []string
+	for line := range strings.SplitSeq(string(b), "\n") {
+		squeezed = append(squeezed, strings.TrimSpace(line))
+	}
+	got := strings.Join(squeezed, "")
+	for _, want := range []string{`"default": [80,443]`, `"default": [true,false]`, `"default": ["a","b"]`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("schema missing %s:\n%s", want, b)
+		}
+	}
+}

@@ -35,12 +35,13 @@ func sampleLeafTyped(f *Field) any {
 		return float64(0)
 	case KindDuration:
 		return "0s"
+	default:
+		return ""
 	}
-	return ""
 }
 
 func sampleTree(fields []*Field) []kv {
-	var out []kv
+	out := make([]kv, 0, len(fields))
 	for _, f := range fields {
 		var v any
 		switch f.Kind {
@@ -134,11 +135,15 @@ func emitSampleTOML(m *Model) []byte {
 // writeTOMLTable writes scalar keys first, then [table] sections. TOML
 // requires that order, and it matches the Rust toml crate's output.
 func writeTOMLTable(b *strings.Builder, pairs []kv, path []string) {
-	var tables []kv
+	type table struct {
+		k     string
+		pairs []kv
+	}
+	var tables []table
 	for _, pair := range pairs {
 		switch v := pair.v.(type) {
 		case []kv:
-			tables = append(tables, pair)
+			tables = append(tables, table{pair.k, v})
 		case []any:
 			parts := make([]string, len(v))
 			for i, item := range v {
@@ -149,10 +154,10 @@ func writeTOMLTable(b *strings.Builder, pairs []kv, path []string) {
 			fmt.Fprintf(b, "%s = %s\n", pair.k, tomlScalar(pair.v))
 		}
 	}
-	for _, table := range tables {
-		full := append(append([]string{}, path...), table.k)
+	for _, t := range tables {
+		full := append(append([]string{}, path...), t.k)
 		fmt.Fprintf(b, "\n[%s]\n", strings.Join(full, "."))
-		writeTOMLTable(b, table.v.([]kv), full)
+		writeTOMLTable(b, t.pairs, full)
 	}
 }
 

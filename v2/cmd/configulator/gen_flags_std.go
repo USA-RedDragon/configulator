@@ -50,15 +50,15 @@ func (e *emitter) emitStdFlagHooks() {
 	walk(e.m.Fields, nil, "")
 
 	name := func(segs []string) *Statement {
-		var lits []Code
+		lits := make([]Code, 0, len(segs))
 		for _, s := range segs {
 			lits = append(lits, Lit(s))
 		}
 		return Qual("strings", "Join").Call(Index().String().Values(lits...), Id("o").Dot("Separator"))
 	}
 
-	var reg []Code
-	var lookups []Code
+	reg := make([]Code, 0, len(flags)+2)
+	lookups := make([]Code, 0, len(flags))
 	for _, ff := range flags {
 		lookups = append(lookups, name(ff.segs))
 	}
@@ -75,7 +75,7 @@ func (e *emitter) emitStdFlagHooks() {
 		Id("fs").Op("*").Qual(stdFlag, "FlagSet"), Id("o").Op("*").Qual(pkgStdFlag, "Options"),
 	).Error().Block(reg...)
 
-	var app []Code
+	app := make([]Code, 0, len(flags)+1)
 	for _, ff := range flags {
 		app = append(app, stdApply(ff.f, ff.path, name(ff.segs))...)
 	}
@@ -95,7 +95,7 @@ func stdKind(f *Field) (reg string, ok bool) {
 		k = f.Elem.Kind
 	}
 	switch k {
-	case KindString:
+	case KindString, KindStdSlot:
 		return "String", true
 	case KindBool:
 		return "Bool", true
@@ -105,8 +105,9 @@ func stdKind(f *Field) (reg string, ok bool) {
 		return "Int64", true
 	case KindUint:
 		return "Uint64", true
+	default:
+		return "", false
 	}
-	return "", false
 }
 
 func stdRegister(f *Field, name *Statement) Code {
@@ -120,7 +121,7 @@ func stdRegister(f *Field, name *Statement) Code {
 		target = f.Elem
 	}
 	switch target.Kind {
-	case KindString:
+	case KindString, KindStdSlot:
 		def = Lit(f.Default)
 	case KindBool:
 		v, _ := strconv.ParseBool(f.Default)
@@ -136,6 +137,7 @@ func stdRegister(f *Field, name *Statement) Code {
 	case KindUint:
 		v, _ := strconv.ParseUint(f.Default, 10, 64)
 		def = Lit(v)
+	default:
 	}
 	if target.Kind == KindDuration {
 		reg = "Duration"
@@ -153,8 +155,6 @@ func stdApply(f *Field, path string, name *Statement) []Code {
 	if f.Kind == KindPointer {
 		target = f.Elem
 	}
-	get := Id("fs").Dot("Lookup").Call(Id("fn")).Dot("Value").Assert(Qual(stdFlag, "Getter")).Dot("Get").Call()
-	var conv []Code
 	assignTo := func(v *Statement) *Statement {
 		if f.Kind == KindPointer {
 			return cfgSel("cfg", f).Op("=").Op("&").Id("pv")
@@ -162,24 +162,41 @@ func stdApply(f *Field, path string, name *Statement) []Code {
 		_ = v
 		return cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Id("pv")))
 	}
+	conv := stdConv(target, path)
+	conv = append(conv,
+		assignTo(nil),
+		Id("set").Call(Lit(path), Qual(pkgCfg, "LayerCLI"), Lit("-").Op("+").Id("fn")),
+	)
+	return []Code{If(
+		Id("fn").Op(":=").Add(name), Id("isSet").Index(Id("fn")),
+	).Block(conv...)}
+}
+
+// stdConv emits the statements that read target's flag value into pv.
+func stdConv(target *Field, path string) []Code {
+	get := Id("fs").Dot("Lookup").Call(Id("fn")).Dot("Value").Assert(Qual(stdFlag, "Getter")).Dot("Get").Call()
 	t := target.Type.Underlying().String()
 	switch target.Kind {
 	case KindString:
-		conv = []Code{Id("pv").Op(":=").Add(get).Assert(String())}
+		return []Code{Id("pv").Op(":=").Add(get).Assert(String())}
 	case KindBool:
-		conv = []Code{Id("pv").Op(":=").Add(get).Assert(Bool())}
+		return []Code{Id("pv").Op(":=").Add(get).Assert(Bool())}
 	case KindFloat:
 		if t == "float64" {
-			conv = []Code{Id("pv").Op(":=").Add(get).Assert(Float64())}
-		} else {
-			conv = []Code{Id("pv").Op(":=").Id(t).Call(Add(get).Assert(Float64()))}
+			return []Code{Id("pv").Op(":=").Add(get).Assert(Float64())}
 		}
+		return []Code{Id("pv").Op(":=").Id(t).Call(Add(get).Assert(Float64()))}
 	case KindDuration:
-		conv = []Code{Id("pv").Op(":=").Add(get).Assert(Qual("time", "Duration"))}
+		return []Code{Id("pv").Op(":=").Add(get).Assert(Qual("time", "Duration"))}
+	case KindStdSlot:
+		conv := append([]Code{Id("raw").Op(":=").Add(get).Assert(String())},
+			slotParse(target, path, Lit("-").Op("+").Id("fn"), "raw", "sv")...)
+		return append(conv, Id("pv").Op(":=").Add(Id("sv")))
 	case KindInt:
 		raw := Add(get).Assert(Int64())
-		if target.Bits != 0 && target.Bits != 64 {
-			conv = []Code{
+		switch {
+		case target.Bits != 0 && target.Bits != 64:
+			return []Code{
 				Id("raw").Op(":=").Add(raw),
 				If(Id("raw").Op("<").Qual("math", fmt.Sprintf("MinInt%d", target.Bits)).Op("||").
 					Id("raw").Op(">").Qual("math", fmt.Sprintf("MaxInt%d", target.Bits))).Block(
@@ -189,15 +206,16 @@ func stdApply(f *Field, path string, name *Statement) []Code {
 					}))),
 				Id("pv").Op(":=").Id(t).Call(Id("raw")),
 			}
-		} else if t == "int64" {
-			conv = []Code{Id("pv").Op(":=").Add(raw)}
-		} else {
-			conv = []Code{Id("pv").Op(":=").Id(t).Call(Add(raw))}
+		case t == "int64":
+			return []Code{Id("pv").Op(":=").Add(raw)}
+		default:
+			return []Code{Id("pv").Op(":=").Id(t).Call(Add(raw))}
 		}
 	case KindUint:
 		raw := Add(get).Assert(Uint64())
-		if target.Bits != 0 && target.Bits != 64 {
-			conv = []Code{
+		switch {
+		case target.Bits != 0 && target.Bits != 64:
+			return []Code{
 				Id("raw").Op(":=").Add(raw),
 				If(Id("raw").Op(">").Qual("math", fmt.Sprintf("MaxUint%d", target.Bits))).Block(
 					Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
@@ -206,17 +224,12 @@ func stdApply(f *Field, path string, name *Statement) []Code {
 					}))),
 				Id("pv").Op(":=").Id(t).Call(Id("raw")),
 			}
-		} else if t == "uint64" {
-			conv = []Code{Id("pv").Op(":=").Add(raw)}
-		} else {
-			conv = []Code{Id("pv").Op(":=").Id(t).Call(Add(raw))}
+		case t == "uint64":
+			return []Code{Id("pv").Op(":=").Add(raw)}
+		default:
+			return []Code{Id("pv").Op(":=").Id(t).Call(Add(raw))}
 		}
+	default:
+		return nil
 	}
-	body := append(conv,
-		assignTo(nil),
-		Id("set").Call(Lit(path), Qual(pkgCfg, "LayerCLI"), Lit("-").Op("+").Id("fn")),
-	)
-	return []Code{If(
-		Id("fn").Op(":=").Add(name), Id("isSet").Index(Id("fn")),
-	).Block(body...)}
 }

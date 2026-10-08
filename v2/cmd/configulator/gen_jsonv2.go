@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"go/types"
 
 	. "github.com/dave/jennifer/jen"
 )
@@ -24,7 +23,7 @@ func (e *emitter) emitFastPaths() {
 }
 
 func (e *emitter) emitFastPath(shadow string, fields []*Field) {
-	var cases []Code
+	cases := make([]Code, 0, len(fields)+1)
 	for _, f := range fields {
 		cases = append(cases, Case(Lit(f.Tag)).Block(e.fastField(f)...))
 	}
@@ -56,7 +55,7 @@ func (e *emitter) fastField(f *Field) []Code {
 	sel := func() *Statement { return Id("s").Dot(goName(f)) }
 	switch f.Kind {
 	case KindString:
-		return e.fastScalar(f, sel, '"',
+		return e.fastScalar(f, '"',
 			func() []Code {
 				return []Code{
 					Id("str").Op(":=").Id("v").Dot("String").Call(),
@@ -121,7 +120,7 @@ func (e *emitter) fastField(f *Field) []Code {
 	case KindMapStruct:
 		return e.fastMapStruct(f, sel)
 	case KindTextLeaf:
-		return e.fastScalar(f, sel, '"', func() []Code {
+		return e.fastScalar(f, '"', func() []Code {
 			return []Code{
 				Var().Id("leaf").Add(fieldGoType(f.Type)),
 				If(Err().Op(":=").Id("leaf").Dot("UnmarshalText").Call(
@@ -133,41 +132,36 @@ func (e *emitter) fastField(f *Field) []Code {
 	panic("fastField: unhandled kind for " + f.Tag)
 }
 
-func (e *emitter) fastScalar(f *Field, sel func() *Statement, kind rune, assign func() []Code, want string) []Code {
-	body := []Code{
+func (e *emitter) fastScalar(f *Field, kind rune, assign func() []Code, want string) []Code {
+	return []Code{
 		List(Id("v"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 		If(Err().Op("!=").Nil()).Block(Return(Err())),
+		Switch(Id("v").Dot("Kind").Call()).Block(
+			Case(LitRune('n')).Block(),
+			Case(LitRune(kind)).Block(assign()...),
+			Default().Block(Return(Qual("fmt", "Errorf").Call(
+				Lit(f.Tag+": expected "+want+", got %v"), Id("v").Dot("Kind").Call()))),
+		),
 	}
-	inner := assign()
-	body = append(body, Switch(Id("v").Dot("Kind").Call()).Block(
-		Case(LitRune('n')).Block(),
-		Case(LitRune(kind)).Block(inner...),
-		Default().Block(Return(Qual("fmt", "Errorf").Call(
-			Lit(f.Tag+": expected "+want+", got %v"), Id("v").Dot("Kind").Call()))),
-	))
-	return body
 }
 
 func (e *emitter) fastNumeric(f *Field, sel func() *Statement) []Code {
 	t := f.Type.Underlying().String()
-	var read []Code
-	errCheck := If(Err().Op("!=").Nil()).Block(Return(Err()))
-	switch f.Kind {
-	case KindInt:
-		read = []Code{List(Id("num"), Err()).Op(":=").Id("v").Dot("Int").Call(), errCheck}
-		if f.Bits != 0 && f.Bits != 64 {
+	read := []Code{
+		List(Id("num"), Err()).Op(":=").Id("v").Dot(numMethod(f.Kind)).Call(),
+		If(Err().Op("!=").Nil()).Block(Return(Err())),
+	}
+	if f.Bits != 0 && f.Bits != 64 {
+		switch f.Kind {
+		case KindInt:
 			read = append(read, If(Id("num").Op("<").Qual("math", fmt.Sprintf("MinInt%d", f.Bits)).
 				Op("||").Id("num").Op(">").Qual("math", fmt.Sprintf("MaxInt%d", f.Bits))).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id("num")))))
-		}
-	case KindUint:
-		read = []Code{List(Id("num"), Err()).Op(":=").Id("v").Dot("Uint").Call(), errCheck}
-		if f.Bits != 0 && f.Bits != 64 {
+		case KindUint:
 			read = append(read, If(Id("num").Op(">").Qual("math", fmt.Sprintf("MaxUint%d", f.Bits))).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id("num")))))
+		default:
 		}
-	case KindFloat:
-		read = []Code{List(Id("num"), Err()).Op(":=").Id("v").Dot("Float").Call(), errCheck}
 	}
 	conv := Id(t).Call(Id("num"))
 	if t == "int64" && f.Kind == KindInt || t == "uint64" && f.Kind == KindUint || t == "float64" && f.Kind == KindFloat {
@@ -183,6 +177,18 @@ func (e *emitter) fastNumeric(f *Field, sel func() *Statement) []Code {
 			Default().Block(Return(Qual("fmt", "Errorf").Call(
 				Lit(f.Tag+": expected a number, got %v"), Id("v").Dot("Kind").Call()))),
 		),
+	}
+}
+
+// numMethod returns the jsontext.Token method that reads a number of kind k.
+func numMethod(k Kind) string {
+	switch k {
+	case KindInt:
+		return "Int"
+	case KindUint:
+		return "Uint"
+	default:
+		return "Float"
 	}
 }
 
@@ -211,17 +217,8 @@ func scalarElemReader(f *Field, dst string) []Code {
 		read = append(read,
 			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('0')).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a number element, got %v"), Id("v").Dot("Kind").Call()))))
-		var method string
-		switch f.Kind {
-		case KindInt:
-			method = "Int"
-		case KindUint:
-			method = "Uint"
-		case KindFloat:
-			method = "Float"
-		}
 		read = append(read,
-			List(Id("raw"), Err()).Op(":=").Id("v").Dot(method).Call(),
+			List(Id("raw"), Err()).Op(":=").Id("v").Dot(numMethod(f.Kind)).Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())))
 		if (f.Kind == KindInt && t == "int64") || (f.Kind == KindUint && t == "uint64") || (f.Kind == KindFloat && t == "float64") {
 			read = append(read, Id(dst).Op(":=").Id("raw"))
@@ -251,7 +248,7 @@ func nullOrOpen(f *Field, open rune, want string, body []Code) []Code {
 }
 
 func (e *emitter) fastSliceScalar(f *Field, sel func() *Statement) []Code {
-	elemT := fieldGoType(f.Type.Underlying().(*types.Slice).Elem())
+	elemT := fieldGoType(f.Elem.Type)
 	body := []Code{
 		Id("out").Op(":=").Index().Add(elemT.Clone()).Values(),
 		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune(']')).Block(
@@ -279,7 +276,7 @@ func (e *emitter) fastSliceStruct(f *Field, sel func() *Statement) []Code {
 }
 
 func (e *emitter) fastMapScalar(f *Field, sel func() *Statement) []Code {
-	elemT := fieldGoType(f.Type.Underlying().(*types.Map).Elem())
+	elemT := fieldGoType(f.Elem.Type)
 	body := []Code{
 		Id("out").Op(":=").Map(String()).Add(elemT.Clone()).Values(),
 		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune('}')).Block(

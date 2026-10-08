@@ -9,20 +9,24 @@ import (
 	"testing"
 )
 
-// v2Path is the local configulator/v2 tree; go test runs in this package's
-// directory, two levels below it.
-var v2Path = func() string {
+const fixtureFile = "cfg.go"
+
+// v2Path returns the local configulator/v2 tree; go test runs in this
+// package's directory, two levels below it.
+func v2Path(t *testing.T) string {
+	t.Helper()
 	p, err := filepath.Abs("../..")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return p
-}()
+}
 
-func hermeticEnv() []string {
-	out, err := exec.Command("go", "env", "GOMODCACHE").Output()
+func hermeticEnv(t *testing.T) []string {
+	t.Helper()
+	out, err := exec.CommandContext(t.Context(), "go", "env", "GOMODCACHE").Output()
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	cache := strings.TrimSpace(string(out)) + "/cache/download"
 	return append(os.Environ(),
@@ -35,36 +39,40 @@ func hermeticEnv() []string {
 func writeModule(t *testing.T, files map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()
-	files["go.mod"] = fmt.Sprintf(`module fixture
+	gomod := fmt.Sprintf(`module fixture
 
 go 1.27
 
 require github.com/USA-RedDragon/configulator/v2 v2.0.0
 
 replace github.com/USA-RedDragon/configulator/v2 => %s
-`, v2Path)
+`, v2Path(t))
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(gomod), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	for name, content := range files {
 		p := filepath.Join(dir, name)
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(p, []byte(content), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	cmd := exec.Command("go", "mod", "tidy")
+	cmd := exec.CommandContext(t.Context(), "go", "mod", "tidy")
 	cmd.Dir = dir
-	cmd.Env = hermeticEnv()
+	cmd.Env = hermeticEnv(t)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("go mod tidy: %v\n%s", err, out)
 	}
 	return dir
 }
 
-func buildFixtureModel(t *testing.T, files map[string]string, typeName string, noValidate bool) (*Model, error) {
+// buildFixtureModel builds the model for type Cfg declared in src.
+func buildFixtureModel(t *testing.T, src string, noValidate bool) (*Model, error) {
 	t.Helper()
-	dir := writeModule(t, files)
-	named, outPkg, err := loadPackage(dir, typeName, hermeticEnv())
+	dir := writeModule(t, map[string]string{fixtureFile: src})
+	named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv(t))
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +82,7 @@ func buildFixtureModel(t *testing.T, files map[string]string, typeName string, n
 const validateStub = "func (Cfg) Validate() error { return nil }\n"
 
 func TestGenerateTimeErrors(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name     string
 		src      string
@@ -106,13 +115,29 @@ func TestGenerateTimeErrors(t *testing.T) {
 		{"struct-kind-textunmarshaler",
 			"package fixture\n\ntype Endpoint struct {\n\tHost string\n\tPort int\n}\n\nfunc (e *Endpoint) UnmarshalText(b []byte) error { return nil }\n\ntype Cfg struct {\n\tEp Endpoint `name:\"ep\"`\n}\n" + validateStub,
 			"has no built-in wrapper"},
+		{"bad-stdlib-default",
+			"package fixture\n\nimport \"net\"\n\ntype Cfg struct {\n\tN net.IPNet `name:\"n\" default:\"nope\"`\n}\n" + validateStub,
+			"invalid CIDR address"},
+		{"bad-duration-default",
+			"package fixture\n\nimport \"time\"\n\ntype Cfg struct {\n\tD time.Duration `name:\"d\" default:\"30x\"`\n}\n" + validateStub,
+			"unknown unit"},
+		{"pointer-to-duration",
+			"package fixture\n\nimport \"time\"\n\ntype Cfg struct {\n\tD *time.Duration `name:\"d\"`\n}\n" + validateStub,
+			"pointer to time.Duration is not supported"},
+		{"anonymous-struct",
+			"package fixture\n\ntype Cfg struct {\n\tHTTP struct {\n\t\tPort int `name:\"port\"`\n\t} `name:\"http\"`\n}\n" + validateStub,
+			"anonymous struct types are not supported"},
+		{"location-by-value",
+			"package fixture\n\nimport \"time\"\n\ntype Cfg struct {\n\tL time.Location `name:\"l\"`\n}\n" + validateStub,
+			"use *time.Location"},
 		{"map-non-string-keys",
 			"package fixture\n\ntype Cfg struct {\n\tA map[int]string `name:\"a\"`\n}\n" + validateStub,
 			"map keys must be strings"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := buildFixtureModel(t, map[string]string{"cfg.go": tc.src}, "Cfg", false)
+			t.Parallel()
+			_, err := buildFixtureModel(t, tc.src, false)
 			if err == nil {
 				t.Fatalf("expected error containing %q, got nil", tc.contains)
 			}
@@ -124,13 +149,14 @@ func TestGenerateTimeErrors(t *testing.T) {
 }
 
 func TestInternalPackageSameTree(t *testing.T) {
+	t.Parallel()
 	// A config can use internal packages from its own tree, and the
 	// generated file is in the same package so it can too.
 	dir := writeModule(t, map[string]string{
 		"liba/internal/secret/secret.go": "package secret\n\ntype Options struct {\n\tMode string `name:\"mode\"`\n}\n",
 		"liba/cfg.go":                    "package liba\n\nimport \"fixture/liba/internal/secret\"\n\ntype Cfg struct {\n\tOpts secret.Options `name:\"opts\"`\n}\n\nfunc (Cfg) Validate() error { return nil }\n",
 	})
-	named, outPkg, err := loadPackage(filepath.Join(dir, "liba"), "Cfg", hermeticEnv())
+	named, outPkg, err := loadPackage(filepath.Join(dir, "liba"), "Cfg", hermeticEnv(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,25 +164,24 @@ func TestInternalPackageSameTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := emit(m, "none")
+	out, err := emit(m, flagsNone)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "liba", "cfg_configulator.go"), out, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "liba", "cfg_configulator.go"), out, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("go", "build", "./...")
+	cmd := exec.CommandContext(t.Context(), "go", "build", "./...")
 	cmd.Dir = dir
-	cmd.Env = hermeticEnv()
+	cmd.Env = hermeticEnv(t)
 	if o, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("same-tree internal output does not compile: %v\n%s", err, o)
 	}
 }
 
 func TestNoValidateFlag(t *testing.T) {
-	m, err := buildFixtureModel(t, map[string]string{
-		"cfg.go": "package fixture\n\ntype Cfg struct {\n\tA string `name:\"a\"`\n}\n",
-	}, "Cfg", true)
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n\tA string `name:\"a\"`\n}\n", true)
 	if err != nil {
 		t.Fatalf("-no-validate should permit a Validate-less config: %v", err)
 	}
@@ -166,9 +191,9 @@ func TestNoValidateFlag(t *testing.T) {
 }
 
 func TestURLBecomesSlot(t *testing.T) {
-	m, err := buildFixtureModel(t, map[string]string{
-		"cfg.go": "package fixture\n\nimport \"net/url\"\n\ntype Cfg struct {\n\tU url.URL `name:\"u\"`\n}\n" + validateStub,
-	}, "Cfg", false)
+	t.Parallel()
+	src := "package fixture\n\nimport \"net/url\"\n\ntype Cfg struct {\n\tU url.URL `name:\"u\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, src, false)
 	if err != nil {
 		t.Fatalf("url.URL should map to the URL sentinel slot: %v", err)
 	}
@@ -180,9 +205,10 @@ func TestURLBecomesSlot(t *testing.T) {
 // TestStdFlagsOutputCompiles generates -flags=std output into a hermetic
 // module and builds it.
 func TestStdFlagsOutputCompiles(t *testing.T) {
+	t.Parallel()
 	src := "package fixture\n\nimport \"time\"\n\ntype Cfg struct {\n\tName string `name:\"name\" default:\"x\"`\n\tPort uint16 `name:\"port\" default:\"8080\"`\n\tWait time.Duration `name:\"wait\" default:\"5s\"`\n\tOpt *int64 `name:\"opt\"`\n\tTags []string `name:\"tags\"`\n}\n" + validateStub
-	dir := writeModule(t, map[string]string{"cfg.go": src})
-	named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv())
+	dir := writeModule(t, map[string]string{fixtureFile: src})
+	named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,16 +216,16 @@ func TestStdFlagsOutputCompiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := emit(m, "std")
+	out, err := emit(m, flagsStd)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("go", "build", "./...")
+	cmd := exec.CommandContext(t.Context(), "go", "build", "./...")
 	cmd.Dir = dir
-	cmd.Env = hermeticEnv()
+	cmd.Env = hermeticEnv(t)
 	if o, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("std output does not compile: %v\n%s", err, o)
 	}
@@ -209,9 +235,9 @@ func TestStdFlagsOutputCompiles(t *testing.T) {
 }
 
 func TestShortUnderStdRejected(t *testing.T) {
-	m, err := buildFixtureModel(t, map[string]string{
-		"cfg.go": "package fixture\n\ntype Cfg struct {\n\tA string `name:\"a\" short:\"a\"`\n}\n" + validateStub,
-	}, "Cfg", false)
+	t.Parallel()
+	src := "package fixture\n\ntype Cfg struct {\n\tA string `name:\"a\" short:\"a\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, src, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,8 +247,9 @@ func TestShortUnderStdRejected(t *testing.T) {
 }
 
 func TestSampleFormats(t *testing.T) {
-	src := "package fixture\n\ntype Sub struct {\n\tHost string `name:\"host\" default:\"localhost\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Sub    `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
-	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	t.Parallel()
+	src := "package fixture\n\ntype Inner struct {\n\tHost string `name:\"host\" default:\"localhost\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Inner  `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, src, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,15 +276,17 @@ func TestSampleFormats(t *testing.T) {
 }
 
 func TestMarkdown(t *testing.T) {
-	src := "package fixture\n\ntype Sub struct {\n\tHost string `name:\"host\" default:\"localhost\" description:\"bind host\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\" required:\"true\" description:\"listen port\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Sub    `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
-	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	t.Parallel()
+	src := "package fixture\n\ntype Inner struct {\n\tHost string `name:\"host\" default:\"localhost\" description:\"bind host\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\" required:\"true\" description:\"listen port\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Inner  `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, src, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	md := string(emitMarkdown(m, ".", "APP_", "_", true))
 	// Cells are padded, so collapse runs of spaces before checking content.
-	var squeezed []string
-	for _, line := range strings.Split(md, "\n") {
+	lines := strings.Split(md, "\n")
+	squeezed := make([]string, 0, len(lines))
+	for _, line := range lines {
 		squeezed = append(squeezed, strings.Join(strings.Fields(line), " "))
 	}
 	md = strings.Join(squeezed, "\n")
@@ -275,15 +304,16 @@ func TestMarkdown(t *testing.T) {
 }
 
 func TestEnvFlagOverrides(t *testing.T) {
+	t.Parallel()
 	src := "package fixture\n\ntype Cfg struct {\n" +
 		"\tHost     string `name:\"host\" env:\"HOSTNAME_OVERRIDE\" flag:\"hostname\"`\n" +
 		"\tInternal string `name:\"internal\" env:\"-\" flag:\"-\"`\n" +
 		"\tPort     uint16 `name:\"port\"`\n}\n" + validateStub
-	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	m, err := buildFixtureModel(t, src, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := emit(m, "pflag")
+	out, err := emit(m, flagsPFlag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,17 +333,19 @@ func TestEnvFlagOverrides(t *testing.T) {
 }
 
 func TestBadEnvOverrideRejected(t *testing.T) {
+	t.Parallel()
 	src := "package fixture\n\ntype Cfg struct {\n" +
 		"\tHost string `name:\"host\" env:\"lower-case\"`\n}\n" + validateStub
-	_, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	_, err := buildFixtureModel(t, src, false)
 	if err == nil || !strings.Contains(err.Error(), "uppercase") {
 		t.Fatalf("want uppercase-override error, got %v", err)
 	}
 }
 
 func TestSchemaAndSample(t *testing.T) {
-	src := "package fixture\n\ntype Sub struct {\n\tHost string `name:\"host\" default:\"localhost\" description:\"bind host\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\" required:\"true\" description:\"listen port\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Sub    `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
-	m, err := buildFixtureModel(t, map[string]string{"cfg.go": src}, "Cfg", false)
+	t.Parallel()
+	src := "package fixture\n\ntype Inner struct {\n\tHost string `name:\"host\" default:\"localhost\" description:\"bind host\"`\n}\n\ntype Cfg struct {\n\tPort uint16 `name:\"port\" default:\"8080\" required:\"true\" description:\"listen port\"`\n\tKey  string `name:\"key\" secret:\"true\"`\n\tSub  Inner  `name:\"sub\"`\n\tTags []string `name:\"tags\" default:\"a,b\"`\n}\n" + validateStub
+	m, err := buildFixtureModel(t, src, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,23 +371,25 @@ func TestSchemaAndSample(t *testing.T) {
 // assign the decoded basic value directly to the named field, which
 // doesn't compile.
 func TestNamedScalarTypes(t *testing.T) {
+	t.Parallel()
 	files := map[string]string{
 		"kinds/kinds.go": "package kinds\n\ntype Storage string\n\nconst (\n\tStoragePostgres Storage = \"postgres\"\n\tStorageSQLite Storage = \"sqlite\"\n)\n",
-		"cfg.go": "package fixture\n\nimport \"fixture/kinds\"\n\n" +
-			"type Level string\n\ntype Retries int32\n\ntype Toggle bool\n\ntype Ratio float64\n\n" +
+		fixtureFile: "package fixture\n\nimport \"fixture/kinds\"\n\n" +
+			"type LogLevel string\n\ntype RetryCount int32\n\ntype Switch bool\n\ntype Fraction float64\n\n" +
 			"type Cfg struct {\n" +
-			"\tLevel   Level         `name:\"level\" default:\"info\"`\n" +
-			"\tRetries Retries       `name:\"retries\" default:\"3\"`\n" +
-			"\tToggle  Toggle        `name:\"toggle\"`\n" +
-			"\tRatio   Ratio         `name:\"ratio\" default:\"0.5\"`\n" +
-			"\tStore   Store         `name:\"store\"`\n" +
+			"\tLevel   LogLevel      `name:\"level\" default:\"info\"`\n" +
+			"\tRetries RetryCount    `name:\"retries\" default:\"3\"`\n" +
+			"\tToggle  Switch        `name:\"toggle\"`\n" +
+			"\tRatio   Fraction      `name:\"ratio\" default:\"0.5\"`\n" +
+			"\tStore   StoreConfig   `name:\"store\"`\n" +
 			"}\n\n" +
-			"type Store struct {\n\tType kinds.Storage `name:\"type\" default:\"sqlite\"`\n}\n" + validateStub,
+			"type StoreConfig struct {\n\tType kinds.Storage `name:\"type\" default:\"sqlite\"`\n}\n" + validateStub,
 	}
-	for _, mode := range []string{"pflag", "std", "none"} {
+	for _, mode := range []string{flagsPFlag, flagsStd, flagsNone} {
 		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
 			dir := writeModule(t, files)
-			named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv())
+			named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -367,7 +401,7 @@ func TestNamedScalarTypes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o600); err != nil {
 				t.Fatal(err)
 			}
 			main := "package main\n\nimport (\n\t\"fmt\"\n\n\tconfigulator \"github.com/USA-RedDragon/configulator/v2\"\n\tfixture \"fixture\"\n)\n\n" +
@@ -379,15 +413,15 @@ func TestNamedScalarTypes(t *testing.T) {
 			if err := os.MkdirAll(filepath.Join(dir, "cmd", "run"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(dir, "cmd", "run", "main.go"), []byte(main), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(dir, "cmd", "run", "main.go"), []byte(main), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(dir, "cfg.json"), []byte(`{"retries": 7, "store": {"type": "postgres"}}`), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(dir, "cfg.json"), []byte(`{"retries": 7, "store": {"type": "postgres"}}`), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			cmd := exec.Command("go", "run", "./cmd/run")
+			cmd := exec.CommandContext(t.Context(), "go", "run", "./cmd/run")
 			cmd.Dir = dir
-			cmd.Env = append(hermeticEnv(), "FX_LEVEL=debug", "FX_TOGGLE=true")
+			cmd.Env = append(hermeticEnv(t), "FX_LEVEL=debug", "FX_TOGGLE=true")
 			var stderr strings.Builder
 			cmd.Stderr = &stderr
 			o, err := cmd.Output()
@@ -396,6 +430,87 @@ func TestNamedScalarTypes(t *testing.T) {
 			}
 			if got, want := strings.TrimSpace(string(o)), "debug 7 true 0.5 postgres"; got != want {
 				t.Fatalf("-flags=%s: got %q, want %q", mode, got, want)
+			}
+		})
+	}
+}
+
+func TestStdlibTypes(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		fixtureFile: "package fixture\n\nimport (\n\t\"net\"\n\t\"net/url\"\n\t\"os\"\n\t\"time\"\n)\n\n" +
+			"type Cfg struct {\n" +
+			"\tTZ    *time.Location   `name:\"tz\" default:\"America/Chicago\"`\n" +
+			"\tMonth time.Month       `name:\"month\" default:\"March\"`\n" +
+			"\tNet   net.IPNet        `name:\"net\" default:\"10.0.0.0/8\"`\n" +
+			"\tTCP   net.TCPAddr      `name:\"tcp\" default:\"127.0.0.1:80\"`\n" +
+			"\tUDP   net.UDPAddr      `name:\"udp\"`\n" +
+			"\tMAC   net.HardwareAddr `name:\"mac\" default:\"aa:bb:cc:dd:ee:ff\"`\n" +
+			"\tURL   url.URL          `name:\"url\" default:\"https://a.example/x\"`\n" +
+			"\tMode  os.FileMode      `name:\"mode\" default:\"0644\"`\n" +
+			"\tPort  *int             `name:\"port\" default:\"5\"`\n" +
+			"\tOn    *bool            `name:\"on\" default:\"true\"`\n" +
+			"}\n" + validateStub,
+	}
+	binds := map[string][2]string{
+		flagsPFlag: {"cpflag \"github.com/USA-RedDragon/configulator/v2/flags/pflag\"\n\t\"github.com/spf13/pflag\"",
+			"fs := pflag.NewFlagSet(\"x\", pflag.ContinueOnError)\n\tcpflag.Bind(c, fs, fixture.CfgPFlagHooks(), nil)\n\t_ = fs.Parse(os.Args[1:])"},
+		flagsStd: {"cstd \"github.com/USA-RedDragon/configulator/v2/flags/std\"\n\t\"flag\"",
+			"fs := flag.NewFlagSet(\"x\", flag.ContinueOnError)\n\tcstd.Bind(c, fs, fixture.CfgStdFlagHooks(), nil)\n\t_ = fs.Parse(os.Args[1:])"},
+		flagsNone: {"", ""},
+	}
+	for mode, bind := range binds {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			dir := writeModule(t, files)
+			named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			m, err := buildModel(named, outPkg, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := emit(m, mode)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			main := "package main\n\nimport (\n\t\"fmt\"\n\t\"os\"\n\n\tconfigulator \"github.com/USA-RedDragon/configulator/v2\"\n\tfixture \"fixture\"\n\t" + bind[0] + "\n)\n\n" +
+				"var _ = os.Args\n\n" +
+				"func main() {\n\tc := configulator.New(fixture.CfgSchema()).\n" +
+				"\t\tWithEnvironmentVariables(&configulator.EnvironmentVariableOptions{Prefix: \"FX_\", Separator: \"_\"})\n\t" + bind[1] + "\n" +
+				"\tcfg, err := c.Load()\n\tif err != nil {\n\t\tpanic(err)\n\t}\n" +
+				"\tfmt.Println(cfg.TZ, cfg.Month, cfg.Net.String(), cfg.TCP.String(), cfg.UDP.String(), cfg.MAC, cfg.URL.String(), cfg.Mode, *cfg.Port, *cfg.On)\n}\n"
+			if err := os.MkdirAll(filepath.Join(dir, "cmd", "run"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "cmd", "run", "main.go"), []byte(main), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"run", "./cmd/run"}
+			want := "Europe/Paris July 10.0.0.0/8 127.0.0.1:80 127.0.0.1:53 aa:bb:cc:dd:ee:ff https://a.example/x -rw-r--r-- 5 true"
+			if mode != flagsNone {
+				dash := "-"
+				if mode == flagsPFlag {
+					dash = "--"
+				}
+				args = append(args, dash+"tcp=127.0.0.1:443", dash+"mode=0600")
+				want = "Europe/Paris July 10.0.0.0/8 127.0.0.1:443 127.0.0.1:53 aa:bb:cc:dd:ee:ff https://a.example/x -rw------- 5 true"
+			}
+			cmd := exec.CommandContext(t.Context(), "go", args...)
+			cmd.Dir = dir
+			cmd.Env = append(hermeticEnv(t), "FX_TZ=Europe/Paris", "FX_MONTH=7", "FX_UDP=127.0.0.1:53")
+			var stderr strings.Builder
+			cmd.Stderr = &stderr
+			o, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("-flags=%s: %v\n%s", mode, err, stderr.String())
+			}
+			if got := strings.TrimSpace(string(o)); got != want {
+				t.Fatalf("-flags=%s:\n got %q\nwant %q", mode, got, want)
 			}
 		})
 	}

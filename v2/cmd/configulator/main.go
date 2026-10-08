@@ -17,7 +17,7 @@ import (
 func main() {
 	typeName := flag.String("type", "", "config root type (required)")
 	output := flag.String("output", "", "output file (default <type>_configulator.go)")
-	flagsMode := flag.String("flags", "pflag", "flag adapter: pflag | std | none")
+	flagsMode := flag.String("flags", flagsPFlag, "flag adapter: pflag | std | none")
 	noValidate := flag.Bool("no-validate", false, "allow a config type without Validate() error")
 	schema := flag.Bool("schema", false, "print a JSON Schema to stdout instead of generating")
 	sample := flag.Bool("sample", false, "print a sample config to stdout instead of generating (see -format)")
@@ -36,7 +36,7 @@ func main() {
 		os.Exit(2)
 	}
 	switch *flagsMode {
-	case "pflag", "std", "none":
+	case flagsPFlag, flagsStd, flagsNone:
 	default:
 		fmt.Fprintf(os.Stderr, "configulator: -flags must be pflag, std, or none (got %q)\n", *flagsMode)
 		os.Exit(2)
@@ -63,7 +63,7 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	if *flagsMode == "std" {
+	if *flagsMode == flagsStd {
 		if p := findShortTag(model.Fields, ""); p != "" {
 			fatal(fmt.Errorf("%s: short: tag is not supported with -flags=std (stdlib flag has no shorthands)", p))
 		}
@@ -92,21 +92,7 @@ func main() {
 			}
 			os.Stdout.Write(b)
 		case *sample:
-			switch *format {
-			case "yaml":
-				os.Stdout.Write(emitSample(model))
-			case "json":
-				b, err := emitSampleJSON(model)
-				if err != nil {
-					fatal(err)
-				}
-				os.Stdout.Write(b)
-			case "toml":
-				os.Stdout.Write(emitSampleTOML(model))
-			default:
-				fmt.Fprintf(os.Stderr, "configulator: unknown -format %q: expected yaml, json, or toml\n", *format)
-				os.Exit(2)
-			}
+			writeSample(model, *format)
 		case *markdown:
 			table := emitMarkdown(model, *flagSep, *envPrefix, *envSep, *markdownFile == "")
 			if *markdownFile == "" {
@@ -140,6 +126,25 @@ func main() {
 		fatal(err)
 	}
 	fmt.Fprintf(os.Stderr, "configulator: wrote %s\n", out)
+}
+
+// writeSample prints a sample config in format to stdout.
+func writeSample(model *Model, format string) {
+	switch format {
+	case "yaml":
+		os.Stdout.Write(emitSample(model))
+	case "json":
+		b, err := emitSampleJSON(model)
+		if err != nil {
+			fatal(err)
+		}
+		os.Stdout.Write(b)
+	case "toml":
+		os.Stdout.Write(emitSampleTOML(model))
+	default:
+		fmt.Fprintf(os.Stderr, "configulator: unknown -format %q: expected yaml, json, or toml\n", format)
+		os.Exit(2)
+	}
 }
 
 func fatal(err error) {

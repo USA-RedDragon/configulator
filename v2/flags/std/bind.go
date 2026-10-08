@@ -42,7 +42,10 @@ func Bind[C any](c *configulator.Configulator[C], fs *flag.FlagSet, h Hooks[C], 
 	if !ok {
 		panic("configulator: Bind called twice on the same Configulator, or on one not created by New")
 	}
-	sm := v.(seam.Flag[C, *configulator.FileOptions, configulator.SetOrigin])
+	sm, ok := v.(seam.Flag[C, *configulator.FileOptions, configulator.SetOrigin])
+	if !ok {
+		panic("configulator: Bind found flag hooks for a different config type")
+	}
 	if fo := sm.FileOptions(); fo != nil {
 		if fo.Shorthand != "" {
 			regErr = fmt.Errorf("FileOptions.Shorthand %q: stdlib flag has no shorthand concept; unset it or use the pflag adapter", fo.Shorthand)

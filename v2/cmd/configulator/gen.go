@@ -11,6 +11,12 @@ import (
 )
 
 const (
+	flagsPFlag = "pflag"
+	flagsStd   = "std"
+	flagsNone  = "none"
+)
+
+const (
 	pkgCfg   = "github.com/USA-RedDragon/configulator/v2"
 	pkgPFlag = "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	pfl      = "github.com/spf13/pflag"
@@ -40,9 +46,8 @@ func (e *emitter) quoteKeyName() string {
 }
 
 func emit(m *Model, flagsMode string) ([]byte, error) {
-	outPkgPath = m.PkgPath
 	e := &emitter{
-		m: m, f: NewFile(m.PkgName),
+		m: m, f: NewFilePathName(m.PkgPath, m.PkgName),
 		shadows:      map[string]bool{},
 		shadowFields: map[string][]*Field{},
 	}
@@ -55,15 +60,15 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 	e.f.ImportName(pfl, "pflag")
 
 	e.emitShadowStruct(shadowName(m.TypeName), m.Fields)
-	e.emitSchemaCtor(flagsMode)
+	e.emitSchemaCtor()
 	e.emitApplyDefaults()
 	e.emitDecodeFile()
-	e.emitApplyTo(shadowName(m.TypeName), m.Fields, "", "cfg")
+	e.emitApplyTo(shadowName(m.TypeName), m.Fields, "")
 	e.emitApplyEnv()
 	switch flagsMode {
-	case "pflag":
+	case flagsPFlag:
 		e.emitPFlagHooks()
-	case "std":
+	case flagsStd:
 		e.emitStdFlagHooks()
 	}
 	e.emitFastPaths()
@@ -100,20 +105,17 @@ func goName(f *Field) string {
 	return parts[len(parts)-1]
 }
 
-// cfgSel renders recv followed by the field's Go path (which may be
-// promoted) and any extra selectors.
-func cfgSel(recv string, f *Field, extra ...string) *Statement {
+// cfgSel renders recv followed by the field's Go path, which may be
+// promoted.
+func cfgSel(recv string, f *Field) *Statement {
 	s := Id(recv)
 	for _, p := range strings.Split(f.GoName, ".") {
-		s = s.Dot(p)
-	}
-	for _, p := range extra {
 		s = s.Dot(p)
 	}
 	return s
 }
 
-func (e *emitter) emitSchemaCtor(flagsMode string) {
+func (e *emitter) emitSchemaCtor() {
 	n := e.m.TypeName
 	d := Dict{
 		Id("ApplyDefaults"): Id(lowerFirst(n) + "ApplyDefaults"),
@@ -121,7 +123,7 @@ func (e *emitter) emitSchemaCtor(flagsMode string) {
 		Id("ApplyEnv"):      Id(lowerFirst(n) + "ApplyEnv"),
 	}
 	if req := requiredPaths(e.m.Fields, ""); len(req) > 0 {
-		var lits []Code
+		lits := make([]Code, 0, len(req))
 		for _, p := range req {
 			lits = append(lits, Lit(p))
 		}

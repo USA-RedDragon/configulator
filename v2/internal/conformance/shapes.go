@@ -60,12 +60,12 @@ type Pool struct {
 func (Collections) Validate() error { return nil }
 
 type Optionals struct {
-	Port *uint16 `name:"port" json:"port"`
-	Name *string `name:"name" json:"name" default:"opt-name"`
-	TLS  *Tls    `name:"tls" json:"tls"`
+	Port *uint16    `name:"port" json:"port"`
+	Name *string    `name:"name" json:"name" default:"opt-name"`
+	TLS  *TLSConfig `name:"tls" json:"tls"`
 }
 
-type Tls struct {
+type TLSConfig struct {
 	Cert       string `name:"cert" json:"cert"`
 	MinVersion uint16 `name:"min-version" json:"min-version" default:"12"`
 }

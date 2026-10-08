@@ -9,6 +9,7 @@ import (
 )
 
 func TestSpliceMarkdown(t *testing.T) {
+	t.Parallel()
 	doc := "# App\n\n## Config\n\n" + markdownBegin + "\nold table\n" + markdownEnd + "\n\nFooter\n"
 	got, err := spliceMarkdown([]byte(doc), []byte("| new |\n"))
 	if err != nil {
@@ -40,6 +41,7 @@ func TestSpliceMarkdown(t *testing.T) {
 }
 
 func TestUpdateMarkdownFileCheck(t *testing.T) {
+	t.Parallel()
 	path := filepath.Join(t.TempDir(), "README.md")
 	if err := os.WriteFile(path, []byte(markdownBegin+"\n"+markdownEnd+"\n"), 0o600); err != nil {
 		t.Fatal(err)

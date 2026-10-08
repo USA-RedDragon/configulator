@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"go/types"
 	"strings"
 
@@ -22,10 +21,8 @@ func (e *emitter) emitDecodeFile() {
 	)
 }
 
-func (e *emitter) emitApplyTo(shadow string, fields []*Field, pathPrefix, recv string) {
-	var body []Code
-	body = append(body, e.applyToFields(fields, "s", pathPrefix)...)
-	body = append(body, Return(Nil()))
+func (e *emitter) emitApplyTo(shadow string, fields []*Field, pathPrefix string) {
+	body := append(e.applyToFields(fields, "s", pathPrefix), Return(Nil()))
 	e.f.Func().Params(Id("s").Op("*").Id(shadow)).Id("applyTo").Params(
 		Id("cfg").Op("*").Id(e.typeForShadow(shadow)), Id("set").Qual(pkgCfg, "SetOrigin"), Id("file").String(),
 	).Error().Block(body...)
@@ -82,6 +79,7 @@ func (e *emitter) applyToFields(fields []*Field, src, pathPrefix string) []Code 
 			out = append(out, e.applyToSliceStruct(f, src, path)...)
 		case KindMapStruct:
 			out = append(out, e.applyToMapStruct(f, src, path)...)
+		default:
 		}
 	}
 	return out
@@ -129,17 +127,20 @@ func (e *emitter) applyToPointer(f *Field, src, path string) []Code {
 		)}
 	case KindStruct:
 		elemType := fieldGoType(f.Elem.Type)
-		var inner []Code
+		defaults := e.elementDefaults(f.Elem.Fields, path)
+		apply := e.applyElementFields(f.Elem.Fields, src+"."+goName(f), "e", path)
+		inner := make([]Code, 0, 3+len(defaults)+len(apply))
 		inner = append(inner, Id("e").Op(":=").Add(elemType.Clone()).Values())
-		inner = append(inner, e.elementDefaults(f.Elem.Fields, path)...)
+		inner = append(inner, defaults...)
 		inner = append(inner, If(cfgSel("cfg", f).Op("!=").Nil()).Block(
 			Id("e").Op("=").Op("*").Add(cfgSel("cfg", f)),
 		))
-		inner = append(inner, e.applyElementFields(f.Elem.Fields, src+"."+goName(f), "e", path)...)
+		inner = append(inner, apply...)
 		inner = append(inner, cfgSel("cfg", f).Op("=").Op("&").Id("e"))
 		return []Code{If(sel.Clone().Op("!=").Nil()).Block(inner...)}
+	default:
+		panic("applyToPointer: unsupported element kind at " + path)
 	}
-	panic("applyToPointer: unsupported element kind at " + path)
 }
 
 // elementDefaults sets the element defaults, and records their origin, on
@@ -154,9 +155,7 @@ func (e *emitter) elementDefaults(fields []*Field, pathExpr string) []Code {
 		case KindString:
 			out = append(out, Id("e").Dot(goName(f)).Op("=").Lit(f.Default))
 		case KindUint, KindInt:
-			v := 0
-			fmt.Sscanf(f.Default, "%d", &v)
-			out = append(out, Id("e").Dot(goName(f)).Op("=").Add(castLit(f, v)))
+			out = append(out, Id("e").Dot(goName(f)).Op("=").Add(castLit(f, intLit(f.Kind, f.Default))))
 		default:
 			panic("element default kind not supported yet")
 		}
@@ -178,9 +177,7 @@ func (e *emitter) elementDefaultsExpr(fields []*Field, pathVar string) []Code {
 		case KindString:
 			out = append(out, Id("e").Dot(goName(f)).Op("=").Lit(f.Default))
 		case KindUint, KindInt:
-			v := 0
-			fmt.Sscanf(f.Default, "%d", &v)
-			out = append(out, Id("e").Dot(goName(f)).Op("=").Add(castLit(f, v)))
+			out = append(out, Id("e").Dot(goName(f)).Op("=").Add(castLit(f, intLit(f.Kind, f.Default))))
 		default:
 			panic("element default kind not supported yet")
 		}
@@ -211,7 +208,7 @@ func (e *emitter) applyElementFields(fields []*Field, src, dst, path string) []C
 // applyElementFieldsExpr is applyElementFields for index/key paths built at
 // runtime.
 func (e *emitter) applyElementFieldsExpr(fields []*Field, src, dst, pathVar string) []Code {
-	var out []Code
+	out := make([]Code, 0, len(fields))
 	for _, f := range fields {
 		sel := Id(src).Dot(goName(f))
 		out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
@@ -225,12 +222,13 @@ func (e *emitter) applyElementFieldsExpr(fields []*Field, src, dst, pathVar stri
 func (e *emitter) applyToSliceStruct(f *Field, src, path string) []Code {
 	sel := Id(src).Dot(goName(f))
 	elemType := fieldGoType(f.Elem.Type)
-	loop := []Code{
-		Var().Id("e").Add(elemType.Clone()),
-		Id("idx").Op(":=").Lit(path+"[").Op("+").Qual("strconv", "Itoa").Call(Id("i")).Op("+").Lit("]"),
-	}
-	loop = append(loop, e.elementDefaultsExpr(f.Elem.Fields, "idx")...)
-	loop = append(loop, e.applyElementFieldsExpr(f.Elem.Fields, "esh", "e", "idx")...)
+	keyExpr := Id("idx").Op(":=").Lit(path+"[").Op("+").Qual("strconv", "Itoa").Call(Id("i")).Op("+").Lit("]")
+	defaults := e.elementDefaultsExpr(f.Elem.Fields, "idx")
+	apply := e.applyElementFieldsExpr(f.Elem.Fields, "esh", "e", "idx")
+	loop := make([]Code, 0, 3+len(defaults)+len(apply))
+	loop = append(loop, Var().Id("e").Add(elemType.Clone()), keyExpr)
+	loop = append(loop, defaults...)
+	loop = append(loop, apply...)
 	loop = append(loop, Id("out").Index(Id("i")).Op("=").Id("e"))
 	return []Code{If(sel.Clone().Op("!=").Nil()).Block(
 		Id("out").Op(":=").Make(Index().Add(elemType.Clone()), Len(Op("*").Add(sel.Clone()))),
@@ -243,12 +241,13 @@ func (e *emitter) applyToSliceStruct(f *Field, src, path string) []Code {
 func (e *emitter) applyToMapStruct(f *Field, src, path string) []Code {
 	sel := Id(src).Dot(goName(f))
 	elemType := fieldGoType(f.Elem.Type)
-	loop := []Code{
-		Var().Id("e").Add(elemType.Clone()),
-		Id("key").Op(":=").Lit(path + ".").Op("+").Id(e.quoteKeyName()).Call(Id("k")),
-	}
-	loop = append(loop, e.elementDefaultsExpr(f.Elem.Fields, "key")...)
-	loop = append(loop, e.applyElementFieldsExpr(f.Elem.Fields, "esh", "e", "key")...)
+	keyExpr := Id("key").Op(":=").Lit(path + ".").Op("+").Id(e.quoteKeyName()).Call(Id("k"))
+	defaults := e.elementDefaultsExpr(f.Elem.Fields, "key")
+	apply := e.applyElementFieldsExpr(f.Elem.Fields, "esh", "e", "key")
+	loop := make([]Code, 0, 3+len(defaults)+len(apply))
+	loop = append(loop, Var().Id("e").Add(elemType.Clone()), keyExpr)
+	loop = append(loop, defaults...)
+	loop = append(loop, apply...)
 	loop = append(loop, Id("out").Index(Id("k")).Op("=").Id("e"))
 	return []Code{If(sel.Clone().Op("!=").Nil()).Block(
 		Id("out").Op(":=").Make(Map(String()).Add(elemType.Clone()), Len(Op("*").Add(sel.Clone()))),

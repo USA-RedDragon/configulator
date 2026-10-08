@@ -10,9 +10,10 @@ import (
 // the only place redaction happens.
 func (e *emitter) emitPrintConfig() {
 	n := e.m.TypeName
-	var body []Code
+	lines := e.printFields(e.m.Fields, "")
+	body := make([]Code, 0, len(lines)+2)
 	body = append(body, Var().Id("b").Qual("strings", "Builder"))
-	e.printFields(&body, e.m.Fields, "")
+	body = append(body, lines...)
 	body = append(body, Return(Id("b").Dot("String").Call()))
 	e.f.Comment("PrintConfig renders every field as \"path = value\" lines, redacting")
 	e.f.Comment("fields tagged secret:\"true\". The origin Report holds no values,")
@@ -20,21 +21,22 @@ func (e *emitter) emitPrintConfig() {
 	e.f.Func().Params(Id("c").Op("*").Id(n)).Id("PrintConfig").Params().String().Block(body...)
 }
 
-func (e *emitter) printFields(body *[]Code, fields []*Field, prefix string) {
+func (e *emitter) printFields(fields []*Field, prefix string) []Code {
+	var out []Code
 	for _, f := range fields {
 		path := joinPath(prefix, f.Tag)
 		if f.Kind == KindStruct {
-			e.printFields(body, f.Fields, path)
+			out = append(out, e.printFields(f.Fields, path)...)
 			continue
 		}
 		if f.Secret {
-			*body = append(*body, Id("b").Dot("WriteString").Call(Lit(path+" = (redacted)\n")))
+			out = append(out, Id("b").Dot("WriteString").Call(Lit(path+" = (redacted)\n")))
 			continue
 		}
 		var val *Statement
 		switch f.Kind {
 		case KindPointer:
-			*body = append(*body, If(cfgSel("c", f).Op("==").Nil()).Block(
+			out = append(out, If(cfgSel("c", f).Op("==").Nil()).Block(
 				Id("b").Dot("WriteString").Call(Lit(path+" = <unset>\n")),
 			).Else().Block(
 				Id("b").Dot("WriteString").Call(Qual("fmt", "Sprintf").Call(
@@ -44,7 +46,8 @@ func (e *emitter) printFields(body *[]Code, fields []*Field, prefix string) {
 		default:
 			val = cfgSel("c", f)
 		}
-		*body = append(*body, Id("b").Dot("WriteString").Call(
+		out = append(out, Id("b").Dot("WriteString").Call(
 			Qual("fmt", "Sprintf").Call(Lit(path+" = %v\n"), val)))
 	}
+	return out
 }

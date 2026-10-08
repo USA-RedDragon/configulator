@@ -7,17 +7,14 @@ import (
 	. "github.com/dave/jennifer/jen"
 )
 
-// outPkgPath is set by emit so fieldGoType doesn't import the output
-// package into itself.
-var outPkgPath string
-
 // convNamed wraps expr in a conversion to t when t is a named type over a
 // basic type (e.g. `type LogLevel string`). Decoded values arrive as the
 // underlying type, and Go won't assign that to the named type without a
-// conversion. Other types pass through unchanged, and so does
-// time.Duration, which every layer already decodes as time.Duration.
+// conversion. Other types pass through unchanged, as do the stdlib types
+// configulator has wrappers for.
 func convNamed(t types.Type, expr *Statement) *Statement {
-	if named, ok := t.(*types.Named); ok && !isTimeDuration(named) {
+	t = types.Unalias(t)
+	if named, ok := t.(*types.Named); ok && !isStdSlot(named) {
 		if _, basic := named.Underlying().(*types.Basic); basic {
 			return fieldGoType(t).Call(expr)
 		}
@@ -25,17 +22,23 @@ func convNamed(t types.Type, expr *Statement) *Statement {
 	return expr
 }
 
-func isTimeDuration(n *types.Named) bool {
+// isStdSlot reports whether n is decoded by a configulator wrapper type, whose
+// Value already returns n.
+func isStdSlot(n *types.Named) bool {
 	pkg := n.Obj().Pkg()
-	return pkg != nil && pkg.Path() == "time" && n.Obj().Name() == "Duration"
+	if pkg == nil {
+		return false
+	}
+	_, ok := stdSlot(pkg.Path() + "." + n.Obj().Name())
+	return ok
 }
 
 // fieldGoType renders the user-side Go type for casts and temporaries.
 func fieldGoType(t types.Type) *Statement {
-	switch u := t.(type) {
+	switch u := types.Unalias(t).(type) {
 	case *types.Named:
 		pkg := u.Obj().Pkg()
-		if pkg == nil || pkg.Path() == outPkgPath {
+		if pkg == nil {
 			return Id(u.Obj().Name())
 		}
 		return Qual(pkg.Path(), u.Obj().Name())
@@ -70,12 +73,12 @@ func (e *emitter) shadowFieldType(f *Field) *Statement {
 	case KindPointer:
 		return e.shadowFieldType(f.Elem)
 	case KindSliceScalar:
-		return Op("*").Index().Add(fieldGoType(f.Type.Underlying().(*types.Slice).Elem()))
+		return Op("*").Index().Add(fieldGoType(f.Elem.Type))
 	case KindSliceStruct:
 		e.ensureShadow(f.Elem)
 		return Op("*").Index().Id(e.shadowFor(f.Elem.Type))
 	case KindMapScalar:
-		return Op("*").Map(String()).Add(fieldGoType(f.Type.Underlying().(*types.Map).Elem()))
+		return Op("*").Map(String()).Add(fieldGoType(f.Elem.Type))
 	case KindMapStruct:
 		e.ensureShadow(f.Elem)
 		return Op("*").Map(String()).Id(e.shadowFor(f.Elem.Type))

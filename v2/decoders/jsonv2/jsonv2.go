@@ -9,9 +9,16 @@ import (
 )
 
 // Strict rejects unknown members.
-var Strict configulator.Unmarshal = configulator.StrictJSON
+func Strict(b []byte, v any) error {
+	return configulator.StrictJSON(b, v)
+}
 
 // Lenient ignores unknown members.
-var Lenient configulator.Unmarshal = func(b []byte, v any) error {
+func Lenient(b []byte, v any) error {
 	return jsonv2.Unmarshal(b, v)
 }
+
+var (
+	_ configulator.Unmarshal = Strict
+	_ configulator.Unmarshal = Lenient
+)

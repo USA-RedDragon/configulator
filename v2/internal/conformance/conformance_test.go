@@ -286,6 +286,7 @@ func toFloat(v any) (float64, bool) {
 }
 
 func TestCorpus(t *testing.T) {
+	t.Parallel()
 	spec := specDir(t)
 	casesDir := filepath.Join(spec, "cases")
 	entries, err := os.ReadDir(casesDir)
@@ -309,12 +310,15 @@ func TestCorpus(t *testing.T) {
 			continue
 		}
 		name := e.Name()
+		if !skip[name] {
+			ran++
+		}
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			if skip[name] {
 				t.Skipf("in skip-go.txt")
 			}
 			tc := loadCase(t, filepath.Join(casesDir, name))
-			ran++
 			switch tc.shape {
 			case "scalars":
 				h := ScalarsPFlagHooks()

@@ -54,6 +54,26 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
+    rules:
+      # jennifer's DSL is written with a dot import, and the generator repeats
+      # Go type and identifier names as literals.
+      - path: v2/cmd/configulator/(gen|gen_\w+|load|main|markdown_file|model)\.go$
+        linters:
+          - goconst
+      - path: v2/cmd/configulator/
+        linters:
+          - revive
+          - staticcheck
+        text: should not use dot imports
+      # Generated source is written world-readable like any other source file.
+      - path: v2/cmd/configulator/main\.go$
+        linters:
+          - gosec
+        text: G306
+      # The hook registry is process-wide by design.
+      - path: v2/internal/seam/seam\.go$
+        linters:
+          - gochecknoglobals
     paths:
       - .*_configulator\.go$
       - third_party$

@@ -16,14 +16,14 @@ import (
 	"strings"
 )
 
-type tlsShadow struct {
+type tLSConfigShadow struct {
 	Cert       *string `json:"cert" toml:"cert" yaml:"cert"`
 	MinVersion *uint16 `json:"min-version" toml:"min-version" yaml:"min-version"`
 }
 type optionalsShadow struct {
-	Port *uint16    `json:"port" toml:"port" yaml:"port"`
-	Name *string    `json:"name" toml:"name" yaml:"name"`
-	TLS  *tlsShadow `json:"tls" toml:"tls" yaml:"tls"`
+	Port *uint16          `json:"port" toml:"port" yaml:"port"`
+	Name *string          `json:"name" toml:"name" yaml:"name"`
+	TLS  *tLSConfigShadow `json:"tls" toml:"tls" yaml:"tls"`
 }
 
 // OptionalsSchema returns the generated schema for Optionals.
@@ -35,9 +35,11 @@ func OptionalsSchema() *configulator.Schema[Optionals] {
 	}
 }
 func optionalsApplyDefaults(cfg *Optionals, set configulator.SetOrigin) error {
-	nameDefault := "opt-name"
-	cfg.Name = &nameDefault
-	set("name", configulator.LayerDefault, "default tag")
+	{
+		nameDefault := "opt-name"
+		cfg.Name = &nameDefault
+		set("name", configulator.LayerDefault, "default tag")
+	}
 	return nil
 }
 func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, set configulator.SetOrigin, file string) error {
@@ -62,7 +64,7 @@ func (s *optionalsShadow) applyTo(cfg *Optionals, set configulator.SetOrigin, fi
 		set("name", configulator.LayerFile, file)
 	}
 	if s.TLS != nil {
-		e := Tls{}
+		e := TLSConfig{}
 		e.MinVersion = uint16(12)
 		set("tls.min-version", configulator.LayerDefault, "element default")
 		if cfg.TLS != nil {
@@ -105,7 +107,7 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 	}
 	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "cert"); true {
 		if v, ok := ec.Getenv(n); ok {
-			var e Tls
+			var e TLSConfig
 			if cfg.TLS != nil {
 				e = *cfg.TLS
 			} else {
@@ -128,7 +130,7 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 					Value:  v,
 				}
 			}
-			var e Tls
+			var e TLSConfig
 			if cfg.TLS != nil {
 				e = *cfg.TLS
 			} else {
@@ -243,7 +245,7 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					return err
 				}
 			} else {
-				var sub tlsShadow
+				var sub tLSConfigShadow
 				if err := sub.UnmarshalJSONFrom(dec); err != nil {
 					return err
 				}
@@ -257,7 +259,7 @@ func (s *optionalsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 
 var _ v2.UnmarshalerFrom = (*optionalsShadow)(nil)
 
-func (s *tlsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+func (s *tLSConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	tok, err := dec.ReadToken()
 	if err != nil {
 		return err
@@ -313,7 +315,7 @@ func (s *tlsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	}
 }
 
-var _ v2.UnmarshalerFrom = (*tlsShadow)(nil)
+var _ v2.UnmarshalerFrom = (*tLSConfigShadow)(nil)
 
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,

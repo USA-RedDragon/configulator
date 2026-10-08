@@ -109,8 +109,9 @@ func schemaDefault(f *Field) any {
 		inner := *f.Elem
 		inner.Default = f.Default
 		return schemaDefault(&inner)
+	default:
+		return nil
 	}
-	return nil
 }
 
 // emitSample renders a YAML sample with every key at its default and the
@@ -182,8 +183,9 @@ func sampleValue(f *Field) string {
 		return "[]"
 	case KindPointer:
 		return sampleValue(f.Elem)
+	default:
+		return `""`
 	}
-	return `""`
 }
 
 // emitMarkdown renders a Markdown table of every config key with its file
@@ -304,8 +306,9 @@ func markdownType(f *Field) string {
 		return "integer"
 	case KindFloat:
 		return "number"
+	default:
+		return "string"
 	}
-	return "string"
 }
 
 // envSegUpper returns the env segment the same way EnvName builds it at

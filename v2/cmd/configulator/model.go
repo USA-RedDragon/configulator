@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	configulator "github.com/USA-RedDragon/configulator/v2"
 )
 
 // Kind classifies a field for emission.
@@ -61,17 +63,31 @@ type Model struct {
 	HasValidate bool
 }
 
-// stdSlots maps stdlib types to their configulator sentinel slots.
-var stdSlots = map[string]string{
-	"time.Duration":    "Duration",
-	"net.IPNet":        "IPNet",
-	"os.FileMode":      "FileMode",
-	"time.Location":    "Location",
-	"net.TCPAddr":      "TCPAddr",
-	"net.UDPAddr":      "UDPAddr",
-	"net.HardwareAddr": "HardwareAddr",
-	"net/url.URL":      "URL",
-	"time.Month":       "Month",
+// stdSlot returns the configulator sentinel slot for the stdlib type full,
+// written as import path, dot, type name.
+func stdSlot(full string) (string, bool) {
+	switch full {
+	case "time.Duration":
+		return "Duration", true
+	case "net.IPNet":
+		return "IPNet", true
+	case "os.FileMode", "io/fs.FileMode":
+		return "FileMode", true
+	case "time.Location":
+		return "Location", true
+	case "net.TCPAddr":
+		return "TCPAddr", true
+	case "net.UDPAddr":
+		return "UDPAddr", true
+	case "net.HardwareAddr":
+		return "HardwareAddr", true
+	case "net/url.URL":
+		return "URL", true
+	case "time.Month":
+		return "Month", true
+	default:
+		return "", false
+	}
 }
 
 func buildModel(named *types.Named, outPkg *types.Package, noValidate bool) (*Model, error) {
@@ -105,12 +121,12 @@ func hasValidate(t types.Type) bool {
 	for _, recv := range []types.Type{t, types.NewPointer(t)} {
 		ms := types.NewMethodSet(recv)
 		for i := 0; i < ms.Len(); i++ {
-			f := ms.At(i).Obj().(*types.Func)
-			if f.Name() != "Validate" {
+			f, ok := ms.At(i).Obj().(*types.Func)
+			if !ok || f.Name() != "Validate" {
 				continue
 			}
-			sig := f.Type().(*types.Signature)
-			if sig.Params().Len() == 0 && sig.Results().Len() == 1 &&
+			sig, ok := f.Type().(*types.Signature)
+			if ok && sig.Params().Len() == 0 && sig.Results().Len() == 1 &&
 				sig.Results().At(0).Type().String() == "error" {
 				return true
 			}
@@ -216,7 +232,7 @@ func isUpperEnvSeg(s string) bool {
 		return false
 	}
 	for _, c := range s {
-		if !(c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_') {
+		if (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
 			return false
 		}
 	}
@@ -236,50 +252,26 @@ func tagName(tag reflect.StructTag) string {
 }
 
 func classify(f *Field, outPkg *types.Package, path string) error {
-	t := f.Type
+	t := types.Unalias(f.Type)
+	f.Type = t
 	fieldPath := path + "." + f.GoName
+
+	if handled, err := classifySpecial(f, t, fieldPath); handled {
+		return err
+	}
 
 	// Check sentinel slots first, so a stdlib struct like net.IPNet isn't
 	// mirrored field by field.
 	if named, ok := t.(*types.Named); ok {
-		full := named.Obj().Pkg().Path() + "." + named.Obj().Name()
-		if named.Obj().Pkg() == nil {
-			full = named.Obj().Name()
-		}
-		if slot, ok := stdSlots[full]; ok {
-			if full == "time.Duration" {
-				f.Kind = KindDuration
-			} else {
-				f.Kind = KindStdSlot
-			}
-			f.SlotType = slot
-			return nil
-		}
-		if full == "net/url.URL" {
-			// Unreachable while url.URL is in stdSlots, kept for the error message.
-			return fmt.Errorf("%s: url.URL is undecodable as a leaf; use the generated slot", fieldPath)
+		if handled, err := classifySlot(f, named, fieldPath); handled {
+			return err
 		}
 	}
 
 	switch u := t.Underlying().(type) {
 	case *types.Basic:
-		info := u.Info()
-		switch {
-		case info&types.IsBoolean != 0:
-			f.Kind = KindBool
-		case info&types.IsUnsigned != 0:
-			f.Kind = KindUint
-			f.Bits = basicBits(u)
-		case info&types.IsInteger != 0:
-			f.Kind = KindInt
-			f.Bits = basicBits(u)
-		case info&types.IsFloat != 0:
-			f.Kind = KindFloat
-			f.Bits = basicBits(u)
-		case info&types.IsString != 0:
-			f.Kind = KindString
-		default:
-			return fmt.Errorf("%s: unsupported basic type %s", fieldPath, u)
+		if err := classifyBasic(f, u, fieldPath); err != nil {
+			return err
 		}
 	case *types.Struct:
 		if implementsTextUnmarshaler(t) {
@@ -302,6 +294,11 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 		elem := &Field{GoName: f.GoName, Tag: f.Tag, Type: u.Elem()}
 		if err := classify(elem, outPkg, path); err != nil {
 			return err
+		}
+		switch elem.Kind {
+		case KindString, KindBool, KindInt, KindUint, KindFloat, KindStruct:
+		default:
+			return fmt.Errorf("%s: pointer to %s is not supported", fieldPath, types.TypeString(u.Elem(), nil))
 		}
 		f.Elem = elem
 	case *types.Slice:
@@ -343,10 +340,60 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 		return fmt.Errorf("%s: unsupported type %s", fieldPath, t)
 	}
 
-	if f.Default != "" {
-		if err := checkDefault(f); err != nil {
-			return fmt.Errorf("%s: default:%q: %v", fieldPath, f.Default, err)
+	return checkFieldDefault(f, fieldPath)
+}
+
+// classifySlot classifies named as a sentinel slot. handled reports whether
+// named is a stdlib type with a slot, in which case err is the result.
+func classifySlot(f *Field, named *types.Named, fieldPath string) (handled bool, err error) {
+	full := named.Obj().Name()
+	if pkg := named.Obj().Pkg(); pkg != nil {
+		full = pkg.Path() + "." + full
+	}
+	if slot, ok := stdSlot(full); ok {
+		if full == "time.Duration" {
+			f.Kind = KindDuration
+		} else {
+			f.Kind = KindStdSlot
 		}
+		f.SlotType = slot
+		return true, checkFieldDefault(f, fieldPath)
+	}
+	if full == "net/url.URL" {
+		// Unreachable while url.URL has a slot, kept for the error message.
+		return true, fmt.Errorf("%s: url.URL is undecodable as a leaf; use the generated slot", fieldPath)
+	}
+	return false, nil
+}
+
+func classifyBasic(f *Field, u *types.Basic, fieldPath string) error {
+	info := u.Info()
+	switch {
+	case info&types.IsBoolean != 0:
+		f.Kind = KindBool
+	case info&types.IsUnsigned != 0:
+		f.Kind = KindUint
+		f.Bits = basicBits(u)
+	case info&types.IsInteger != 0:
+		f.Kind = KindInt
+		f.Bits = basicBits(u)
+	case info&types.IsFloat != 0:
+		f.Kind = KindFloat
+		f.Bits = basicBits(u)
+	case info&types.IsString != 0:
+		f.Kind = KindString
+	default:
+		return fmt.Errorf("%s: unsupported basic type %s", fieldPath, u)
+	}
+	return nil
+}
+
+func checkFieldDefault(f *Field, fieldPath string) error {
+	if f.Default == "" {
+		return nil
+	}
+	if err := checkDefault(f); err != nil {
+		return fmt.Errorf("%s: default:%q: %w", fieldPath, f.Default, err)
 	}
 	return nil
 }
@@ -361,8 +408,9 @@ func basicBits(b *types.Basic) int {
 		return 32
 	case types.Int64, types.Uint64, types.Float64:
 		return 64
+	default:
+		return 0
 	}
-	return 0
 }
 
 func isStructKind(t types.Type) bool {
@@ -374,12 +422,12 @@ func implementsTextUnmarshaler(t types.Type) bool {
 	for _, recv := range []types.Type{t, types.NewPointer(t)} {
 		ms := types.NewMethodSet(recv)
 		for i := 0; i < ms.Len(); i++ {
-			fn := ms.At(i).Obj().(*types.Func)
-			if fn.Name() != "UnmarshalText" {
+			fn, ok := ms.At(i).Obj().(*types.Func)
+			if !ok || fn.Name() != "UnmarshalText" {
 				continue
 			}
-			sig := fn.Type().(*types.Signature)
-			if sig.Params().Len() == 1 && sig.Results().Len() == 1 &&
+			sig, ok := fn.Type().(*types.Signature)
+			if ok && sig.Params().Len() == 1 && sig.Results().Len() == 1 &&
 				sig.Params().At(0).Type().String() == "[]byte" &&
 				sig.Results().At(0).Type().String() == "error" {
 				return true
@@ -418,14 +466,17 @@ func checkDefault(f *Field) error {
 		return err
 	case KindPointer:
 		return checkDefault(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, Default: f.Default, Elem: f.Elem.Elem})
-	case KindStdSlot, KindTextLeaf:
+	case KindStdSlot:
+		return parseStdSlot(f.SlotType, []byte(f.Default))
+	case KindTextLeaf:
 		return fmt.Errorf("default: on a custom TextUnmarshaler type is a generate-time error; set it in code")
 	case KindMapScalar, KindMapStruct:
 		return fmt.Errorf("default: on a map is not supported")
 	case KindSliceStruct:
 		return fmt.Errorf("default: on a list of structs is not supported")
+	default:
+		return nil
 	}
-	return nil
 }
 
 func prefixSubtree(fields []*Field, parent string) {
@@ -464,4 +515,50 @@ func findShortTag(fields []*Field, prefix string) string {
 		}
 	}
 	return ""
+}
+
+func isNamed(t types.Type, pkgPath, name string) bool {
+	n, ok := types.Unalias(t).(*types.Named)
+	return ok && n.Obj().Pkg() != nil && n.Obj().Pkg().Path() == pkgPath && n.Obj().Name() == name
+}
+
+// parseStdSlot validates a default: value for slot with the same code the
+// generated loader runs.
+func parseStdSlot(slot string, text []byte) error {
+	switch slot {
+	case "IPNet":
+		return new(configulator.IPNet).UnmarshalText(text)
+	case "FileMode":
+		return new(configulator.FileMode).UnmarshalText(text)
+	case "Location":
+		return new(configulator.Location).UnmarshalText(text)
+	case "TCPAddr":
+		return new(configulator.TCPAddr).UnmarshalText(text)
+	case "UDPAddr":
+		return new(configulator.UDPAddr).UnmarshalText(text)
+	case "HardwareAddr":
+		return new(configulator.HardwareAddr).UnmarshalText(text)
+	case "URL":
+		return new(configulator.URL).UnmarshalText(text)
+	case "Month":
+		return new(configulator.Month).UnmarshalText(text)
+	default:
+		return fmt.Errorf("no default parser for slot %s", slot)
+	}
+}
+
+// classifySpecial handles types that classify's general rules get wrong.
+func classifySpecial(f *Field, t types.Type, fieldPath string) (bool, error) {
+	if p, ok := t.(*types.Pointer); ok && isNamed(p.Elem(), "time", "Location") {
+		f.Kind = KindStdSlot
+		f.SlotType = "Location"
+		return true, checkFieldDefault(f, fieldPath)
+	}
+	if isNamed(t, "time", "Location") {
+		return true, fmt.Errorf("%s: use *time.Location, not time.Location", fieldPath)
+	}
+	if _, ok := t.(*types.Struct); ok {
+		return true, fmt.Errorf("%s: anonymous struct types are not supported; declare a named type", fieldPath)
+	}
+	return false, nil
 }

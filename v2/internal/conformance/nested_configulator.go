@@ -251,7 +251,7 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -259,7 +259,7 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -269,15 +269,15 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.AppName = &str
 			default:
 				return fmt.Errorf("app-name: expected a string, got %v", v.Kind())
 			}
 		case "http":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -289,7 +289,7 @@ func (s *nestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.HTTP = &sub
 			}
 		case "db":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -313,7 +313,7 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -321,7 +321,7 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -331,8 +331,8 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Host = &str
 			default:
@@ -344,8 +344,8 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Uint()
 				if err != nil {
 					return fmt.Errorf("port: %w", err)
@@ -371,7 +371,7 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -379,7 +379,7 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -389,15 +389,15 @@ func (s *nDBShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.URL = &str
 			default:
 				return fmt.Errorf("url: expected a string, got %v", v.Kind())
 			}
 		case "pool":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -421,7 +421,7 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -429,7 +429,7 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -439,8 +439,8 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Uint()
 				if err != nil {
 					return fmt.Errorf("size: %w", err)

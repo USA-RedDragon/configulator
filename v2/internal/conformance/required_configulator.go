@@ -263,7 +263,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -271,7 +271,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -281,15 +281,15 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Top = &str
 			default:
 				return fmt.Errorf("top: expected a string, got %v", v.Kind())
 			}
 		case "nested":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -301,7 +301,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Nested = &sub
 			}
 		case "opt":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -313,7 +313,7 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Opt = &sub
 			}
 		case "items":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -322,11 +322,11 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '[' {
+				if tok.Kind() != jsontext.KindBeginArray {
 					return fmt.Errorf("items: expected an array, got %v", tok.Kind())
 				}
 				out := []rOptShadow{}
-				for dec.PeekKind() != ']' {
+				for dec.PeekKind() != jsontext.KindEndArray {
 					var el rOptShadow
 					if err := el.UnmarshalJSONFrom(dec); err != nil {
 						return err
@@ -351,7 +351,7 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -359,7 +359,7 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -369,8 +369,8 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Leaf = &str
 			default:
@@ -389,7 +389,7 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -397,7 +397,7 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -407,8 +407,8 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Leaf = &str
 			default:
@@ -420,8 +420,8 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Other = &str
 			default:

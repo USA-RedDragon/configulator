@@ -279,7 +279,7 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -287,12 +287,12 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
 		case "peers":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -301,11 +301,11 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '[' {
+				if tok.Kind() != jsontext.KindBeginArray {
 					return fmt.Errorf("peers: expected an array, got %v", tok.Kind())
 				}
 				out := []nCPeerShadow{}
-				for dec.PeekKind() != ']' {
+				for dec.PeekKind() != jsontext.KindEndArray {
 					var el nCPeerShadow
 					if err := el.UnmarshalJSONFrom(dec); err != nil {
 						return err
@@ -318,7 +318,7 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 				s.Peers = &out
 			}
 		case "by-name":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -327,11 +327,11 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '{' {
+				if tok.Kind() != jsontext.KindBeginObject {
 					return fmt.Errorf("by-name: expected an object, got %v", tok.Kind())
 				}
 				out := map[string]nCPeerShadow{}
-				for dec.PeekKind() != '}' {
+				for dec.PeekKind() != jsontext.KindEndObject {
 					kt, err := dec.ReadToken()
 					if err != nil {
 						return err
@@ -361,7 +361,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -369,7 +369,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -379,8 +379,8 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Name = &str
 			default:
@@ -392,8 +392,8 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
 					return fmt.Errorf("slots: %w", err)
@@ -404,7 +404,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return fmt.Errorf("slots: expected a number, got %v", v.Kind())
 			}
 		case "rules":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -413,11 +413,11 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '[' {
+				if tok.Kind() != jsontext.KindBeginArray {
 					return fmt.Errorf("rules: expected an array, got %v", tok.Kind())
 				}
 				out := []nCRuleShadow{}
-				for dec.PeekKind() != ']' {
+				for dec.PeekKind() != jsontext.KindEndArray {
 					var el nCRuleShadow
 					if err := el.UnmarshalJSONFrom(dec); err != nil {
 						return err
@@ -430,7 +430,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Rules = &out
 			}
 		case "tags":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -439,11 +439,11 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '{' {
+				if tok.Kind() != jsontext.KindBeginObject {
 					return fmt.Errorf("tags: expected an object, got %v", tok.Kind())
 				}
 				out := map[string]nCRuleShadow{}
-				for dec.PeekKind() != '}' {
+				for dec.PeekKind() != jsontext.KindEndObject {
 					kt, err := dec.ReadToken()
 					if err != nil {
 						return err
@@ -461,7 +461,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Tags = &out
 			}
 		case "inner":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -473,7 +473,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Inner = &sub
 			}
 		case "opt":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -497,7 +497,7 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -505,7 +505,7 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -515,8 +515,8 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
 					return fmt.Errorf("from: %w", err)
@@ -532,8 +532,8 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
 					return fmt.Errorf("range: %w", err)
@@ -549,8 +549,8 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.On = &b
 			default:
@@ -569,7 +569,7 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -577,7 +577,7 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -587,8 +587,8 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
 					return fmt.Errorf("level: %w", err)

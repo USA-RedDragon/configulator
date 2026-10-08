@@ -11,6 +11,15 @@ const (
 	pkgJSONv2   = "encoding/json/v2"
 )
 
+// jsonKind renders the jsontext.Kind constant for the token kind r.
+func jsonKind(r rune) *Statement {
+	names := map[rune]string{
+		'n': "KindNull", 'f': "KindFalse", 't': "KindTrue", '"': "KindString", '0': "KindNumber",
+		'{': "KindBeginObject", '}': "KindEndObject", '[': "KindBeginArray", ']': "KindEndArray",
+	}
+	return Qual(pkgJSONText, names[r])
+}
+
 // emitFastPaths emits an UnmarshalJSONFrom method for every shadow struct,
 // nested and element ones included, so json/v2 never falls back to
 // reflection. json/v2 skips struct tags when the method exists, so the
@@ -40,13 +49,13 @@ func (e *emitter) emitFastPath(shadow string, fields []*Field) {
 	).Error().Block(
 		List(Id("tok"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 		If(Err().Op("!=").Nil()).Block(Return(Err())),
-		If(Id("tok").Dot("Kind").Call().Op("!=").LitRune('{')).Block(
+		If(Id("tok").Dot("Kind").Call().Op("!=").Add(jsonKind('{'))).Block(
 			Return(Qual("fmt", "Errorf").Call(Lit("expected object, got %v"), Id("tok").Dot("Kind").Call())),
 		),
 		For().Block(
 			List(Id("tok"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())),
-			If(Id("tok").Dot("Kind").Call().Op("==").LitRune('}')).Block(Return(Nil())),
+			If(Id("tok").Dot("Kind").Call().Op("==").Add(jsonKind('}'))).Block(Return(Nil())),
 			Switch(Id("tok").Dot("String").Call()).Block(cases...),
 		),
 	)
@@ -80,8 +89,8 @@ func (e *emitter) fastField(f *Field) []Code {
 			List(Id("v"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())),
 			Switch(Id("v").Dot("Kind").Call()).Block(
-				Case(LitRune('n')).Block(),
-				Case(LitRune('t'), LitRune('f')).Block(
+				Case(jsonKind('n')).Block(),
+				Case(jsonKind('t'), jsonKind('f')).Block(
 					Id("b").Op(":=").Id("v").Dot("Bool").Call(),
 					sel().Op("=").Op("&").Id("b"),
 				),
@@ -93,15 +102,15 @@ func (e *emitter) fastField(f *Field) []Code {
 		return e.fastNumeric(f, sel)
 	case KindDuration, KindStdSlot:
 		hint := slotHint(f.SlotType)
-		kinds := []Code{LitRune('"')}
+		kinds := []Code{jsonKind('"')}
 		if isComplexSlot(f) {
-			kinds = append(kinds, LitRune('0'))
+			kinds = append(kinds, jsonKind('0'))
 		}
 		return []Code{
 			List(Id("v"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())),
 			Switch(Id("v").Dot("Kind").Call()).Block(
-				Case(LitRune('n')).Block(),
+				Case(jsonKind('n')).Block(),
 				Case(kinds...).Block(
 					Var().Id("slot").Add(slotCode(f)),
 					If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(
@@ -115,7 +124,7 @@ func (e *emitter) fastField(f *Field) []Code {
 	case KindStruct:
 		sub := e.shadowFor(f.Type)
 		return []Code{
-			If(Id("dec").Dot("PeekKind").Call().Op("==").LitRune('n')).Block(
+			If(Id("dec").Dot("PeekKind").Call().Op("==").Add(jsonKind('n'))).Block(
 				If(List(Id("_"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(), Err().Op("!=").Nil()).Block(Return(Err())),
 			).Else().Block(
 				Var().Id("sub").Id(sub),
@@ -140,13 +149,13 @@ func (e *emitter) fastField(f *Field) []Code {
 	panic("fastField: unhandled kind for " + f.Tag)
 }
 
-func (e *emitter) fastScalar(f *Field, kind rune, assign func() []Code, want string) []Code {
+func (e *emitter) fastScalar(f *Field, k rune, assign func() []Code, want string) []Code {
 	return []Code{
 		List(Id("v"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 		If(Err().Op("!=").Nil()).Block(Return(Err())),
 		Switch(Id("v").Dot("Kind").Call()).Block(
-			Case(LitRune('n')).Block(),
-			Case(LitRune(kind)).Block(assign()...),
+			Case(jsonKind('n')).Block(),
+			Case(jsonKind(k)).Block(assign()...),
 			Default().Block(Return(Qual("fmt", "Errorf").Call(
 				Lit(f.Tag+": expected "+want+", got %v"), Id("v").Dot("Kind").Call()))),
 		),
@@ -168,8 +177,8 @@ func (e *emitter) fastNumeric(f *Field, sel func() *Statement) []Code {
 		List(Id("v"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 		If(Err().Op("!=").Nil()).Block(Return(Err())),
 		Switch(Id("v").Dot("Kind").Call()).Block(
-			Case(LitRune('n')).Block(),
-			Case(LitRune('0')).Block(read...),
+			Case(jsonKind('n')).Block(),
+			Case(jsonKind('0')).Block(read...),
 			Default().Block(Return(Qual("fmt", "Errorf").Call(
 				Lit(f.Tag+": expected a number, got %v"), Id("v").Dot("Kind").Call()))),
 		),
@@ -227,20 +236,20 @@ func scalarElemReader(f *Field, dst string) []Code {
 	switch f.Kind {
 	case KindString:
 		read = append(read,
-			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('"')).Block(
+			If(Id("v").Dot("Kind").Call().Op("!=").Add(jsonKind('"'))).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a string element, got %v"), Id("v").Dot("Kind").Call()))),
 			Id(dst).Op(":=").Id("v").Dot("String").Call(),
 		)
 	case KindBool:
 		read = append(read,
-			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('t').Op("&&").Id("v").Dot("Kind").Call().Op("!=").LitRune('f')).Block(
+			If(Id("v").Dot("Kind").Call().Op("!=").Add(jsonKind('t')).Op("&&").Id("v").Dot("Kind").Call().Op("!=").Add(jsonKind('f'))).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a bool element, got %v"), Id("v").Dot("Kind").Call()))),
 			Id(dst).Op(":=").Id("v").Dot("Bool").Call(),
 		)
 	case KindInt, KindUint, KindFloat:
 		t := f.Type.Underlying().String()
 		read = append(read,
-			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('0')).Block(
+			If(Id("v").Dot("Kind").Call().Op("!=").Add(jsonKind('0'))).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a number element, got %v"), Id("v").Dot("Kind").Call()))))
 		read = append(read,
 			List(Id("raw"), Err()).Op(":=").Id("v").Dot(numMethod(f.Kind)).Call(),
@@ -252,9 +261,9 @@ func scalarElemReader(f *Field, dst string) []Code {
 			read = append(read, Id(dst).Op(":=").Id(t).Call(Id("raw")))
 		}
 	case KindDuration, KindStdSlot:
-		notText := Id("v").Dot("Kind").Call().Op("!=").LitRune('"')
+		notText := Id("v").Dot("Kind").Call().Op("!=").Add(jsonKind('"'))
 		if isComplexSlot(f) {
-			notText = notText.Op("&&").Id("v").Dot("Kind").Call().Op("!=").LitRune('0')
+			notText = notText.Op("&&").Id("v").Dot("Kind").Call().Op("!=").Add(jsonKind('0'))
 		}
 		read = append(read,
 			If(notText).Block(
@@ -273,12 +282,12 @@ func scalarElemReader(f *Field, dst string) []Code {
 // must be '[' or '{'.
 func nullOrOpen(f *Field, open rune, want string, body []Code) []Code {
 	return []Code{
-		If(Id("dec").Dot("PeekKind").Call().Op("==").LitRune('n')).Block(
+		If(Id("dec").Dot("PeekKind").Call().Op("==").Add(jsonKind('n'))).Block(
 			If(List(Id("_"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(), Err().Op("!=").Nil()).Block(Return(Err())),
 		).Else().Block(append([]Code{
 			List(Id("tok"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())),
-			If(Id("tok").Dot("Kind").Call().Op("!=").LitRune(open)).Block(
+			If(Id("tok").Dot("Kind").Call().Op("!=").Add(jsonKind(open))).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected "+want+", got %v"), Id("tok").Dot("Kind").Call()))),
 		}, body...)...),
 	}
@@ -288,7 +297,7 @@ func (e *emitter) fastSliceScalar(f *Field, sel func() *Statement) []Code {
 	elemT := listShadowElem(f.Elem)
 	body := []Code{
 		Id("out").Op(":=").Index().Add(elemT.Clone()).Values(),
-		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune(']')).Block(
+		For(Id("dec").Dot("PeekKind").Call().Op("!=").Add(jsonKind(']'))).Block(
 			append(scalarElemReader(f.Elem, "el"), Id("out").Op("=").Append(Id("out"), Id("el")))...,
 		),
 		If(List(Id("_"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(), Err().Op("!=").Nil()).Block(Return(Err())),
@@ -301,7 +310,7 @@ func (e *emitter) fastSliceStruct(f *Field, sel func() *Statement) []Code {
 	sub := e.shadowFor(f.Elem.Type)
 	body := []Code{
 		Id("out").Op(":=").Index().Id(sub).Values(),
-		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune(']')).Block(
+		For(Id("dec").Dot("PeekKind").Call().Op("!=").Add(jsonKind(']'))).Block(
 			Var().Id("el").Id(sub),
 			If(Err().Op(":=").Id("el").Dot("UnmarshalJSONFrom").Call(Id("dec")), Err().Op("!=").Nil()).Block(Return(Err())),
 			Id("out").Op("=").Append(Id("out"), Id("el")),
@@ -316,7 +325,7 @@ func (e *emitter) fastMapScalar(f *Field, sel func() *Statement) []Code {
 	elemT := listShadowElem(f.Elem)
 	body := []Code{
 		Id("out").Op(":=").Map(String()).Add(elemT.Clone()).Values(),
-		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune('}')).Block(
+		For(Id("dec").Dot("PeekKind").Call().Op("!=").Add(jsonKind('}'))).Block(
 			append(append([]Code{
 				List(Id("kt"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 				If(Err().Op("!=").Nil()).Block(Return(Err())),
@@ -334,7 +343,7 @@ func (e *emitter) fastMapStruct(f *Field, sel func() *Statement) []Code {
 	sub := e.shadowFor(f.Elem.Type)
 	body := []Code{
 		Id("out").Op(":=").Map(String()).Id(sub).Values(),
-		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune('}')).Block(
+		For(Id("dec").Dot("PeekKind").Call().Op("!=").Add(jsonKind('}'))).Block(
 			List(Id("kt"), Err()).Op(":=").Id("dec").Dot("ReadToken").Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())),
 			Id("mk").Op(":=").Id("kt").Dot("String").Call(),

@@ -211,7 +211,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -219,12 +219,12 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
 		case "http":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -241,8 +241,8 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case 't', 'f':
+			case jsontext.KindNull:
+			case jsontext.KindTrue, jsontext.KindFalse:
 				b := v.Bool()
 				s.Enable = &b
 			default:
@@ -261,7 +261,7 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -269,7 +269,7 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -279,8 +279,8 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"':
+			case jsontext.KindNull:
+			case jsontext.KindString:
 				str := v.String()
 				s.Host = &str
 			default:
@@ -292,8 +292,8 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '0':
+			case jsontext.KindNull:
+			case jsontext.KindNumber:
 				num, err := v.Int()
 				if err != nil {
 					return fmt.Errorf("port: %w", err)
@@ -304,7 +304,7 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return fmt.Errorf("port: expected a number, got %v", v.Kind())
 			}
 		case "stuff":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -313,16 +313,16 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '[' {
+				if tok.Kind() != jsontext.KindBeginArray {
 					return fmt.Errorf("stuff: expected an array, got %v", tok.Kind())
 				}
 				out := []string{}
-				for dec.PeekKind() != ']' {
+				for dec.PeekKind() != jsontext.KindEndArray {
 					v, err := dec.ReadToken()
 					if err != nil {
 						return err
 					}
-					if v.Kind() != '"' {
+					if v.Kind() != jsontext.KindString {
 						return fmt.Errorf("stuff: expected a string element, got %v", v.Kind())
 					}
 					el := v.String()

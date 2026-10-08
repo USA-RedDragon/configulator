@@ -314,7 +314,7 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if err != nil {
 		return err
 	}
-	if tok.Kind() != '{' {
+	if tok.Kind() != jsontext.KindBeginObject {
 		return fmt.Errorf("expected object, got %v", tok.Kind())
 	}
 	for {
@@ -322,7 +322,7 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		if err != nil {
 			return err
 		}
-		if tok.Kind() == '}' {
+		if tok.Kind() == jsontext.KindEndObject {
 			return nil
 		}
 		switch tok.String() {
@@ -332,8 +332,8 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"', '0':
+			case jsontext.KindNull:
+			case jsontext.KindString, jsontext.KindNumber:
 				var slot impl.Complex128
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
 					return err
@@ -348,8 +348,8 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"', '0':
+			case jsontext.KindNull:
+			case jsontext.KindString, jsontext.KindNumber:
 				var slot impl.Complex128
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
 					return err
@@ -364,8 +364,8 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return err
 			}
 			switch v.Kind() {
-			case 'n':
-			case '"', '0':
+			case jsontext.KindNull:
+			case jsontext.KindString, jsontext.KindNumber:
 				var slot impl.Complex64
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
 					return err
@@ -375,7 +375,7 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return fmt.Errorf("w: expected a text scalar (e.g. \"1+2i\"), got %v", v.Kind())
 			}
 		case "zs":
-			if dec.PeekKind() == 'n' {
+			if dec.PeekKind() == jsontext.KindNull {
 				if _, err := dec.ReadToken(); err != nil {
 					return err
 				}
@@ -384,16 +384,16 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				if err != nil {
 					return err
 				}
-				if tok.Kind() != '[' {
+				if tok.Kind() != jsontext.KindBeginArray {
 					return fmt.Errorf("zs: expected an array, got %v", tok.Kind())
 				}
 				out := []impl.Complex128{}
-				for dec.PeekKind() != ']' {
+				for dec.PeekKind() != jsontext.KindEndArray {
 					v, err := dec.ReadToken()
 					if err != nil {
 						return err
 					}
-					if v.Kind() != '"' && v.Kind() != '0' {
+					if v.Kind() != jsontext.KindString && v.Kind() != jsontext.KindNumber {
 						return fmt.Errorf("zs: expected a text element (e.g. \"1+2i\"), got %v", v.Kind())
 					}
 					var el impl.Complex128

@@ -41,9 +41,9 @@ func TestSampleUnparseableListDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 	for format, tc := range map[string]struct{ got, want string }{
-		"yaml": {string(emitSample(m)), "\nbad: []\n"},
-		"json": {string(j), `"bad": []`},
-		"toml": {string(emitSampleTOML(m)), "bad = []\n"},
+		formatYAML: {string(emitSample(m)), "\nbad: []\n"},
+		formatJSON: {string(j), `"bad": []`},
+		formatTOML: {string(emitSampleTOML(m)), "bad = []\n"},
 	} {
 		if !strings.Contains(tc.got, tc.want) {
 			t.Errorf("%s sample:\n%s\nwant %q", format, tc.got, tc.want)
@@ -73,6 +73,27 @@ func TestTOMLTooLargeCommentQuotesKey(t *testing.T) {
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("toml sample:\n%s\nwant %q", got, want)
+		}
+	}
+}
+
+// TestMarkdownEscapesControlChars checks that a newline or tab in a cell
+// is written as an escape, so it can't break the table row.
+func TestMarkdownEscapesControlChars(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n"+
+		"\tS string `name:\"s\" default:\"a\\nb\\tc\" description:\"one\\ntwo\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	md := string(emitMarkdown(m, ".", "", "_", false))
+	if lines := strings.Count(md, "\n"); lines != 3 {
+		t.Errorf("want a header, a rule and one row, got %d lines:\n%s", lines, md)
+	}
+	for _, want := range []string{"`a\\nb\\tc`", "one\\ntwo"} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown missing %q:\n%s", want, md)
 		}
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // emitJSONSchema renders a draft-07 JSON Schema for the config type.
@@ -322,7 +323,7 @@ func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byt
 	markdownFields(&rows, m.Fields, "", envPrefix, envSep, "", flagSep, true, true)
 	for i := range rows {
 		for j, c := range rows[i] {
-			rows[i][j] = strings.ReplaceAll(c, "|", `\|`)
+			rows[i][j] = strings.ReplaceAll(escapeControl(c), "|", `\|`)
 		}
 	}
 
@@ -360,6 +361,21 @@ func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byt
 		fmt.Fprintf(&b, "| %s |\n", strings.Join(cells, " | "))
 	}
 	return []byte(b.String())
+}
+
+// escapeControl replaces each control character in s with its Go escape,
+// like \n or \t, so a value can't break a table row.
+func escapeControl(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if unicode.IsControl(r) {
+			q := strconv.QuoteRune(r)
+			b.WriteString(q[1 : len(q)-1])
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 func runeLen(s string) int { return len([]rune(s)) }

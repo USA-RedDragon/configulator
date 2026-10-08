@@ -189,7 +189,7 @@ func sampleValue(f *Field) string {
 // emitMarkdown renders a Markdown table of every config key with its file
 // path, env var, flag, type, default and description. Collections are
 // file-only, so their env and flag cells are em-dash characters.
-func emitMarkdown(m *Model, flagSep, envPrefix, envSep string) []byte {
+func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byte {
 	var rows [][6]string
 	markdownFields(&rows, m.Fields, "", envPrefix, envSep, "", flagSep, true)
 
@@ -208,7 +208,9 @@ func emitMarkdown(m *Model, flagSep, envPrefix, envSep string) []byte {
 	pad := func(c string, w int) string { return c + strings.Repeat(" ", w-runeLen(c)) }
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "# %s configuration\n\n", m.TypeName)
+	if title {
+		fmt.Fprintf(&b, "# %s configuration\n\n", m.TypeName)
+	}
 	cells := make([]string, 6)
 	for i, h := range header {
 		cells[i] = pad(h, widths[i])

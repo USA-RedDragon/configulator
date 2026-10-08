@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -25,6 +26,9 @@ func main() {
 	envPrefix := flag.String("env-prefix", "", "env var prefix shown in -markdown output (verbatim)")
 	envSep := flag.String("env-separator", "_", "env var separator shown in -markdown output")
 	flagSep := flag.String("flag-separator", ".", "flag separator shown in -markdown output")
+	markdownFile := flag.String("markdown-file", "", "with -markdown, write the table between the "+markdownBegin+" and "+markdownEnd+" markers in this file instead of stdout")
+	check := flag.Bool("check", false, "with -markdown-file, change nothing and exit 1 if the file is out of date")
+	pkgDir := flag.String("dir", ".", "directory of the package that declares -type")
 	flag.Parse()
 
 	if *typeName == "" {
@@ -38,7 +42,16 @@ func main() {
 		os.Exit(2)
 	}
 
-	dir, err := os.Getwd()
+	if *markdownFile != "" && !*markdown {
+		fmt.Fprintln(os.Stderr, "configulator: -markdown-file needs -markdown")
+		os.Exit(2)
+	}
+	if *check && *markdownFile == "" {
+		fmt.Fprintln(os.Stderr, "configulator: -check needs -markdown-file")
+		os.Exit(2)
+	}
+
+	dir, err := filepath.Abs(*pkgDir)
 	if err != nil {
 		fatal(err)
 	}
@@ -95,7 +108,18 @@ func main() {
 				os.Exit(2)
 			}
 		case *markdown:
-			os.Stdout.Write(emitMarkdown(model, *flagSep, *envPrefix, *envSep))
+			table := emitMarkdown(model, *flagSep, *envPrefix, *envSep, *markdownFile == "")
+			if *markdownFile == "" {
+				os.Stdout.Write(table)
+				return
+			}
+			changed, err := updateMarkdownFile(*markdownFile, table, *check)
+			if err != nil {
+				fatal(err)
+			}
+			if changed {
+				fmt.Fprintf(os.Stderr, "configulator: updated %s\n", *markdownFile)
+			}
 		}
 		return
 	}
@@ -108,7 +132,11 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	if err := os.WriteFile(out, src, 0o644); err != nil {
+	path := out
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(dir, path)
+	}
+	if err := os.WriteFile(path, src, 0o644); err != nil {
 		fatal(err)
 	}
 	fmt.Fprintf(os.Stderr, "configulator: wrote %s\n", out)

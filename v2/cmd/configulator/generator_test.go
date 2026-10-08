@@ -254,7 +254,7 @@ func TestMarkdown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	md := string(emitMarkdown(m, ".", "APP_", "_"))
+	md := string(emitMarkdown(m, ".", "APP_", "_", true))
 	// Cells are padded, so collapse runs of spaces before checking content.
 	var squeezed []string
 	for _, line := range strings.Split(md, "\n") {

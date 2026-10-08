@@ -1,0 +1,63 @@
+package main
+
+import (
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestSpliceMarkdown(t *testing.T) {
+	doc := "# App\n\n## Config\n\n" + markdownBegin + "\nold table\n" + markdownEnd + "\n\nFooter\n"
+	got, err := spliceMarkdown([]byte(doc), []byte("| new |\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# App\n\n## Config\n\n" + markdownBegin + "\n\n| new |\n\n" + markdownEnd + "\n\nFooter\n"
+	if string(got) != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+
+	again, err := spliceMarkdown(got, []byte("| new |\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(again) != string(got) {
+		t.Error("splicing the same table twice changed the document")
+	}
+
+	for name, bad := range map[string]string{
+		"no markers":   "# App\n",
+		"only begin":   markdownBegin + "\n",
+		"reversed":     markdownEnd + "\n" + markdownBegin + "\n",
+		"two sections": markdownBegin + markdownEnd + markdownBegin + markdownEnd,
+	} {
+		if _, err := spliceMarkdown([]byte(bad), []byte("x")); err == nil {
+			t.Errorf("%s: expected an error", name)
+		}
+	}
+}
+
+func TestUpdateMarkdownFileCheck(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "README.md")
+	if err := os.WriteFile(path, []byte(markdownBegin+"\n"+markdownEnd+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := updateMarkdownFile(path, []byte("| t |"), true)
+	if !changed || !errors.Is(err, errMarkdownStale) {
+		t.Fatalf("check on a stale file: changed=%v err=%v", changed, err)
+	}
+	if b, _ := os.ReadFile(path); strings.Contains(string(b), "| t |") {
+		t.Fatal("check mode wrote the file")
+	}
+
+	if _, err := updateMarkdownFile(path, []byte("| t |"), false); err != nil {
+		t.Fatal(err)
+	}
+	changed, err = updateMarkdownFile(path, []byte("| t |"), true)
+	if changed || err != nil {
+		t.Fatalf("check on an up-to-date file: changed=%v err=%v", changed, err)
+	}
+}

@@ -125,6 +125,51 @@ type.
 | `-sample` | print a sample config to stdout (no code generated); `-format yaml\|json\|toml`, commented YAML by default |
 | `-markdown` | print a Markdown reference table of every key to stdout (`-env-prefix`, `-env-separator`, `-flag-separator` shape the env/flag columns) |
 | `-no-validate` | don't require a `Validate() error` method |
+| `-dir` | directory of the package that declares `-type`, default `.` |
+| `-markdown-file` | with `-markdown`, write the table into this file between the configulator markers instead of stdout |
+| `-check` | with `-markdown-file`, change nothing and exit 1 if the file is out of date |
+
+### Config docs in your README
+
+Put the markers where the table should go:
+
+```markdown
+## Configuration
+
+<!-- configulator:begin -->
+<!-- configulator:end -->
+```
+
+Then fill it in from `go:generate`, pre-commit, or CI.
+
+```go
+//go:generate go tool configulator -type Config -markdown -markdown-file ../../README.md -env-prefix MYAPP_
+```
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/USA-RedDragon/configulator
+    rev: v2.1.0
+    hooks:
+      - id: configulator-markdown
+        args: [-dir, internal/config, -type, Config, -markdown-file, README.md, -env-prefix, MYAPP_]
+      - id: configulator-generate
+        args: [-dir, internal/config, -type, Config]
+```
+
+```yaml
+# GitHub Actions: fails a pull request whose README is stale, and commits
+# the update on pushes to the default branch (needs contents: write).
+- uses: USA-RedDragon/reusable-actions/configulator-docs@v2
+  with:
+    dir: internal/config
+    type: Config
+    env-prefix: MYAPP_
+```
+
+The hooks and the action run `go tool configulator`, so they use the
+version pinned in your `go.mod`.
 
 ### Requirements
 

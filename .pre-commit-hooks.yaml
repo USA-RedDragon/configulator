@@ -1,0 +1,16 @@
+# Both hooks run the configulator version pinned by the repository's own
+# go.mod (go get -tool github.com/USA-RedDragon/configulator/v2/cmd/configulator).
+- id: configulator-markdown
+  name: configulator markdown
+  description: Render the config reference table into a Markdown file between configulator markers.
+  entry: go tool configulator -markdown
+  language: system
+  pass_filenames: false
+  files: '\.(go|md)$'
+- id: configulator-generate
+  name: configulator generate
+  description: Regenerate the *_configulator.go loader.
+  entry: go tool configulator
+  language: system
+  pass_filenames: false
+  files: '\.go$'

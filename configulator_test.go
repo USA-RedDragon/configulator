@@ -46,6 +46,8 @@ type testConfig struct {
 	// arrays of maps and slices/arrays are not yet implemented
 }
 
+const testEnvPrefix = "TEST_"
+
 func (c testConfig) Validate() error {
 	return nil
 }
@@ -192,13 +194,13 @@ func TestConfigulatorOptions(t *testing.T) {
 	}
 
 	c.WithEnvironmentVariables(&EnvironmentVariableOptions{
-		Prefix:    "TEST_",
+		Prefix:    testEnvPrefix,
 		Separator: "_",
 	})
 	if c.envOptions == nil {
 		t.Fatal("expected non-nil EnvironmentVariableOptions")
 	}
-	if c.envOptions.Prefix != "TEST_" {
+	if c.envOptions.Prefix != testEnvPrefix {
 		t.Fatalf("expected prefix 'TEST_', got '%s'", c.envOptions.Prefix)
 	}
 	if c.envOptions.Separator != "_" {
@@ -235,7 +237,7 @@ func TestConfigulatorOptions(t *testing.T) {
 	}
 }
 
-//nolint:golint,gocyclo
+//nolint:gocyclo
 func TestConfigulatorDefaults(t *testing.T) {
 	t.Parallel()
 
@@ -301,7 +303,7 @@ func TestConfigulatorDefaults(t *testing.T) {
 		t.Fatalf("expected default Float64 to be 12.0, got %v", cfg.Float64)
 	}
 
-	//nolint:golint,goconst
+	//nolint:goconst
 	if cfg.String != "15.0" {
 		t.Fatalf("expected default String to be '15.0', got '%s'", cfg.String)
 	}
@@ -835,7 +837,7 @@ func TestConfigulatorDefaults(t *testing.T) {
 	}
 }
 
-//nolint:golint,gocyclo
+//nolint:gocyclo
 func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	t.Setenv("TEST_BOOL", "false")
 	t.Setenv("TEST_INT", "20")
@@ -901,7 +903,7 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 
 	c := New[testConfig]()
 	c.WithEnvironmentVariables(&EnvironmentVariableOptions{
-		Prefix:    "TEST_",
+		Prefix:    testEnvPrefix,
 		Separator: "_",
 	})
 
@@ -1484,7 +1486,7 @@ func TestConfigulatorEnvironmentVariables(t *testing.T) {
 	}
 }
 
-//nolint:golint,gocyclo
+//nolint:gocyclo
 func TestConfigulatorFlags(t *testing.T) {
 	t.Parallel()
 
@@ -2110,7 +2112,7 @@ func TestNonDefault(t *testing.T) {
 	c := New[nonDefaultsTestConfig]().
 		WithPFlags(pflags, nil).
 		WithEnvironmentVariables(&EnvironmentVariableOptions{
-			Prefix:    "TEST_",
+			Prefix:    testEnvPrefix,
 			Separator: "_",
 		})
 
@@ -2364,7 +2366,7 @@ func TestFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	path := dir + "/config.yaml"
-	if err := os.WriteFile(path, []byte("int8: 42\nsubTestConfig:\n  bool: true\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("int8: 42\nsubTestConfig:\n  bool: true\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2403,7 +2405,7 @@ func TestPrecedence(t *testing.T) {
 	path := dir + "/config.yaml"
 	// file sets three fields; env overrides one of them; a flag overrides
 	// another. Expected: flag > env > file > default.
-	if err := os.WriteFile(path, []byte("int8: 10\nuint8: 10\nstring: from-file\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("int8: 10\nuint8: 10\nstring: from-file\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PRECTEST_UINT8", "20")
@@ -2441,10 +2443,10 @@ func TestConfigFlag(t *testing.T) {
 	dir := t.TempDir()
 	searched := dir + "/search.yaml"
 	explicit := dir + "/explicit.yaml"
-	if err := os.WriteFile(searched, []byte("string: from-search\n"), 0o644); err != nil {
+	if err := os.WriteFile(searched, []byte("string: from-search\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(explicit, []byte("string: from-explicit\n"), 0o644); err != nil {
+	if err := os.WriteFile(explicit, []byte("string: from-explicit\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2562,7 +2564,7 @@ simple:
 `
 	tmpDir := t.TempDir()
 	tmpFile := tmpDir + "/config.yaml"
-	err := os.WriteFile(tmpFile, []byte(yamlContent), 0644)
+	err := os.WriteFile(tmpFile, []byte(yamlContent), 0o600)
 	if err != nil {
 		t.Fatalf("failed to write temp config file: %v", err)
 	}

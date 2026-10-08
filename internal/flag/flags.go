@@ -32,7 +32,7 @@ func RegisterFlagsFromStruct(flags *pflag.FlagSet, stru any, prefix, separator, 
 	return nil
 }
 
-//nolint:golint,gocyclo
+//nolint:gocyclo
 func AddFlag(flags *pflag.FlagSet, prefix string, field reflect.StructField, separator, arraySeparator string) error {
 	tag, err := tags.ExtractStructTags(field, arraySeparator)
 	if err != nil {
@@ -201,7 +201,6 @@ func AddFlag(flags *pflag.FlagSet, prefix string, field reflect.StructField, sep
 			return fmt.Errorf("failed to register flags for struct %s: %w", field.Name, err)
 		}
 	case reflect.Map:
-		// TODO: Handle map types
 		return fmt.Errorf("unsupported map type in config: %v", field.Type)
 	case reflect.Array, reflect.Slice:
 		switch field.Type.Elem().Kind() {
@@ -388,10 +387,8 @@ func AddFlag(flags *pflag.FlagSet, prefix string, field reflect.StructField, sep
 			// They can be set via config files or programmatically.
 			return nil
 		case reflect.Map:
-			// TODO: Handle map types
 			return fmt.Errorf("unsupported map type in config: %v", field.Type)
 		case reflect.Array, reflect.Slice:
-			// TODO: Handle array and slice types
 			return fmt.Errorf("unsupported array/slice type in config: %v", field.Type)
 		case reflect.Complex64, reflect.Complex128:
 			return fmt.Errorf("complex types are not supported")

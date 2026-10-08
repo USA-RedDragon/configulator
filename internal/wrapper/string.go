@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-//nolint:golint,gocyclo
+//nolint:gocyclo
 func WrapString(typ reflect.Type, val, arraySeparator string) (WrappedValue, error) {
 	if (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array) && strings.HasPrefix(val, "[") && strings.HasSuffix(val, "]") {
 		val = strings.Trim(val, "[]")

@@ -21,7 +21,7 @@ func TestNestedStructWithDashedTagFromEnvironment(t *testing.T) {
 
 	c := New[dashedConfig]()
 	c.WithEnvironmentVariables(&EnvironmentVariableOptions{
-		Prefix:    "TEST_",
+		Prefix:    testEnvPrefix,
 		Separator: "_",
 	})
 	cfg, err := c.Load()

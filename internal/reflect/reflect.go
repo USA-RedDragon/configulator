@@ -2,6 +2,7 @@ package reflect
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 
@@ -54,7 +55,7 @@ func GetDefaultsFromStruct(typ reflect.Type, arraySeparator string) (any, error)
 	return ret, nil
 }
 
-//nolint:golint,gocyclo
+//nolint:gocyclo
 func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.WrappedValue) error {
 	v := stru.FieldByName(field.Name)
 	switch v.Kind() {
@@ -81,26 +82,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapInt8()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					// YAML decodes integers as int, so accept the same
-					// widening set the unsigned cases always had.
-					switch conv := a.(type) {
-					case int8:
-						i = conv
-					case int:
-						i = int8(conv)
-					case int64:
-						i = int8(conv)
-					case float64:
-						i = int8(conv)
-					default:
-						return fmt.Errorf("failed to unwrap int8")
-					}
-					v.SetInt(int64(i))
-					return nil
-				}
-				return fmt.Errorf("failed to unwrap int8")
+				// YAML decodes integers as int and JSON as float64; accept any
+				// numeric that fits the field instead of wrapping.
+				return setIntFromInterface(v, val)
 			}
 		}
 		v.SetInt(int64(i))
@@ -110,26 +94,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapInt16()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					// YAML decodes integers as int, so accept the same
-					// widening set the unsigned cases always had.
-					switch conv := a.(type) {
-					case int16:
-						i = conv
-					case int:
-						i = int16(conv)
-					case int64:
-						i = int16(conv)
-					case float64:
-						i = int16(conv)
-					default:
-						return fmt.Errorf("failed to unwrap int16")
-					}
-					v.SetInt(int64(i))
-					return nil
-				}
-				return fmt.Errorf("failed to unwrap int16")
+				return setIntFromInterface(v, val)
 			}
 		}
 		v.SetInt(int64(i))
@@ -139,26 +104,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapInt32()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					// YAML decodes integers as int, so accept the same
-					// widening set the unsigned cases always had.
-					switch conv := a.(type) {
-					case int32:
-						i = conv
-					case int:
-						i = int32(conv)
-					case int64:
-						i = int32(conv)
-					case float64:
-						i = int32(conv)
-					default:
-						return fmt.Errorf("failed to unwrap int32")
-					}
-					v.SetInt(int64(i))
-					return nil
-				}
-				return fmt.Errorf("failed to unwrap int32")
+				return setIntFromInterface(v, val)
 			}
 		}
 		v.SetInt(int64(i))
@@ -202,40 +148,9 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapUint8()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					switch conv := a.(type) {
-					case uint8:
-						i = conv
-						v.SetUint(uint64(i))
-						return nil
-					case uint16:
-						i = uint8(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case uint32:
-						i = uint8(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case uint64:
-						i = uint8(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int:
-						i = uint8(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int64:
-						i = uint8(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case float64:
-						i = uint8(conv)
-						v.SetUint(uint64(i))
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap uint8")
+				// YAML decodes integers as int and JSON as float64; accept any
+				// numeric that fits the field instead of wrapping.
+				return setUintFromInterface(v, val)
 			}
 		}
 		v.SetUint(uint64(i))
@@ -245,36 +160,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapUint16()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					switch conv := a.(type) {
-					case uint16:
-						i = conv
-						v.SetUint(uint64(i))
-						return nil
-					case uint32:
-						i = uint16(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case uint64:
-						i = uint16(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int:
-						i = uint16(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int64:
-						i = uint16(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case float64:
-						i = uint16(conv)
-						v.SetUint(uint64(i))
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap uint16")
+				return setUintFromInterface(v, val)
 			}
 		}
 		v.SetUint(uint64(i))
@@ -284,32 +170,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapUint32()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					switch conv := a.(type) {
-					case uint32:
-						i = conv
-						v.SetUint(uint64(i))
-						return nil
-					case uint64:
-						i = uint32(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int:
-						i = uint32(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int64:
-						i = uint32(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case float64:
-						i = uint32(conv)
-						v.SetUint(uint64(i))
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap uint32")
+				return setUintFromInterface(v, val)
 			}
 		}
 		v.SetUint(uint64(i))
@@ -336,44 +197,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapUint()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					switch conv := a.(type) {
-					case uint:
-						i = conv
-						v.SetUint(uint64(i))
-						return nil
-					case uint8:
-						i = uint(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case uint16:
-						i = uint(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case uint32:
-						i = uint(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case uint64:
-						i = uint(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int:
-						i = uint(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case int64:
-						i = uint(conv)
-						v.SetUint(uint64(i))
-						return nil
-					case float64:
-						i = uint(conv)
-						v.SetUint(uint64(i))
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap uint")
+				return setUintFromInterface(v, val)
 			}
 		}
 		v.SetUint(uint64(i))
@@ -998,5 +822,74 @@ func SetNestedStructValue(val *reflect.Value, fields []string, wrapped wrapper.W
 		return fmt.Errorf("failed to set field %s value: %w", field.Name, err)
 	}
 
+	return nil
+}
+
+// setIntFromInterface stores a decoded number of any numeric type into the
+// signed integer field v, erroring when it is fractional or out of range.
+func setIntFromInterface(v reflect.Value, val wrapper.WrappedValue) error {
+	a, _ := val.UnwrapInterface()
+	rv := reflect.ValueOf(a)
+	var n int64
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n = rv.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		u := rv.Uint()
+		if u > math.MaxInt64 {
+			return fmt.Errorf("value %v overflows %s", a, v.Kind())
+		}
+		n = int64(u)
+	case reflect.Float32, reflect.Float64:
+		f := rv.Float()
+		if f != math.Trunc(f) {
+			return fmt.Errorf("value %v is not an integer for %s", a, v.Kind())
+		}
+		if f < math.MinInt64 || f >= math.MaxInt64 {
+			return fmt.Errorf("value %v overflows %s", a, v.Kind())
+		}
+		n = int64(f)
+	default:
+		return fmt.Errorf("failed to unwrap %s", v.Kind())
+	}
+	if v.OverflowInt(n) {
+		return fmt.Errorf("value %v overflows %s", a, v.Kind())
+	}
+	v.SetInt(n)
+	return nil
+}
+
+// setUintFromInterface stores a decoded number of any numeric type into the
+// unsigned integer field v, erroring when it is negative, fractional or out
+// of range.
+func setUintFromInterface(v reflect.Value, val wrapper.WrappedValue) error {
+	a, _ := val.UnwrapInterface()
+	rv := reflect.ValueOf(a)
+	var u uint64
+	switch rv.Kind() {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		u = rv.Uint()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n := rv.Int()
+		if n < 0 {
+			return fmt.Errorf("value %v is negative for %s", a, v.Kind())
+		}
+		u = uint64(n)
+	case reflect.Float32, reflect.Float64:
+		f := rv.Float()
+		if f != math.Trunc(f) {
+			return fmt.Errorf("value %v is not an integer for %s", a, v.Kind())
+		}
+		if f < 0 || f >= math.MaxUint64 {
+			return fmt.Errorf("value %v out of range for %s", a, v.Kind())
+		}
+		u = uint64(f)
+	default:
+		return fmt.Errorf("failed to unwrap %s", v.Kind())
+	}
+	if v.OverflowUint(u) {
+		return fmt.Errorf("value %v overflows %s", a, v.Kind())
+	}
+	v.SetUint(u)
 	return nil
 }

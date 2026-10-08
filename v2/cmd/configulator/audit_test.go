@@ -605,8 +605,8 @@ func main() {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sample := string(emitSample(m)); !strings.Contains(sample, "tags: [a;b,c]") {
-		t.Errorf("sample should show the default as written:\n%s", sample)
+	if sample := string(emitSample(m)); !strings.Contains(sample, `tags: ["a;b", "c"]`) {
+		t.Errorf("sample should split the default on commas and quote each element:\n%s", sample)
 	}
 }
 

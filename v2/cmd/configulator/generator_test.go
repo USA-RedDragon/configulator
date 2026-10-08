@@ -699,3 +699,22 @@ func TestSampleSecretWithDefaultIsCommented(t *testing.T) {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestSampleListDefaultsQuoted(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\nimport \"time\"\n\ntype Cfg struct {\n"+
+		"\tOrigins []string `name:\"origins\" default:\"*,https://*\"`\n"+
+		"\tPorts []int `name:\"ports\" default:\"80,443\"`\n"+
+		"\tWaits []time.Duration `name:\"waits\" default:\"1s,2m\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# Sample configuration for Cfg.\n" +
+		"origins: [\"*\", \"https://*\"]\n" +
+		"ports: [80, 443]\n" +
+		"waits: [\"1s\", \"2m\"]\n"
+	if got := string(emitSample(m)); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}

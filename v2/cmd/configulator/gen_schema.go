@@ -222,10 +222,14 @@ func sampleValue(f *Field) string {
 	}
 	if f.Default != "" {
 		switch f.Kind {
-		case KindString, KindDuration, KindStdSlot:
+		case KindString, KindDuration, KindStdSlot, KindTextLeaf:
 			return strconv.Quote(f.Default)
 		case KindSliceScalar:
-			return "[" + f.Default + "]"
+			parts := strings.Split(f.Default, ",")
+			for i, p := range parts {
+				parts[i] = sampleValue(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: p})
+			}
+			return "[" + strings.Join(parts, ", ") + "]"
 		default:
 			return f.Default
 		}

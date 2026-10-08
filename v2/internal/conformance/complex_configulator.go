@@ -110,75 +110,67 @@ func (s *complexShadow) applyTo(cfg *Complex, sep string, set configulator.SetOr
 }
 
 func complexApplyEnv(cfg *Complex, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "z"); true {
-		if v, ok := ec.Getenv(n); ok {
+	if n, v, ok := ec.Lookup("z"); ok {
+		var slot impl.Complex128
+		if err := slot.UnmarshalText([]byte(v)); err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "z",
+				Source: n,
+				Value:  v,
+			}
+		}
+		sv, _ := slot.Value()
+		cfg.Z = sv
+		set("z", configulator.LayerEnv, n)
+	}
+	if n, v, ok := ec.Lookup("exponent"); ok {
+		var slot impl.Complex128
+		if err := slot.UnmarshalText([]byte(v)); err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "exponent",
+				Source: n,
+				Value:  v,
+			}
+		}
+		sv, _ := slot.Value()
+		cfg.Exponent = sv
+		set("exponent", configulator.LayerEnv, n)
+	}
+	if n, v, ok := ec.Lookup("w"); ok {
+		var slot impl.Complex64
+		if err := slot.UnmarshalText([]byte(v)); err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "w",
+				Source: n,
+				Value:  v,
+			}
+		}
+		sv, _ := slot.Value()
+		cfg.W = sv
+		set("w", configulator.LayerEnv, n)
+	}
+	if n, v, ok := ec.Lookup("zs"); ok {
+		lp := impl.SplitList(v, ec.ArraySeparator)
+		lst := make([]complex128, len(lp))
+		for li, ls := range lp {
 			var slot impl.Complex128
-			if err := slot.UnmarshalText([]byte(v)); err != nil {
+			if err := slot.UnmarshalText([]byte(ls)); err != nil {
 				return &configulator.ParseError{
 					Err:    err,
-					Path:   "z",
+					Path:   "zs",
 					Source: n,
 					Value:  v,
 				}
 			}
 			sv, _ := slot.Value()
-			cfg.Z = sv
-			set("z", configulator.LayerEnv, n)
+			lx := sv
+			lst[li] = lx
 		}
-	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "exponent"); true {
-		if v, ok := ec.Getenv(n); ok {
-			var slot impl.Complex128
-			if err := slot.UnmarshalText([]byte(v)); err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "exponent",
-					Source: n,
-					Value:  v,
-				}
-			}
-			sv, _ := slot.Value()
-			cfg.Exponent = sv
-			set("exponent", configulator.LayerEnv, n)
-		}
-	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "w"); true {
-		if v, ok := ec.Getenv(n); ok {
-			var slot impl.Complex64
-			if err := slot.UnmarshalText([]byte(v)); err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "w",
-					Source: n,
-					Value:  v,
-				}
-			}
-			sv, _ := slot.Value()
-			cfg.W = sv
-			set("w", configulator.LayerEnv, n)
-		}
-	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "zs"); true {
-		if v, ok := ec.Getenv(n); ok {
-			lp := impl.SplitList(v, ec.ArraySeparator)
-			lst := make([]complex128, len(lp))
-			for li, ls := range lp {
-				var slot impl.Complex128
-				if err := slot.UnmarshalText([]byte(ls)); err != nil {
-					return &configulator.ParseError{
-						Err:    err,
-						Path:   "zs",
-						Source: n,
-						Value:  v,
-					}
-				}
-				sv, _ := slot.Value()
-				lx := sv
-				lst[li] = lx
-			}
-			cfg.Zs = lst
-			set("zs", configulator.LayerEnv, n)
-		}
+		cfg.Zs = lst
+		set("zs", configulator.LayerEnv, n)
 	}
 	return nil
 }

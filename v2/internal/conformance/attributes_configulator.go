@@ -77,47 +77,39 @@ func (s *attributesShadow) applyTo(cfg *Attributes, sep string, set configulator
 }
 
 func attributesApplyEnv(cfg *Attributes, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "token"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    impl.Redact(err, v),
-					Path:   "token",
-					Source: n,
-					Value:  "(redacted)",
-				}
+	if n, v, ok := ec.Lookup("token"); ok {
+		p, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    impl.Redact(err, v),
+				Path:   "token",
+				Source: n,
+				Value:  "(redacted)",
 			}
-			cfg.Token = p
-			set("token", configulator.LayerEnv, n)
 		}
+		cfg.Token = p
+		set("token", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "RN"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Renamed = v
-			set("renamed", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("RN"); ok {
+		cfg.Renamed = v
+		set("renamed", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "no-flag"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.NoFlag = v
-			set("no-flag", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("no-flag"); ok {
+		cfg.NoFlag = v
+		set("no-flag", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("port"); ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Port = uint16(p)
-			set("port", configulator.LayerEnv, n)
 		}
+		cfg.Port = uint16(p)
+		set("port", configulator.LayerEnv, n)
 	}
 	return nil
 }

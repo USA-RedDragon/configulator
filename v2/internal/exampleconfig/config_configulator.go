@@ -106,53 +106,43 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "log-level"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.LogLevel = v
-			set("log-level", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("log-level"); ok {
+		cfg.LogLevel = v
+		set("log-level", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "timeout"); true {
-		if v, ok := ec.Getenv(n); ok {
-			d, err := time.ParseDuration(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "timeout",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("timeout"); ok {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "timeout",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Timeout = d
-			set("timeout", configulator.LayerEnv, n)
 		}
+		cfg.Timeout = d
+		set("timeout", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.HTTP.Host = v
-			set("http.host", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("http", "host"); ok {
+		cfg.HTTP.Host = v
+		set("http.host", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "http.port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("http", "port"); ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "http.port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.HTTP.Port = uint16(p)
-			set("http.port", configulator.LayerEnv, n)
 		}
+		cfg.HTTP.Port = uint16(p)
+		set("http.port", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "url"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.DB.URL = v
-			set("db.url", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("db", "url"); ok {
+		cfg.DB.URL = v
+		set("db.url", configulator.LayerEnv, n)
 	}
 	return nil
 }

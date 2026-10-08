@@ -15,7 +15,6 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cstd "github.com/USA-RedDragon/configulator/v2/flags/std"
-	"github.com/USA-RedDragon/configulator/v2/impl"
 )
 
 type configShadow struct {
@@ -62,26 +61,22 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "listen"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Listen = v
-			set("listen", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("listen"); ok {
+		cfg.Listen = v
+		set("listen", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "debug"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "debug",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("debug"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "debug",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Debug = p
-			set("debug", configulator.LayerEnv, n)
 		}
+		cfg.Debug = p
+		set("debug", configulator.LayerEnv, n)
 	}
 	return nil
 }

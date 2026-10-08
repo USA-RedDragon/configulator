@@ -15,7 +15,6 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 )
 
@@ -84,71 +83,61 @@ func (s *scalarsShadow) applyTo(cfg *Scalars, sep string, set configulator.SetOr
 }
 
 func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Name = v
-			set("name", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("name"); ok {
+		cfg.Name = v
+		set("name", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "count"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "count",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("count"); ok {
+		p, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "count",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Count = p
-			set("count", configulator.LayerEnv, n)
 		}
+		cfg.Count = p
+		set("count", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("port"); ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Port = uint16(p)
-			set("port", configulator.LayerEnv, n)
 		}
+		cfg.Port = uint16(p)
+		set("port", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "ratio"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseFloat(v, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "ratio",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("ratio"); ok {
+		p, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "ratio",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Ratio = p
-			set("ratio", configulator.LayerEnv, n)
 		}
+		cfg.Ratio = p
+		set("ratio", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "verbose"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "verbose",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("verbose"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "verbose",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Verbose = p
-			set("verbose", configulator.LayerEnv, n)
 		}
+		cfg.Verbose = p
+		set("verbose", configulator.LayerEnv, n)
 	}
 	return nil
 }

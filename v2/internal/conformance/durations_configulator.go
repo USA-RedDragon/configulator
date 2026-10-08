@@ -69,26 +69,22 @@ func (s *durationsShadow) applyTo(cfg *Durations, sep string, set configulator.S
 }
 
 func durationsApplyEnv(cfg *Durations, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "timeout"); true {
-		if v, ok := ec.Getenv(n); ok {
-			d, err := time.ParseDuration(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "timeout",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("timeout"); ok {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "timeout",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Timeout = d
-			set("timeout", configulator.LayerEnv, n)
 		}
+		cfg.Timeout = d
+		set("timeout", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "label"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Label = v
-			set("label", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("label"); ok {
+		cfg.Label = v
+		set("label", configulator.LayerEnv, n)
 	}
 	return nil
 }

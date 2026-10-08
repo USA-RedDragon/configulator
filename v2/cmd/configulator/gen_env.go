@@ -12,15 +12,6 @@ func (e *emitter) emitApplyEnv() {
 	).Error().Block(body...)
 }
 
-func envNameCall(segments []string) *Statement {
-	args := make([]Code, 0, 2+len(segments))
-	args = append(args, Id("ec").Dot("Opts").Dot("Prefix"), Id("ec").Dot("Opts").Dot("Separator"))
-	for _, s := range segments {
-		args = append(args, Lit(s))
-	}
-	return Qual(pkgImpl, "EnvName").Call(args...)
-}
-
 func (e *emitter) envFields(fields []*Field) []Code {
 	ls := leaves(fields, (*Field).envSeg, func(f *Field) bool { return f.EnvSkip })
 	out := make([]Code, 0, len(ls))
@@ -30,11 +21,13 @@ func (e *emitter) envFields(fields []*Field) []Code {
 			return []Code{t.Op("=").Add(val)}
 		})...)
 		inner = append(inner, Id("set").Call(Lit(l.path), Qual(pkgCfg, "LayerEnv"), Id("n")))
+		segs := make([]Code, 0, len(l.segs))
+		for _, s := range l.segs {
+			segs = append(segs, Lit(s))
+		}
 		out = append(out, If(
-			Id("n").Op(":=").Add(envNameCall(l.segs)), True(),
-		).Block(
-			If(List(Id("v"), Id("ok")).Op(":=").Id("ec").Dot("Getenv").Call(Id("n")), Id("ok")).Block(inner...),
-		))
+			List(Id("n"), Id("v"), Id("ok")).Op(":=").Id("ec").Dot("Lookup").Call(segs...), Id("ok"),
+		).Block(inner...))
 	}
 	return out
 }

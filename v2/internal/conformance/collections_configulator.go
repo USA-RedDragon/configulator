@@ -120,18 +120,14 @@ func (s *collectionsShadow) applyTo(cfg *Collections, sep string, set configulat
 }
 
 func collectionsApplyEnv(cfg *Collections, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tags"); true {
-		if v, ok := ec.Getenv(n); ok {
-			lst := impl.SplitList(v, ec.ArraySeparator)
-			cfg.Tags = lst
-			set("tags", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("tags"); ok {
+		lst := impl.SplitList(v, ec.ArraySeparator)
+		cfg.Tags = lst
+		set("tags", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "log-level"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.LogLevel = v
-			set("log-level", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("log-level"); ok {
+		cfg.LogLevel = v
+		set("log-level", configulator.LayerEnv, n)
 	}
 	return nil
 }

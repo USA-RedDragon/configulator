@@ -84,6 +84,11 @@ func styleProblems(src []byte) []string {
 			out = append(out, "no blank line before the declaration on line "+strconv.Itoa(line))
 		}
 	}
+	for _, bad := range []string{"; true {"} {
+		if bytes.Contains(src, []byte(bad)) {
+			out = append(out, "contains "+bad)
+		}
+	}
 	return out
 }
 

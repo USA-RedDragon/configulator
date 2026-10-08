@@ -80,48 +80,40 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.HTTP.Host = v
-			set("http.host", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("http", "host"); ok {
+		cfg.HTTP.Host = v
+		set("http.host", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "http.port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("http", "port"); ok {
+		p, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "http.port",
+				Source: n,
+				Value:  v,
 			}
-			cfg.HTTP.Port = int(p)
-			set("http.port", configulator.LayerEnv, n)
 		}
+		cfg.HTTP.Port = int(p)
+		set("http.port", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "stuff"); true {
-		if v, ok := ec.Getenv(n); ok {
-			lst := impl.SplitList(v, ec.ArraySeparator)
-			cfg.HTTP.Stuff = lst
-			set("http.stuff", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("http", "stuff"); ok {
+		lst := impl.SplitList(v, ec.ArraySeparator)
+		cfg.HTTP.Stuff = lst
+		set("http.stuff", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "enable"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseBool(v)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "enable",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("enable"); ok {
+		p, err := strconv.ParseBool(v)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "enable",
+				Source: n,
+				Value:  v,
 			}
-			cfg.Enable = p
-			set("enable", configulator.LayerEnv, n)
 		}
+		cfg.Enable = p
+		set("enable", configulator.LayerEnv, n)
 	}
 	return nil
 }

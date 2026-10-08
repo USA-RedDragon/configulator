@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/USA-RedDragon/configulator/v2"
-	"github.com/USA-RedDragon/configulator/v2/impl"
 )
 
 type dBConfigShadow struct {
@@ -68,26 +67,22 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "url"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.DB.URL = v
-			set("db.url", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("db", "url"); ok {
+		cfg.DB.URL = v
+		set("db.url", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "pool"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "db.pool",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("db", "pool"); ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "db.pool",
+				Source: n,
+				Value:  v,
 			}
-			cfg.DB.Pool = uint16(p)
-			set("db.pool", configulator.LayerEnv, n)
 		}
+		cfg.DB.Pool = uint16(p)
+		set("db.pool", configulator.LayerEnv, n)
 	}
 	return nil
 }

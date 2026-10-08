@@ -14,7 +14,6 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 )
 
@@ -120,45 +119,37 @@ func (s *requiredShadow) applyTo(cfg *Required, sep string, set configulator.Set
 }
 
 func requiredApplyEnv(cfg *Required, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "top"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Top = v
-			set("top", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("top"); ok {
+		cfg.Top = v
+		set("top", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "nested", "leaf"); true {
-		if v, ok := ec.Getenv(n); ok {
-			cfg.Nested.Leaf = v
-			set("nested.leaf", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("nested", "leaf"); ok {
+		cfg.Nested.Leaf = v
+		set("nested.leaf", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "opt", "leaf"); true {
-		if v, ok := ec.Getenv(n); ok {
-			{
-				var e ROpt
-				if cfg.Opt != nil {
-					e = *cfg.Opt
-				} else {
-				}
-				e.Leaf = v
-				cfg.Opt = &e
+	if n, v, ok := ec.Lookup("opt", "leaf"); ok {
+		{
+			var e ROpt
+			if cfg.Opt != nil {
+				e = *cfg.Opt
+			} else {
 			}
-			set("opt.leaf", configulator.LayerEnv, n)
+			e.Leaf = v
+			cfg.Opt = &e
 		}
+		set("opt.leaf", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "opt", "other"); true {
-		if v, ok := ec.Getenv(n); ok {
-			{
-				var e ROpt
-				if cfg.Opt != nil {
-					e = *cfg.Opt
-				} else {
-				}
-				e.Other = v
-				cfg.Opt = &e
+	if n, v, ok := ec.Lookup("opt", "other"); ok {
+		{
+			var e ROpt
+			if cfg.Opt != nil {
+				e = *cfg.Opt
+			} else {
 			}
-			set("opt.other", configulator.LayerEnv, n)
+			e.Other = v
+			cfg.Opt = &e
 		}
+		set("opt.other", configulator.LayerEnv, n)
 	}
 	return nil
 }

@@ -15,7 +15,6 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
-	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 )
 
@@ -91,69 +90,61 @@ func (s *optionalsShadow) applyTo(cfg *Optionals, sep string, set configulator.S
 }
 
 func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "port",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("port"); ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "port",
+				Source: n,
+				Value:  v,
 			}
-			pv := uint16(p)
-			cfg.Port = &pv
-			set("port", configulator.LayerEnv, n)
 		}
+		pv := uint16(p)
+		cfg.Port = &pv
+		set("port", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
-		if v, ok := ec.Getenv(n); ok {
-			pv := v
-			cfg.Name = &pv
-			set("name", configulator.LayerEnv, n)
-		}
+	if n, v, ok := ec.Lookup("name"); ok {
+		pv := v
+		cfg.Name = &pv
+		set("name", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "cert"); true {
-		if v, ok := ec.Getenv(n); ok {
-			{
-				var e TLSConfig
-				if cfg.TLS != nil {
-					e = *cfg.TLS
-				} else {
-					e.MinVersion = uint16(12)
-					set("tls.min-version", configulator.LayerDefault, "element default")
-				}
-				e.Cert = v
-				cfg.TLS = &e
+	if n, v, ok := ec.Lookup("tls", "cert"); ok {
+		{
+			var e TLSConfig
+			if cfg.TLS != nil {
+				e = *cfg.TLS
+			} else {
+				e.MinVersion = uint16(12)
+				set("tls.min-version", configulator.LayerDefault, "element default")
 			}
-			set("tls.cert", configulator.LayerEnv, n)
+			e.Cert = v
+			cfg.TLS = &e
 		}
+		set("tls.cert", configulator.LayerEnv, n)
 	}
-	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "min-version"); true {
-		if v, ok := ec.Getenv(n); ok {
-			p, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return &configulator.ParseError{
-					Err:    err,
-					Path:   "tls.min-version",
-					Source: n,
-					Value:  v,
-				}
+	if n, v, ok := ec.Lookup("tls", "min-version"); ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "tls.min-version",
+				Source: n,
+				Value:  v,
 			}
-			{
-				var e TLSConfig
-				if cfg.TLS != nil {
-					e = *cfg.TLS
-				} else {
-					e.MinVersion = uint16(12)
-					set("tls.min-version", configulator.LayerDefault, "element default")
-				}
-				e.MinVersion = uint16(p)
-				cfg.TLS = &e
-			}
-			set("tls.min-version", configulator.LayerEnv, n)
 		}
+		{
+			var e TLSConfig
+			if cfg.TLS != nil {
+				e = *cfg.TLS
+			} else {
+				e.MinVersion = uint16(12)
+				set("tls.min-version", configulator.LayerDefault, "element default")
+			}
+			e.MinVersion = uint16(p)
+			cfg.TLS = &e
+		}
+		set("tls.min-version", configulator.LayerEnv, n)
 	}
 	return nil
 }

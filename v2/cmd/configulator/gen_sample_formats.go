@@ -61,15 +61,12 @@ func sampleTree(fields []*Field) []kv {
 		case KindMapStruct, KindMapScalar:
 			v = []kv{}
 		case KindSliceScalar:
-			items := []any{}
+			v = []any{}
 			if f.Default != "" && !f.Secret {
-				for _, part := range strings.Split(f.Default, ",") {
-					elem := *f.Elem
-					elem.Default = part
-					items = append(items, sampleLeafTyped(&elem))
+				if d, ok := typedDefault(f); ok {
+					v = d
 				}
 			}
-			v = items
 		default:
 			v = sampleLeafTyped(f)
 		}
@@ -122,7 +119,8 @@ func writeJSONValue(enc *jsontext.Encoder, v any) error {
 		return enc.WriteToken(jsontext.Uint(v))
 	case float64:
 		if math.IsInf(v, 0) || math.IsNaN(v) {
-			return fmt.Errorf("sample value %v has no JSON spelling", v)
+			// JSON has no NaN or infinity; null leaves the default in place.
+			return enc.WriteToken(jsontext.Null)
 		}
 		return enc.WriteValue(jsontext.Value(formatFloat(v)))
 	}
@@ -152,27 +150,90 @@ func writeTOMLTable(b *strings.Builder, pairs []kv, path []string) {
 			for i, item := range v {
 				parts[i] = tomlScalar(item)
 			}
-			fmt.Fprintf(b, "%s = [%s]\n", pair.k, strings.Join(parts, ", "))
+			if tomlTooBig(v...) {
+				fmt.Fprintf(b, "# %s holds a number too large for a TOML integer, written as a string\n", pair.k)
+			}
+			fmt.Fprintf(b, "%s = [%s]\n", tomlKey(pair.k), strings.Join(parts, ", "))
 		default:
-			fmt.Fprintf(b, "%s = %s\n", pair.k, tomlScalar(pair.v))
+			if tomlTooBig(pair.v) {
+				fmt.Fprintf(b, "# %s is too large for a TOML integer, so it's written as a string\n", pair.k)
+			}
+			fmt.Fprintf(b, "%s = %s\n", tomlKey(pair.k), tomlScalar(pair.v))
 		}
 	}
 	for _, t := range tables {
 		full := append(append([]string{}, path...), t.k)
-		fmt.Fprintf(b, "\n[%s]\n", strings.Join(full, "."))
+		keys := make([]string, len(full))
+		for i, k := range full {
+			keys[i] = tomlKey(k)
+		}
+		fmt.Fprintf(b, "\n[%s]\n", strings.Join(keys, "."))
 		writeTOMLTable(b, t.pairs, full)
 	}
+}
+
+// tomlTooBig reports whether any of vs is a uint64 above TOML's int64 range.
+func tomlTooBig(vs ...any) bool {
+	for _, v := range vs {
+		if u, ok := v.(uint64); ok && u > math.MaxInt64 {
+			return true
+		}
+	}
+	return false
+}
+
+// tomlKey returns k as a bare key when TOML allows it, else quoted.
+func tomlKey(k string) string {
+	if k != "" && strings.Trim(k, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") == "" {
+		return k
+	}
+	return tomlString(k)
+}
+
+// tomlString quotes s as a TOML basic string.
+func tomlString(s string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range s {
+		switch r {
+		case '"':
+			b.WriteString(`\"`)
+		case '\\':
+			b.WriteString(`\\`)
+		case '\b':
+			b.WriteString(`\b`)
+		case '\t':
+			b.WriteString(`\t`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\f':
+			b.WriteString(`\f`)
+		case '\r':
+			b.WriteString(`\r`)
+		default:
+			if r < 0x20 || r == 0x7f {
+				fmt.Fprintf(&b, `\u%04X`, r)
+			} else {
+				b.WriteRune(r)
+			}
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 func tomlScalar(v any) string {
 	switch v := v.(type) {
 	case string:
-		return strconv.Quote(v)
+		return tomlString(v)
 	case bool:
 		return strconv.FormatBool(v)
 	case int64:
 		return strconv.FormatInt(v, 10)
 	case uint64:
+		if v > math.MaxInt64 {
+			return tomlString(strconv.FormatUint(v, 10))
+		}
 		return strconv.FormatUint(v, 10)
 	case float64:
 		switch {

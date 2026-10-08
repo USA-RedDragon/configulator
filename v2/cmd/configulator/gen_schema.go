@@ -4,6 +4,7 @@ import (
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -75,43 +76,74 @@ func schemaField(f *Field) map[string]any {
 		s["additionalProperties"] = schemaField(f.Elem)
 	}
 	if f.Default != "" && !f.Secret {
-		if d := schemaDefault(f); d != nil {
+		if d := schemaDefault(f); d != nil && jsonFinite(d) {
 			s["default"] = d
 		}
 	}
 	return s
 }
 
+// jsonFinite reports whether d has no NaN or infinity, which JSON can't
+// hold.
+func jsonFinite(d any) bool {
+	switch v := d.(type) {
+	case float64:
+		return !math.IsNaN(v) && !math.IsInf(v, 0)
+	case []any:
+		for _, e := range v {
+			if !jsonFinite(e) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// schemaDefault returns f's default as a typed value. checkDefault has
+// already accepted it, except the elements of a list, which are split on
+// "," here and on the runtime separator at load. A list whose elements
+// don't parse returns nil, leaving the default out.
 func schemaDefault(f *Field) any {
+	v, ok := typedDefault(f)
+	if !ok && f.Kind != KindSliceScalar {
+		panic(fmt.Sprintf("schemaDefault: default %q of %s passed checkDefault but doesn't parse", f.Default, f.Tag))
+	}
+	return v
+}
+
+func typedDefault(f *Field) (any, bool) {
+	var err error
+	var v any
 	switch f.Kind {
 	case KindString, KindDuration, KindStdSlot:
-		return f.Default
+		return f.Default, true
 	case KindBool:
-		v, _ := strconv.ParseBool(f.Default)
-		return v
+		v, err = strconv.ParseBool(f.Default)
 	case KindInt:
-		v, _ := strconv.ParseInt(f.Default, 10, 64)
-		return v
+		v, err = strconv.ParseInt(f.Default, 10, 64)
 	case KindUint:
-		v, _ := strconv.ParseUint(f.Default, 10, 64)
-		return v
+		v, err = strconv.ParseUint(f.Default, 10, 64)
 	case KindFloat:
-		v, _ := strconv.ParseFloat(f.Default, 64)
-		return v
+		v, err = strconv.ParseFloat(f.Default, 64)
 	case KindSliceScalar:
 		parts := strings.Split(f.Default, ",")
 		out := make([]any, len(parts))
 		for i, p := range parts {
-			out[i] = schemaDefault(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: p})
+			e, ok := typedDefault(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: p})
+			if !ok {
+				return nil, false
+			}
+			out[i] = e
 		}
-		return out
+		return out, true
 	case KindPointer:
 		inner := *f.Elem
 		inner.Default = f.Default
-		return schemaDefault(&inner)
+		return typedDefault(&inner)
 	default:
-		return nil
+		return nil, true
 	}
+	return v, err == nil
 }
 
 // emitSample renders a YAML sample with every key at its default and the
@@ -216,6 +248,22 @@ func indentLines(lines []string, prefix string) []string {
 	return out
 }
 
+// yamlFloat spells NaN and infinities the way YAML reads them.
+func yamlFloat(def string) string {
+	v, err := strconv.ParseFloat(def, 64)
+	switch {
+	case err != nil:
+		return def
+	case math.IsNaN(v):
+		return ".nan"
+	case math.IsInf(v, 1):
+		return ".inf"
+	case math.IsInf(v, -1):
+		return "-.inf"
+	}
+	return def
+}
+
 func sampleValue(f *Field) string {
 	if f.Kind == KindPointer {
 		return sampleValue(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: f.Default, Elem: f.Elem.Elem})
@@ -230,6 +278,8 @@ func sampleValue(f *Field) string {
 				parts[i] = sampleValue(&Field{Kind: f.Elem.Kind, Type: f.Elem.Type, Default: p})
 			}
 			return "[" + strings.Join(parts, ", ") + "]"
+		case KindFloat:
+			return yamlFloat(f.Default)
 		default:
 			return f.Default
 		}

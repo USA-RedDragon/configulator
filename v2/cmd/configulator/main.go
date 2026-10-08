@@ -23,7 +23,7 @@ func main() {
 	noValidate := flag.Bool("no-validate", false, "allow a config type without Validate() error")
 	schema := flag.Bool("schema", false, "print a JSON Schema to stdout instead of generating")
 	sample := flag.Bool("sample", false, "print a sample config to stdout instead of generating (see -format)")
-	format := flag.String("format", "yaml", "sample format: yaml (commented) | json | toml")
+	format := flag.String("format", formatYAML, "sample format: yaml (commented) | json | toml")
 	markdown := flag.Bool("markdown", false, "print a Markdown reference table of every key to stdout instead of generating")
 	envPrefix := flag.String("env-prefix", "", "env var prefix shown in -markdown output (verbatim)")
 	envSep := flag.String("env-separator", "_", "env var separator shown in -markdown output")
@@ -34,27 +34,13 @@ func main() {
 	pkgDir := flag.String("dir", ".", "directory of the package that declares -type")
 	flag.Parse()
 
-	if *typeName == "" {
-		fmt.Fprintln(os.Stderr, "configulator: -type is required")
-		os.Exit(2)
+	u := usage{
+		typeName: *typeName, flagsMode: *flagsMode, format: *format,
+		schema: *schema, sample: *sample, markdown: *markdown, check: *check,
+		markdownFile: *markdownFile, sampleFile: *sampleFile,
 	}
-	switch *flagsMode {
-	case flagsPFlag, flagsStd, flagsNone:
-	default:
-		fmt.Fprintf(os.Stderr, "configulator: -flags must be pflag, std, or none (got %q)\n", *flagsMode)
-		os.Exit(2)
-	}
-
-	if *markdownFile != "" && !*markdown {
-		fmt.Fprintln(os.Stderr, "configulator: -markdown-file needs -markdown")
-		os.Exit(2)
-	}
-	if *sampleFile != "" && !*sample {
-		fmt.Fprintln(os.Stderr, "configulator: -sample-file needs -sample")
-		os.Exit(2)
-	}
-	if *check && *markdownFile == "" && *sampleFile == "" {
-		fmt.Fprintln(os.Stderr, "configulator: -check needs -markdown-file or -sample-file")
+	if msg := u.problem(); msg != "" {
+		fmt.Fprintln(os.Stderr, "configulator: "+msg)
 		os.Exit(2)
 	}
 
@@ -77,21 +63,7 @@ func main() {
 		}
 	}
 
-	modes := 0
-	for _, b := range []*bool{schema, sample, markdown} {
-		if *b {
-			modes++
-		}
-	}
-	if modes > 1 {
-		fmt.Fprintln(os.Stderr, "configulator: pass at most one of -schema, -sample, -markdown; output goes to stdout, pipe it where you want it")
-		os.Exit(2)
-	}
-	if *format != "yaml" && !*sample {
-		fmt.Fprintln(os.Stderr, "configulator: -format only applies to -sample")
-		os.Exit(2)
-	}
-	if modes == 1 {
+	if *schema || *sample || *markdown {
 		switch {
 		case *schema:
 			b, err := emitJSONSchema(model)
@@ -151,15 +123,57 @@ func writeOutput(path string, b []byte, check bool, update func(string, []byte, 
 // sampleBytes renders a sample config in format.
 func sampleBytes(model *Model, format string) ([]byte, error) {
 	switch format {
-	case "yaml":
+	case formatYAML:
 		return emitSample(model), nil
-	case "json":
+	case formatJSON:
 		return emitSampleJSON(model)
-	case "toml":
+	case formatTOML:
 		return emitSampleTOML(model), nil
 	default:
 		return nil, fmt.Errorf("unknown -format %q: expected yaml, json, or toml", format)
 	}
+}
+
+const (
+	formatYAML = "yaml"
+	formatJSON = "json"
+	formatTOML = "toml"
+)
+
+// usage holds the flags checked before the package loads.
+type usage struct {
+	typeName, flagsMode, format     string
+	schema, sample, markdown, check bool
+	markdownFile, sampleFile        string
+}
+
+// problem describes the first usage error, or returns "".
+func (u usage) problem() string {
+	modes := 0
+	for _, b := range []bool{u.schema, u.sample, u.markdown} {
+		if b {
+			modes++
+		}
+	}
+	switch {
+	case u.typeName == "":
+		return "-type is required"
+	case u.flagsMode != flagsPFlag && u.flagsMode != flagsStd && u.flagsMode != flagsNone:
+		return fmt.Sprintf("-flags must be pflag, std, or none (got %q)", u.flagsMode)
+	case u.markdownFile != "" && !u.markdown:
+		return "-markdown-file needs -markdown"
+	case u.sampleFile != "" && !u.sample:
+		return "-sample-file needs -sample"
+	case u.check && u.markdownFile == "" && u.sampleFile == "":
+		return "-check needs -markdown-file or -sample-file"
+	case modes > 1:
+		return "pass at most one of -schema, -sample, -markdown; output goes to stdout, pipe it where you want it"
+	case u.format != formatYAML && !u.sample:
+		return "-format only applies to -sample"
+	case u.format != formatYAML && u.format != formatJSON && u.format != formatTOML:
+		return fmt.Sprintf("-format must be yaml, json or toml (got %q)", u.format)
+	}
+	return ""
 }
 
 // warnUntagged prints a warning for each exported field the generator skips

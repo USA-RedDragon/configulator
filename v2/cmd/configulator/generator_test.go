@@ -893,3 +893,56 @@ func TestUntaggedFieldsWarned(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+func TestSampleSpecialValues(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Inner struct {\n\tX int `name:\"x\"`\n}\n\ntype Cfg struct {\n"+
+		"\tCtl string `name:\"ctl\" default:\"a\\x7fb\\tc\"`\n"+
+		"\tBig uint64 `name:\"big\" default:\"18446744073709551615\"`\n"+
+		"\tNaN float64 `name:\"not-a-number\" default:\"NaN\"`\n"+
+		"\tInf float64 `name:\"inf\" default:\"-Inf\"`\n"+
+		"\tOdd Inner `name:\"odd.key\"`\n"+
+		"\tBad []int `name:\"bad\" default:\"1;2\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tm := string(emitSampleTOML(m))
+	for _, want := range []string{`ctl = "a\u007Fb\tc"`, "# big is too large", `big = "18446744073709551615"`, "not-a-number = nan", "inf = -inf", `["odd.key"]`} {
+		if !strings.Contains(tm, want) {
+			t.Errorf("toml sample missing %q:\n%s", want, tm)
+		}
+	}
+	y := string(emitSample(m))
+	for _, want := range []string{"not-a-number: .nan\n", "inf: -.inf\n"} {
+		if !strings.Contains(y, want) {
+			t.Errorf("yaml sample missing %q:\n%s", want, y)
+		}
+	}
+	s, err := emitJSONSchema(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(s), `"default": [`) {
+		t.Errorf("a list default that doesn't split on \",\" should be left out:\n%s", s)
+	}
+}
+
+func TestUsageProblems(t *testing.T) {
+	t.Parallel()
+	ok := usage{typeName: "C", flagsMode: flagsPFlag, format: formatYAML}
+	if p := ok.problem(); p != "" {
+		t.Fatalf("valid flags: %s", p)
+	}
+	for name, u := range map[string]usage{
+		"no type":      {flagsMode: flagsPFlag, format: formatYAML},
+		"bad format":   {typeName: "C", flagsMode: flagsPFlag, format: "xml", sample: true},
+		"format alone": {typeName: "C", flagsMode: flagsPFlag, format: formatJSON},
+		"two modes":    {typeName: "C", flagsMode: flagsPFlag, format: formatYAML, schema: true, sample: true},
+		"bare check":   {typeName: "C", flagsMode: flagsPFlag, format: formatYAML, check: true},
+	} {
+		if u.problem() == "" {
+			t.Errorf("%s: want a usage problem", name)
+		}
+	}
+}

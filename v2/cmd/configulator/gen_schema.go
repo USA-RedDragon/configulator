@@ -312,6 +312,9 @@ func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagP
 		}
 		if flagOK && !f.FlagSkip {
 			flagCell = "`--" + fFlag + "`"
+			if f.Short != "" {
+				flagCell = "`-" + f.Short + "`, " + flagCell
+			}
 		}
 		desc := f.Desc
 		if f.Required {

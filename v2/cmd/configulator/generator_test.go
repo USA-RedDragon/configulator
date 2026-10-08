@@ -656,3 +656,24 @@ func TestSampleCollectionExamples(t *testing.T) {
 		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestMarkdownShorthand(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n\tAddr string `name:\"address\" short:\"a\"`\n\tPort int `name:\"port\"`\n}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var squeezed []string
+	for line := range strings.SplitSeq(string(emitMarkdown(m, ".", "", "_", false)), "\n") {
+		squeezed = append(squeezed, strings.Join(strings.Fields(line), " "))
+	}
+	md := strings.Join(squeezed, "\n")
+	for _, want := range []string{
+		"| `address` | string | | `ADDRESS` | `-a`, `--address` | |",
+		"| `port` | integer | | `PORT` | `--port` | |",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown missing %q:\n%s", want, md)
+		}
+	}
+}

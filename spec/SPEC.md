@@ -74,9 +74,9 @@ independent YAML parsers, not configulator.
 7. **Env naming** is `PREFIX + upper(tag_name)` with nested levels joined by
    `SEPARATOR`, recursing with the **tag name** at every level. `-` → `_`
    applies **only to tag-derived segments**; prefix and separator are used
-   verbatim. A prefix or separator that cannot survive this construction
-   (lowercase prefix, separator containing `-`) is a typed runtime error at
-   load, not a silent misconstruction.
+   verbatim. An empty separator means `_`. A prefix or separator that
+   cannot survive this construction (lowercase prefix, separator containing
+   `-`) is a typed runtime error at load, not a silent misconstruction.
 
 8. **`--config` travels out of band**, never through the value tree under a
    sentinel key.
@@ -141,7 +141,8 @@ Layout: `spec/cases/<case>/` containing:
 - `argv.json` — CLI args as a string array (optional)
 - `options.json` — `{"prefix", "env_separator", "flag_separator",
   "array_separator", "capabilities": [...]}` (optional; defaults
-  `"APP_"`, `"_"`, `"."`, `","`, `[]`)
+  `"APP_"`, `"_"`, `"."`, `","`, `[]`). An `env_separator` of `""` is
+  passed to the library as empty, so the library default applies.
 - `shape` — one of the shape names below
 - `expect.json` — expected config as a nested JSON object, **or**
 - `expect_errors.json` — `{"kind": "<logical kind>", "contains": [..]}`

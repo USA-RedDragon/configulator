@@ -93,9 +93,6 @@ func loadCase(t *testing.T, dir string) caseInput {
 	if tc.opts.Prefix == "" {
 		tc.opts.Prefix = "APP_"
 	}
-	if tc.opts.EnvSeparator == "" {
-		tc.opts.EnvSeparator = "_"
-	}
 	if tc.opts.FlagSeparator == "" {
 		tc.opts.FlagSeparator = "."
 	}

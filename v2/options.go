@@ -20,7 +20,7 @@ type EnvironmentVariableOptions struct {
 	// uppercase.
 	Prefix string
 	// Separator joins nested levels and must not contain "-". Empty
-	// means "__".
+	// means "_".
 	Separator string
 }
 

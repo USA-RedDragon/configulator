@@ -128,7 +128,9 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
 | `opaque:"true"` | Decode a named scalar type with its `UnmarshalText` method instead of as a number or string |
 
 Env var names are the prefix plus each level's name, uppercased, with `-`
-turned into `_`: `http.listen-port` is `MYAPP_HTTP_LISTEN_PORT`.
+turned into `_`, joined by the separator: `http.listen-port` is
+`MYAPP_HTTP_LISTEN_PORT`. The separator defaults to `_`. Before v2.4.0 it
+defaulted to `__`, so set `Separator: "__"` to keep those names.
 
 ## Generator flags
 

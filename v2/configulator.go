@@ -56,13 +56,13 @@ func (c *Configulator[C]) WithFile(opts *FileOptions) *Configulator[C] {
 }
 
 // WithEnvironmentVariables enables the env layer. A nil opts means no
-// prefix and separator "__".
+// prefix and separator "_".
 func (c *Configulator[C]) WithEnvironmentVariables(opts *EnvironmentVariableOptions) *Configulator[C] {
 	if opts == nil {
 		opts = &EnvironmentVariableOptions{}
 	}
 	if opts.Separator == "" {
-		opts.Separator = "__"
+		opts.Separator = "_"
 	}
 	c.envOpts = opts
 	return c

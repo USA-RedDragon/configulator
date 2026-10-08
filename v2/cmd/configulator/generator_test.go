@@ -824,3 +824,36 @@ func TestSchemaListDefaultsTyped(t *testing.T) {
 		}
 	}
 }
+
+func TestSampleFloatsAndMarkdownEscapes(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\ntype Cfg struct {\n"+
+		"\tExp float64 `name:\"exp\" default:\"1e3\"`\n"+
+		"\tZero float32 `name:\"zero\"`\n"+
+		"\tList []float64 `name:\"list\" default:\"1.5,2\"`\n"+
+		"\tPipe string `name:\"pipe\" default:\"a|b\" description:\"x | y\"`\n"+
+		"\tTick string \"name:\\\"tick\\\" default:\\\"a`b\\\"\"\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tm := string(emitSampleTOML(m))
+	for _, want := range []string{"exp = 1000.0\n", "zero = 0.0\n", "list = [1.5, 2.0]\n"} {
+		if !strings.Contains(tm, want) {
+			t.Errorf("toml sample missing %q:\n%s", want, tm)
+		}
+	}
+	j, err := emitSampleJSON(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(j), `"exp": 1000.0,`) || !strings.HasSuffix(string(j), "}\n") || strings.HasSuffix(string(j), "\n\n") {
+		t.Errorf("json sample: want exp 1000.0 and one trailing newline:\n%q", j)
+	}
+	md := string(emitMarkdown(m, ".", "", "_", false))
+	for _, want := range []string{"`a\\|b`", "x \\| y", "`` a`b ``"} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown missing %q:\n%s", want, md)
+		}
+	}
+}

@@ -260,6 +260,11 @@ func sampleValue(f *Field) string {
 func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byte {
 	var rows [][6]string
 	markdownFields(&rows, m.Fields, "", envPrefix, envSep, "", flagSep, true, true)
+	for i := range rows {
+		for j, c := range rows[i] {
+			rows[i][j] = strings.ReplaceAll(c, "|", `\|`)
+		}
+	}
 
 	header := [6]string{"Key", "Type", "Default", "Environment", "Flag", "Description"}
 	var widths [6]int
@@ -299,6 +304,15 @@ func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byt
 
 func runeLen(s string) int { return len([]rune(s)) }
 
+// codeSpan wraps s in backticks, using a double-backtick fence when s
+// holds a backtick itself.
+func codeSpan(s string) string {
+	if strings.Contains(s, "`") {
+		return "`` " + s + " ``"
+	}
+	return "`" + s + "`"
+}
+
 func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagPath, flagSep string, envOK, flagOK bool) {
 	for _, f := range fields {
 		key := f.Tag
@@ -337,7 +351,7 @@ func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagP
 		}
 		def := ""
 		if f.Default != "" && !f.Secret {
-			def = "`" + f.Default + "`"
+			def = codeSpan(f.Default)
 		}
 		switch f.Kind {
 		case KindStruct:

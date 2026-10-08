@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json/jsontext"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -83,7 +84,6 @@ func emitSampleJSON(m *Model) ([]byte, error) {
 	if err := writeJSONValue(enc, sampleTree(m.Fields)); err != nil {
 		return nil, err
 	}
-	buf.WriteByte('\n')
 	return buf.Bytes(), nil
 }
 
@@ -121,7 +121,10 @@ func writeJSONValue(enc *jsontext.Encoder, v any) error {
 	case uint64:
 		return enc.WriteToken(jsontext.Uint(v))
 	case float64:
-		return enc.WriteToken(jsontext.Float(v))
+		if math.IsInf(v, 0) || math.IsNaN(v) {
+			return fmt.Errorf("sample value %v has no JSON spelling", v)
+		}
+		return enc.WriteValue(jsontext.Value(formatFloat(v)))
 	}
 	return fmt.Errorf("unhandled sample value %T", v)
 }
@@ -172,7 +175,28 @@ func tomlScalar(v any) string {
 	case uint64:
 		return strconv.FormatUint(v, 10)
 	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
+		switch {
+		case math.IsNaN(v):
+			return "nan"
+		case math.IsInf(v, 1):
+			return "inf"
+		case math.IsInf(v, -1):
+			return "-inf"
+		}
+		return formatFloat(v)
 	}
 	return `""`
+}
+
+// formatFloat spells v so TOML reads it as a float, not an integer: 1000
+// becomes "1000.0". JSON samples use it too so both match configulator-rs.
+func formatFloat(v float64) string {
+	if a := math.Abs(v); a != 0 && (a < 1e-5 || a >= 1e16) {
+		return strings.Replace(strconv.FormatFloat(v, 'e', -1, 64), "e+", "e", 1)
+	}
+	s := strconv.FormatFloat(v, 'f', -1, 64)
+	if !strings.Contains(s, ".") {
+		s += ".0"
+	}
+	return s
 }

@@ -275,7 +275,7 @@ func registerFlag(f *Field, name *Statement) []Code {
 	}
 	// pflag's own int and uint flags wrap on 32-bit platforms.
 	if reg == "Int" || reg == "Uint" {
-		value := Qual(pkgPFlag, "New"+reg).Call(def)
+		value := Qual(pkgImpl, "New"+reg).Call(def)
 		call = Id("fs").Dot("Var").Call(value, name.Clone(), Lit(f.Desc))
 		if f.Short != "" {
 			call = Id("fs").Dot("VarP").Call(value, name.Clone(), Lit(f.Short), Lit(f.Desc))

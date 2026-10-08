@@ -62,7 +62,10 @@ func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) erro
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -103,11 +106,11 @@ func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("log-level"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "log-level"); ok {
 		cfg.LogLevel = v
 		set("log-level", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("timeout"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "timeout"); ok {
 		d, err := time.ParseDuration(v)
 		if err != nil {
 			return &configulator.ParseError{
@@ -120,11 +123,11 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 		cfg.Timeout = d
 		set("timeout", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("http", "host"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); ok {
 		cfg.HTTP.Host = v
 		set("http.host", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("http", "port"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return &configulator.ParseError{
@@ -137,7 +140,7 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 		cfg.HTTP.Port = uint16(p)
 		set("http.port", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("db", "url"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "db", "url"); ok {
 		cfg.DB.URL = v
 		set("db.url", configulator.LayerEnv, n)
 	}

@@ -41,7 +41,10 @@ func durationsApplyDefaults(cfg *Durations, _ string, set configulator.SetOrigin
 func durationsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Durations, sep string, set configulator.SetOrigin, file string) error {
 	var sh durationsShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -66,7 +69,7 @@ func (s *durationsShadow) applyTo(cfg *Durations, _ string, set configulator.Set
 }
 
 func durationsApplyEnv(cfg *Durations, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("timeout"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "timeout"); ok {
 		d, err := time.ParseDuration(v)
 		if err != nil {
 			return &configulator.ParseError{
@@ -79,7 +82,7 @@ func durationsApplyEnv(cfg *Durations, ec configulator.EnvContext, set configula
 		cfg.Timeout = d
 		set("timeout", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("label"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "label"); ok {
 		cfg.Label = v
 		set("label", configulator.LayerEnv, n)
 	}

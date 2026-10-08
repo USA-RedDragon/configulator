@@ -1,8 +1,10 @@
-//go:build goexperiment.jsonv2
+package impl
 
-package pflag
-
-import "strconv"
+import (
+	"flag"
+	"fmt"
+	"strconv"
+)
 
 // Int is a pflag.Value for an int flag. pflag's own int flag parses 64
 // bits and wraps a bigger number on 32-bit platforms. Int returns a range
@@ -50,3 +52,17 @@ func (u *Uint) String() string { return strconv.FormatUint(uint64(*u), 10) }
 
 // Type returns "uint".
 func (*Uint) Type() string { return "uint" }
+
+// FlagValue returns the value of the flag name on fs as a T. It panics if fs
+// has no such flag or the flag holds another type, which means the flag was
+// replaced after Bind.
+func FlagValue[T any](fs *flag.FlagSet, name string) T {
+	if f := fs.Lookup(name); f != nil {
+		if g, ok := f.Value.(flag.Getter); ok {
+			if v, ok := g.Get().(T); ok {
+				return v
+			}
+		}
+	}
+	panic(fmt.Sprintf("configulator: flag %q is missing or does not hold a %T", name, *new(T)))
+}

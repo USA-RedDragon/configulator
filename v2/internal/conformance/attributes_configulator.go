@@ -44,7 +44,10 @@ func attributesApplyDefaults(_ *Attributes, _ string, _ configulator.SetOrigin) 
 func attributesDecodeFile(data []byte, u configulator.Unmarshal, cfg *Attributes, sep string, set configulator.SetOrigin, file string) error {
 	var sh attributesShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -74,7 +77,7 @@ func (s *attributesShadow) applyTo(cfg *Attributes, _ string, set configulator.S
 }
 
 func attributesApplyEnv(cfg *Attributes, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("token"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "token"); ok {
 		p, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return &configulator.ParseError{
@@ -87,15 +90,15 @@ func attributesApplyEnv(cfg *Attributes, ec configulator.EnvContext, set configu
 		cfg.Token = p
 		set("token", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("RN"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "RN"); ok {
 		cfg.Renamed = v
 		set("renamed", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("no-flag"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "no-flag"); ok {
 		cfg.NoFlag = v
 		set("no-flag", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("port"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "port"); ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return &configulator.ParseError{

@@ -90,11 +90,11 @@ type DecodeError struct {
 	Err  error
 }
 
-// NewDecodeError returns the DecodeError for err, the error the decoder
-// returned for the config file path. Generated code calls it. A ParseError
-// or UnknownKeyError from the generated JSON decoding is taken out of the
-// decoder's own error, and the ParseError gets path as its Source.
-func NewDecodeError(path string, err error) *DecodeError {
+// newDecodeError returns the DecodeError for err, the error the decoder
+// returned for the config file path. A ParseError or UnknownKeyError from
+// the generated JSON decoding is taken out of the decoder's own error, and
+// the ParseError gets path as its Source.
+func newDecodeError(path string, err error) *DecodeError {
 	var pe *ParseError
 	var ue *UnknownKeyError
 	switch {

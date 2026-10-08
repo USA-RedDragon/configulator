@@ -21,3 +21,11 @@ func SplitList(s, sep string) []string {
 	}
 	return strings.Split(s, sep)
 }
+
+// LookupEnv builds a field's env var name like EnvName and looks it up with
+// getenv. It returns the name even when the variable is not set.
+func LookupEnv(getenv func(string) (string, bool), prefix, sep string, segments ...string) (name, value string, ok bool) {
+	name = EnvName(prefix, sep, segments...)
+	value, ok = getenv(name)
+	return name, value, ok
+}

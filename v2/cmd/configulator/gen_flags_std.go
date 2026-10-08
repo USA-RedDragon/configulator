@@ -152,7 +152,7 @@ func (e *emitter) stdApply(l leaf, name *Statement) []Code {
 
 // stdConv emits the statements that read target's flag value into pv.
 func stdConv(target *Field, path string) []Code {
-	get := func(t Code) *Statement { return Qual(pkgStdFlag, "Get").Types(t).Call(Id("fs"), Id("fn")) }
+	get := func(t Code) *Statement { return Qual(pkgImpl, "FlagValue").Types(t).Call(Id("fs"), Id("fn")) }
 	t := target.Type.Underlying().String()
 	switch target.Kind {
 	case KindString:

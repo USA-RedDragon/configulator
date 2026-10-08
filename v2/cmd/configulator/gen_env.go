@@ -21,12 +21,13 @@ func (e *emitter) envFields(fields []*Field) []Code {
 			return []Code{t.Op("=").Add(val)}
 		})...)
 		inner = append(inner, Id("set").Call(Lit(l.path), Qual(pkgCfg, "LayerEnv"), Id("n")))
-		segs := make([]Code, 0, len(l.segs))
+		segs := make([]Code, 0, len(l.segs)+3)
+		segs = append(segs, Id("ec").Dot("Getenv"), Id("ec").Dot("Opts").Dot("Prefix"), Id("ec").Dot("Opts").Dot("Separator"))
 		for _, s := range l.segs {
 			segs = append(segs, Lit(s))
 		}
 		out = append(out, If(
-			List(Id("n"), Id("v"), Id("ok")).Op(":=").Id("ec").Dot("Lookup").Call(segs...), Id("ok"),
+			List(Id("n"), Id("v"), Id("ok")).Op(":=").Qual(pkgImpl, "LookupEnv").Call(segs...), Id("ok"),
 		).Block(inner...))
 	}
 	return out

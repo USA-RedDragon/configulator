@@ -31,21 +31,6 @@ type Hooks[C any] struct {
 	Apply func(cfg *C, fs *flag.FlagSet, o *Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error
 }
 
-// Get returns the value of the flag name on fs as a T. Generated Apply
-// functions call it for the flags their Register function added. It panics
-// if fs has no such flag or the flag holds another type, which means the
-// flag was replaced after Bind.
-func Get[T any](fs *flag.FlagSet, name string) T {
-	if f := fs.Lookup(name); f != nil {
-		if g, ok := f.Value.(flag.Getter); ok {
-			if v, ok := g.Get().(T); ok {
-				return v
-			}
-		}
-	}
-	panic(fmt.Sprintf("configulator: flag %q is missing or does not hold a %T", name, *new(T)))
-}
-
 // Bind adds the config flags to fs and applies them at Load.
 func Bind[C any](c *configulator.Configulator[C], fs *flag.FlagSet, h Hooks[C], o *Options) *configulator.Configulator[C] {
 	if o == nil {

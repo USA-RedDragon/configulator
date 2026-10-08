@@ -56,7 +56,10 @@ func nestedCollectionsApplyDefaults(_ *NestedCollections, _ string, _ configulat
 func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *NestedCollections, sep string, set configulator.SetOrigin, file string) error {
 	var sh nestedCollectionsShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }

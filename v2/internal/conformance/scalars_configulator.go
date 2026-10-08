@@ -15,6 +15,7 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 )
 
@@ -50,7 +51,10 @@ func scalarsApplyDefaults(cfg *Scalars, _ string, set configulator.SetOrigin) er
 func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, sep string, set configulator.SetOrigin, file string) error {
 	var sh scalarsShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -80,11 +84,11 @@ func (s *scalarsShadow) applyTo(cfg *Scalars, _ string, set configulator.SetOrig
 }
 
 func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("name"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "name"); ok {
 		cfg.Name = v
 		set("name", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("count"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "count"); ok {
 		p, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
 			return &configulator.ParseError{
@@ -97,7 +101,7 @@ func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.
 		cfg.Count = p
 		set("count", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("port"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "port"); ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return &configulator.ParseError{
@@ -110,7 +114,7 @@ func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.
 		cfg.Port = uint16(p)
 		set("port", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("ratio"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "ratio"); ok {
 		p, err := strconv.ParseFloat(v, 64)
 		if err != nil {
 			return &configulator.ParseError{
@@ -123,7 +127,7 @@ func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.
 		cfg.Ratio = p
 		set("ratio", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("verbose"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "verbose"); ok {
 		p, err := strconv.ParseBool(v)
 		if err != nil {
 			return &configulator.ParseError{

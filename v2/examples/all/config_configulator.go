@@ -50,7 +50,10 @@ func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) erro
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -78,11 +81,11 @@ func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("http", "host"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); ok {
 		cfg.HTTP.Host = v
 		set("http.host", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("http", "port"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); ok {
 		p, err := strconv.ParseInt(v, 10, strconv.IntSize)
 		if err != nil {
 			return &configulator.ParseError{
@@ -95,12 +98,12 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 		cfg.HTTP.Port = int(p)
 		set("http.port", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("http", "stuff"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "http", "stuff"); ok {
 		lst := impl.SplitList(v, ec.ArraySeparator)
 		cfg.HTTP.Stuff = lst
 		set("http.stuff", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("enable"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "enable"); ok {
 		p, err := strconv.ParseBool(v)
 		if err != nil {
 			return &configulator.ParseError{
@@ -146,7 +149,7 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 		}
 	}
 	fs.String(names[0], "localhost", "host to listen on")
-	fs.Var(cpflag.NewInt(8080), names[1], "port to listen on")
+	fs.Var(impl.NewInt(8080), names[1], "port to listen on")
 	fs.StringSlice(names[2], nil, "some stuff")
 	fs.Bool(names[3], false, "enable the service")
 	return nil

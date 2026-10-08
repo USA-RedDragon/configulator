@@ -13,6 +13,7 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 )
 
@@ -41,7 +42,10 @@ func embeddedApplyDefaults(cfg *Embedded, _ string, set configulator.SetOrigin) 
 func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, sep string, set configulator.SetOrigin, file string) error {
 	var sh embeddedShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -59,11 +63,11 @@ func (s *embeddedShadow) applyTo(cfg *Embedded, _ string, set configulator.SetOr
 }
 
 func embeddedApplyEnv(cfg *Embedded, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("region"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "region"); ok {
 		cfg.Region = v
 		set("region", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("zone"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "zone"); ok {
 		cfg.Zone = v
 		set("zone", configulator.LayerEnv, n)
 	}

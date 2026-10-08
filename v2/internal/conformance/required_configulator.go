@@ -14,6 +14,7 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 )
 
@@ -63,7 +64,10 @@ func requiredApplyDefaults(_ *Required, _ string, _ configulator.SetOrigin) erro
 func requiredDecodeFile(data []byte, u configulator.Unmarshal, cfg *Required, sep string, set configulator.SetOrigin, file string) error {
 	var sh requiredShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -116,15 +120,15 @@ func (s *requiredShadow) applyTo(cfg *Required, _ string, set configulator.SetOr
 }
 
 func requiredApplyEnv(cfg *Required, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("top"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "top"); ok {
 		cfg.Top = v
 		set("top", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("nested", "leaf"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "nested", "leaf"); ok {
 		cfg.Nested.Leaf = v
 		set("nested.leaf", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("opt", "leaf"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "opt", "leaf"); ok {
 		var e ROpt
 		if cfg.Opt != nil {
 			e = *cfg.Opt
@@ -133,7 +137,7 @@ func requiredApplyEnv(cfg *Required, ec configulator.EnvContext, set configulato
 		cfg.Opt = &e
 		set("opt.leaf", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("opt", "other"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "opt", "other"); ok {
 		var e ROpt
 		if cfg.Opt != nil {
 			e = *cfg.Opt

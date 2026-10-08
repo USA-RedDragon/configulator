@@ -15,6 +15,7 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 )
 
@@ -50,7 +51,10 @@ func optionalsApplyDefaults(cfg *Optionals, _ string, set configulator.SetOrigin
 func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, sep string, set configulator.SetOrigin, file string) error {
 	var sh optionalsShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -87,7 +91,7 @@ func (s *optionalsShadow) applyTo(cfg *Optionals, _ string, set configulator.Set
 }
 
 func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("port"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "port"); ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return &configulator.ParseError{
@@ -101,12 +105,12 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 		cfg.Port = &pv
 		set("port", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("name"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "name"); ok {
 		pv := v
 		cfg.Name = &pv
 		set("name", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("tls", "cert"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "tls", "cert"); ok {
 		var e TLSConfig
 		if cfg.TLS != nil {
 			e = *cfg.TLS
@@ -118,7 +122,7 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 		cfg.TLS = &e
 		set("tls.cert", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("tls", "min-version"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "tls", "min-version"); ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return &configulator.ParseError{

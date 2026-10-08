@@ -40,7 +40,10 @@ func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) erro
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -65,11 +68,11 @@ func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("listen"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "listen"); ok {
 		cfg.Listen = v
 		set("listen", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("timeout"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "timeout"); ok {
 		d, err := time.ParseDuration(v)
 		if err != nil {
 			return &configulator.ParseError{

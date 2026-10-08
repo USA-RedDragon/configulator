@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/USA-RedDragon/configulator/v2"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 )
 
 type dBConfigShadow struct {
@@ -44,7 +45,10 @@ func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) erro
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -64,11 +68,11 @@ func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("db", "url"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "db", "url"); ok {
 		cfg.DB.URL = v
 		set("db.url", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("db", "pool"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "db", "pool"); ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return &configulator.ParseError{

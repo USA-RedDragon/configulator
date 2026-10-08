@@ -48,7 +48,10 @@ func complexApplyDefaults(cfg *Complex, _ string, set configulator.SetOrigin) er
 func complexDecodeFile(data []byte, u configulator.Unmarshal, cfg *Complex, sep string, set configulator.SetOrigin, file string) error {
 	var sh complexShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -108,7 +111,7 @@ func (s *complexShadow) applyTo(cfg *Complex, _ string, set configulator.SetOrig
 }
 
 func complexApplyEnv(cfg *Complex, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("z"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "z"); ok {
 		var slot impl.Complex128
 		if err := slot.UnmarshalText([]byte(v)); err != nil {
 			return &configulator.ParseError{
@@ -122,7 +125,7 @@ func complexApplyEnv(cfg *Complex, ec configulator.EnvContext, set configulator.
 		cfg.Z = sv
 		set("z", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("exponent"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "exponent"); ok {
 		var slot impl.Complex128
 		if err := slot.UnmarshalText([]byte(v)); err != nil {
 			return &configulator.ParseError{
@@ -136,7 +139,7 @@ func complexApplyEnv(cfg *Complex, ec configulator.EnvContext, set configulator.
 		cfg.Exponent = sv
 		set("exponent", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("w"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "w"); ok {
 		var slot impl.Complex64
 		if err := slot.UnmarshalText([]byte(v)); err != nil {
 			return &configulator.ParseError{
@@ -150,7 +153,7 @@ func complexApplyEnv(cfg *Complex, ec configulator.EnvContext, set configulator.
 		cfg.W = sv
 		set("w", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("zs"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "zs"); ok {
 		lp := impl.SplitList(v, ec.ArraySeparator)
 		lst := make([]complex128, len(lp))
 		for li, ls := range lp {

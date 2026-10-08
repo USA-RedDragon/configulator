@@ -4,6 +4,7 @@ package configulator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -184,6 +185,10 @@ func (c *Configulator[C]) load() (*C, error) {
 			}
 			staged := *cfg
 			if err := c.schema.DecodeFile(data, dec, &staged, c.arraySep, set, res.Path); err != nil {
+				var de *DecodeError
+				if errors.As(err, &de) {
+					err = newDecodeError(de.Path, de.Err)
+				}
 				return cfg, err
 			}
 			*cfg = staged

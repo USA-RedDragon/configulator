@@ -16,6 +16,7 @@ import (
 
 	"github.com/USA-RedDragon/configulator/v2"
 	cstd "github.com/USA-RedDragon/configulator/v2/flags/std"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 )
 
 type configShadow struct {
@@ -43,7 +44,10 @@ func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) erro
 func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -61,11 +65,11 @@ func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin
 }
 
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("host"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "host"); ok {
 		cfg.Host = v
 		set("host", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("port"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "port"); ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return &configulator.ParseError{
@@ -115,12 +119,12 @@ func configRegisterStdFlags(fs *flag.FlagSet, _ *cstd.Options) error {
 
 func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, _ *cstd.Options, isSet map[string]bool, _ string, set configulator.SetOrigin) error {
 	if fn := "host"; isSet[fn] {
-		pv := cstd.Get[string](fs, fn)
+		pv := impl.FlagValue[string](fs, fn)
 		cfg.Host = pv
 		set("host", configulator.LayerCLI, "-"+fn)
 	}
 	if fn := "port"; isSet[fn] {
-		raw := cstd.Get[uint64](fs, fn)
+		raw := impl.FlagValue[uint64](fs, fn)
 		if raw > math.MaxUint16 {
 			return &configulator.ParseError{
 				Err:    fmt.Errorf("%d overflows uint16", raw),

@@ -59,7 +59,10 @@ func collectionsApplyDefaults(cfg *Collections, sep string, set configulator.Set
 func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collections, sep string, set configulator.SetOrigin, file string) error {
 	var sh collectionsShadow
 	if err := u(data, &sh); err != nil {
-		return configulator.NewDecodeError(file, err)
+		return &configulator.DecodeError{
+			Err:  err,
+			Path: file,
+		}
 	}
 	return sh.applyTo(cfg, sep, set, file)
 }
@@ -117,12 +120,12 @@ func (s *collectionsShadow) applyTo(cfg *Collections, _ string, set configulator
 }
 
 func collectionsApplyEnv(cfg *Collections, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n, v, ok := ec.Lookup("tags"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "tags"); ok {
 		lst := impl.SplitList(v, ec.ArraySeparator)
 		cfg.Tags = lst
 		set("tags", configulator.LayerEnv, n)
 	}
-	if n, v, ok := ec.Lookup("log-level"); ok {
+	if n, v, ok := impl.LookupEnv(ec.Getenv, ec.Opts.Prefix, ec.Opts.Separator, "log-level"); ok {
 		cfg.LogLevel = v
 		set("log-level", configulator.LayerEnv, n)
 	}

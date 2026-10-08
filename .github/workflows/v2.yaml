@@ -27,7 +27,7 @@ jobs:
           cd v2
           go test -race -count=1 -covermode atomic -coverpkg=./... -coverprofile coverage.raw ./...
           grep -v -e '_configulator\.go:' -e '/internal/conformance/' coverage.raw > coverage.out
-      - uses: USA-RedDragon/reusable-actions/coverage@v2
+      - uses: USA-RedDragon/reusable-actions/coverage@c7f24b7a3dc1110838186b173b1f1a2a65ff1c91 # v2.0.22
         with:
           file: v2/coverage.out
           badge: .github/badges/coverage-v2.svg

@@ -61,7 +61,7 @@ jobs:
       - name: Regenerate everything; committed output must not drift
         run: |
           cd v2/internal/conformance
-          for T in Scalars Nested Collections Optionals Embedded Durations; do
+          for T in Scalars Nested Collections NestedCollections Optionals Embedded Durations; do
             go run github.com/USA-RedDragon/configulator/v2/cmd/configulator \
               -type "$T" -output "$(echo "$T" | tr '[:upper:]' '[:lower:]')_configulator.go"
           done

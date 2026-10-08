@@ -43,6 +43,22 @@ Server: `addr` string (no default), `weight` uint16/u16 (default `1`).
 Pool: `size` uint16/u16 (default `5`).
 Element defaults apply per element (SPEC rule 3).
 
+## nested-collections
+
+| tag | type | default |
+|---|---|---|
+| `peers` | []Peer / Vec<Peer> | — |
+| `by-name` | map[string]Peer / HashMap<String,Peer> | — |
+
+Peer: `name` string (no default), `slots` int64/i64 (default `3`),
+`rules` []Rule / Vec<Rule>, `tags` map[string]Rule / HashMap<String,Rule>,
+`inner` Level, `opt` *Level / Option<Level>.
+Rule: `from` int64/i64 (no default), `range` int64/i64 (default `1`),
+`on` bool (default `true`).
+Level: `level` int64/i64 (default `7`).
+Element defaults apply per element at every depth (SPEC rule 3), and an
+optional struct inside an element gets its defaults when allocated (rule 5).
+
 ## optionals
 
 | tag | type | default |

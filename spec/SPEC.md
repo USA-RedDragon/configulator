@@ -1,6 +1,6 @@
 # configulator behavioral specification
 
-Version: 0.1.0 (see `SPEC_VERSION`)
+Version: 0.1.1 (see `SPEC_VERSION`)
 
 This document governs two implementations:
 
@@ -152,6 +152,7 @@ Error kinds: `ExplicitFileMissing`, `SearchPathUnreadable`, `ParseError`,
 - `scalars`: string/bool/i64-int/u16-int/f64 with defaults on some fields
 - `nested`: two levels of nested struct, defaults at both levels
 - `collections`: `[]string`, `[]struct` (element default), `map[string]string`, `map[string]struct`
+- `nested-collections`: lists and maps of structs inside list and map elements, with defaults at each level
 - `optionals`: optional u16, optional string (with default), optional struct
 - `durations`: duration leaf plus a plain string
 

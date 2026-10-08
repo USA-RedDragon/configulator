@@ -1,0 +1,1 @@
+{"peers":[{"name":"a","rules":[{"from":1},{"from":2,"range":5,"on":false}],"tags":{"x":{"from":9}},"opt":{}}],"by-name":{"b":{"name":"b","rules":[{"from":4}]}}}

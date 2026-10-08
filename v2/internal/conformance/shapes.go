@@ -59,6 +59,32 @@ type Pool struct {
 
 func (Collections) Validate() error { return nil }
 
+type NestedCollections struct {
+	Peers  []NCPeer          `name:"peers" json:"peers"`
+	ByName map[string]NCPeer `name:"by-name" json:"by-name"`
+}
+
+type NCPeer struct {
+	Name  string            `name:"name" json:"name"`
+	Slots int64             `name:"slots" json:"slots" default:"3"`
+	Rules []NCRule          `name:"rules" json:"rules"`
+	Tags  map[string]NCRule `name:"tags" json:"tags"`
+	Inner NCLevel           `name:"inner" json:"inner"`
+	Opt   *NCLevel          `name:"opt" json:"opt"`
+}
+
+type NCRule struct {
+	From  int64 `name:"from" json:"from"`
+	Range int64 `name:"range" json:"range" default:"1"`
+	On    bool  `name:"on" json:"on" default:"true"`
+}
+
+type NCLevel struct {
+	Level int64 `name:"level" json:"level" default:"7"`
+}
+
+func (NestedCollections) Validate() error { return nil }
+
 type Optionals struct {
 	Port *uint16    `name:"port" json:"port"`
 	Name *string    `name:"name" json:"name" default:"opt-name"`

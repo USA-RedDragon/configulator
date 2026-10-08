@@ -327,6 +327,8 @@ func TestCorpus(t *testing.T) {
 				runShape[Nested](t, tc, NestedSchema(), nil, func(c *Nested) any { return c })
 			case "collections":
 				runShape[Collections](t, tc, CollectionsSchema(), nil, func(c *Collections) any { return c })
+			case "nested-collections":
+				runShape[NestedCollections](t, tc, NestedCollectionsSchema(), nil, func(c *NestedCollections) any { return c })
 			case "optionals":
 				runShape[Optionals](t, tc, OptionalsSchema(), nil, func(c *Optionals) any { return c })
 			case "durations":

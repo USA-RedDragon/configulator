@@ -1,0 +1,1 @@
+{"peers":[{"name":"a","slots":3,"rules":[{"from":1,"range":1,"on":true},{"from":2,"range":5,"on":false}],"tags":{"x":{"from":9,"range":1,"on":true}},"inner":{"level":7},"opt":{"level":7}}],"by-name":{"b":{"name":"b","slots":3,"rules":[{"from":4,"range":1,"on":true}],"tags":{},"inner":{"level":7},"opt":null}}}

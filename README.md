@@ -183,17 +183,30 @@ repos:
         args: [-dir, internal/config, -type, Config, -sample-file, config.example.yaml]
 ```
 
+In GitHub Actions, the
+[configulator-docs reusable workflow](https://github.com/USA-RedDragon/reusable-actions#configulator-docs-workflow)
+fails pull requests from forks when the README or example config is stale.
+It commits the update on pushes to the default branch and on pull requests
+from branches in the same repository, such as Renovate's. It generates in a
+read-only job and commits from a separate job, using a GitHub App token,
+that runs no repository code:
+
 ```yaml
-# GitHub Actions: fails pull requests with a stale README or example config,
-# and commits the update on pushes to the default branch.
-- uses: USA-RedDragon/reusable-actions/configulator-docs@v2
-  with:
-    dir: internal/config
-    type: Config
-    env-prefix: MYAPP_
+jobs:
+  config-docs:
+    permissions:
+      contents: read
+    uses: USA-RedDragon/reusable-actions/.github/workflows/configulator-docs.yaml@v2
+    with:
+      dir: internal/config
+      type: Config
+      env-prefix: MYAPP_
+      app-id: ${{ vars.AUTO_COMMIT_APP_ID }}
+    secrets:
+      app-key: ${{ secrets.AUTO_COMMIT_APP_KEY }}
 ```
 
-The hooks and the action run `go tool configulator`, so they use the version
+The hooks and the workflow run `go tool configulator`, so they use the version
 in your `go.mod`.
 
 ## v1

@@ -349,7 +349,12 @@ func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error
 				s.ByName = &out
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -485,7 +490,12 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Opt = &sub
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -557,7 +567,12 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return fmt.Errorf("on: expected a bool, got %v", v.Kind())
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -599,7 +614,12 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return fmt.Errorf("level: expected a number, got %v", v.Kind())
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }

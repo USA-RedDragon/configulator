@@ -327,7 +327,12 @@ func (s *requiredShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Items = &out
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -365,7 +370,12 @@ func (s *rNestedShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return fmt.Errorf("leaf: expected a string, got %v", v.Kind())
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -416,7 +426,12 @@ func (s *rOptShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				return fmt.Errorf("other: expected a string, got %v", v.Kind())
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }

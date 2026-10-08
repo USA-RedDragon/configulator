@@ -408,7 +408,12 @@ func (s *complexShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				s.Zs = &out
 			}
 		default:
-			return fmt.Errorf("unknown key %q", tok.String())
+			if reject, _ := json.GetOption(dec.Options(), json.RejectUnknownMembers); reject {
+				return fmt.Errorf("unknown key %q", tok.String())
+			}
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
 		}
 	}
 }

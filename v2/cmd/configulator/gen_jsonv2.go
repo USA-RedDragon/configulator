@@ -23,8 +23,9 @@ func jsonKind(r rune) *Statement {
 // emitFastPaths emits an UnmarshalJSONFrom method for every shadow struct,
 // nested and element ones included, so json/v2 never falls back to
 // reflection. json/v2 skips struct tags when the method exists, so the
-// generated code does its own case-sensitive key matching, unknown key
-// rejection and string-only sentinel slots.
+// generated code does its own case-sensitive key matching and string-only
+// sentinel slots. It rejects unknown keys only when the decoder sets
+// json.RejectUnknownMembers, as StrictJSON does, and skips them otherwise.
 func (e *emitter) emitFastPaths() {
 	for _, sh := range e.shadowOrder {
 		e.emitFastPath(sh, e.shadowFields[sh])
@@ -41,7 +42,13 @@ func (e *emitter) emitFastPath(shadow string, fields []*Field) {
 		cases = append(cases, Case(Lit(f.Tag)).Block(body...))
 	}
 	cases = append(cases, Default().Block(
-		Return(Qual("fmt", "Errorf").Call(Lit("unknown key %q"), Id("tok").Dot("String").Call())),
+		If(
+			List(Id("reject"), Id("_")).Op(":=").Qual(pkgJSONv2, "GetOption").Call(Id("dec").Dot("Options").Call(), Qual(pkgJSONv2, "RejectUnknownMembers")),
+			Id("reject"),
+		).Block(
+			Return(Qual("fmt", "Errorf").Call(Lit("unknown key %q"), Id("tok").Dot("String").Call())),
+		),
+		If(Err().Op(":=").Id("dec").Dot("SkipValue").Call(), Err().Op("!=").Nil()).Block(Return(Err())),
 	))
 
 	e.decl().Func().Params(Id("s").Op("*").Id(shadow)).Id("UnmarshalJSONFrom").Params(

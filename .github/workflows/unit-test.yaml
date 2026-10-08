@@ -9,6 +9,9 @@ on:
         required: false
         default: false
     secrets:
+      auto_commit_app_key:
+        description: 'Private key of the auto-commit GitHub App'
+        required: false
       token:
         description: 'GitHub token'
         required: false
@@ -18,8 +21,17 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      - name: Generate GitHub App Token
+        if: inputs.coverage
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.AUTO_COMMIT_APP_ID }}
+          private-key: ${{ secrets.auto_commit_app_key }}
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
@@ -45,6 +57,9 @@ jobs:
         if: always() && inputs.coverage
         with:
           file: coverage.out
+          token: ${{ steps.app-token.outputs.token }}
+          git-user-name: usa-reddragon-auto-commit-bot[bot]
+          git-user-email: usa-reddragon-auto-commit-bot[bot]@users.noreply.github.com
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always() && inputs.coverage

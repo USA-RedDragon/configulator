@@ -8,7 +8,7 @@ import (
 
 	inref "github.com/USA-RedDragon/configulator/internal/reflect"
 	"github.com/USA-RedDragon/configulator/internal/wrapper"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
 
 var (

@@ -114,14 +114,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapInt64()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					if i, ok = a.(int64); ok {
-						v.SetInt(i)
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap int64")
+				return setIntFromInterface(v, val)
 			}
 		}
 		v.SetInt(i)
@@ -131,14 +124,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapInt()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					if i, ok = a.(int); ok {
-						v.SetInt(int64(i))
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap int")
+				return setIntFromInterface(v, val)
 			}
 		}
 		v.SetInt(int64(i))
@@ -180,14 +166,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			i, ok = val.UnwrapUint64()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					if i, ok = a.(uint64); ok {
-						v.SetUint(i)
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap uint64")
+				return setUintFromInterface(v, val)
 			}
 		}
 		v.SetUint(i)
@@ -207,14 +186,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			f, ok = val.UnwrapFloat32()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					if f, ok = a.(float32); ok {
-						v.SetFloat(float64(f))
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap float32")
+				return setFloatFromInterface(v, val)
 			}
 		}
 		v.SetFloat(float64(f))
@@ -224,14 +196,7 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 			var ok bool
 			f, ok = val.UnwrapFloat64()
 			if !ok {
-				a, ok := val.UnwrapInterface()
-				if ok {
-					if f, ok = a.(float64); ok {
-						v.SetFloat(f)
-						return nil
-					}
-				}
-				return fmt.Errorf("failed to unwrap float64")
+				return setFloatFromInterface(v, val)
 			}
 		}
 		v.SetFloat(f)
@@ -313,10 +278,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(float32); ok {
-									slice.Index(i).SetFloat(float64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to float32 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to float32 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -341,10 +304,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(float64); ok {
-									slice.Index(i).SetFloat(str)
-								} else {
-									return fmt.Errorf("failed to convert interface to float64 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to float64 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -369,10 +330,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(int8); ok {
-									slice.Index(i).SetInt(int64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to int8 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to int8 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -397,10 +356,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(int16); ok {
-									slice.Index(i).SetInt(int64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to int16 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to int16 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -425,10 +382,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(int32); ok {
-									slice.Index(i).SetInt(int64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to int32 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to int32 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -453,10 +408,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(int64); ok {
-									slice.Index(i).SetInt(str)
-								} else {
-									return fmt.Errorf("failed to convert interface to int64 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to int64 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -481,10 +434,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(int); ok {
-									slice.Index(i).SetInt(int64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to int in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to int in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -547,10 +498,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(uint8); ok {
-									slice.Index(i).SetUint(uint64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to uint8 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to uint8 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -575,10 +524,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(uint16); ok {
-									slice.Index(i).SetUint(uint64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to uint16 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to uint16 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -603,10 +550,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(uint32); ok {
-									slice.Index(i).SetUint(uint64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to uint32 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to uint32 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -631,10 +576,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(uint64); ok {
-									slice.Index(i).SetUint(str)
-								} else {
-									return fmt.Errorf("failed to convert interface to uint64 in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to uint64 in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -659,10 +602,8 @@ func SetStructValue(stru *reflect.Value, field reflect.StructField, val wrapper.
 						} else if s, ok := val.UnwrapInterfaceSlice(); ok {
 							slice := reflect.MakeSlice(v.Type(), len(s), len(s))
 							for i, val := range s {
-								if str, ok := val.(uint); ok {
-									slice.Index(i).SetUint(uint64(str))
-								} else {
-									return fmt.Errorf("failed to convert interface to uint in slice")
+								if err := setNumber(slice.Index(i), val); err != nil {
+									return fmt.Errorf("failed to convert interface to uint in slice: %w", err)
 								}
 							}
 							v.Set(slice)
@@ -829,6 +770,10 @@ func SetNestedStructValue(val *reflect.Value, fields []string, wrapped wrapper.W
 // signed integer field v, erroring when it is fractional or out of range.
 func setIntFromInterface(v reflect.Value, val wrapper.WrappedValue) error {
 	a, _ := val.UnwrapInterface()
+	return setInt(v, a)
+}
+
+func setInt(v reflect.Value, a any) error {
 	rv := reflect.ValueOf(a)
 	var n int64
 	switch rv.Kind() {
@@ -864,6 +809,10 @@ func setIntFromInterface(v reflect.Value, val wrapper.WrappedValue) error {
 // of range.
 func setUintFromInterface(v reflect.Value, val wrapper.WrappedValue) error {
 	a, _ := val.UnwrapInterface()
+	return setUint(v, a)
+}
+
+func setUint(v reflect.Value, a any) error {
 	rv := reflect.ValueOf(a)
 	var u uint64
 	switch rv.Kind() {
@@ -892,4 +841,45 @@ func setUintFromInterface(v reflect.Value, val wrapper.WrappedValue) error {
 	}
 	v.SetUint(u)
 	return nil
+}
+
+func setFloatFromInterface(v reflect.Value, val wrapper.WrappedValue) error {
+	a, _ := val.UnwrapInterface()
+	return setFloat(v, a)
+}
+
+// setFloat stores a decoded number of any numeric type into the float field v.
+func setFloat(v reflect.Value, a any) error {
+	rv := reflect.ValueOf(a)
+	var f float64
+	switch rv.Kind() {
+	case reflect.Float32, reflect.Float64:
+		f = rv.Float()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		f = float64(rv.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		f = float64(rv.Uint())
+	default:
+		return fmt.Errorf("failed to unwrap %s", v.Kind())
+	}
+	if v.OverflowFloat(f) {
+		return fmt.Errorf("value %v overflows %s", a, v.Kind())
+	}
+	v.SetFloat(f)
+	return nil
+}
+
+// setNumber stores a decoded number into v, which may be any integer or float
+// kind.
+func setNumber(v reflect.Value, a any) error {
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return setInt(v, a)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return setUint(v, a)
+	case reflect.Float32, reflect.Float64:
+		return setFloat(v, a)
+	default:
+		return fmt.Errorf("%s is not a number", v.Kind())
+	}
 }

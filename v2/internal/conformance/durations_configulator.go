@@ -10,6 +10,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 	"slices"
 	"strings"
@@ -17,8 +18,8 @@ import (
 )
 
 type durationsShadow struct {
-	Timeout *configulator.Duration `json:"timeout" toml:"timeout" yaml:"timeout"`
-	Label   *string                `json:"label" toml:"label" yaml:"label"`
+	Timeout *impl.Duration `json:"timeout" toml:"timeout" yaml:"timeout"`
+	Label   *string        `json:"label" toml:"label" yaml:"label"`
 }
 
 // DurationsSchema returns the generated schema for Durations.
@@ -63,7 +64,7 @@ func (s *durationsShadow) applyTo(cfg *Durations, sep string, set configulator.S
 	return nil
 }
 func durationsApplyEnv(cfg *Durations, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "timeout"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "timeout"); true {
 		if v, ok := ec.Getenv(n); ok {
 			d, err := time.ParseDuration(v)
 			if err != nil {
@@ -78,7 +79,7 @@ func durationsApplyEnv(cfg *Durations, ec configulator.EnvContext, set configula
 			set("timeout", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "label"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "label"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.Label = v
 			set("label", configulator.LayerEnv, n)
@@ -160,7 +161,7 @@ func (s *durationsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case 'n':
 			case '"':
-				var slot configulator.Duration
+				var slot impl.Duration
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
 					return err
 				}

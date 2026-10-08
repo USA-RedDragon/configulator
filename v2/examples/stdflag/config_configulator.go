@@ -11,6 +11,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	std "github.com/USA-RedDragon/configulator/v2/flags/std"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"slices"
 	"strconv"
 	"strings"
@@ -56,13 +57,13 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 	return nil
 }
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "listen"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "listen"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.Listen = v
 			set("listen", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "debug"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "debug"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseBool(v)
 			if err != nil {

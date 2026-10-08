@@ -10,6 +10,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 	"math"
 	"slices"
@@ -95,19 +96,19 @@ func (s *nestedShadow) applyTo(cfg *Nested, sep string, set configulator.SetOrig
 	return nil
 }
 func nestedApplyEnv(cfg *Nested, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "app-name"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "app-name"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.AppName = v
 			set("app-name", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.HTTP.Host = v
 			set("http.host", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseUint(v, 10, 16)
 			if err != nil {
@@ -122,13 +123,13 @@ func nestedApplyEnv(cfg *Nested, ec configulator.EnvContext, set configulator.Se
 			set("http.port", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "url"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "url"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.DB.URL = v
 			set("db.url", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "pool", "size"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "db", "pool", "size"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseUint(v, 10, 16)
 			if err != nil {

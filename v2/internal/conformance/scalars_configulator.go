@@ -10,6 +10,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 	"math"
 	"slices"
@@ -78,13 +79,13 @@ func (s *scalarsShadow) applyTo(cfg *Scalars, sep string, set configulator.SetOr
 	return nil
 }
 func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.Name = v
 			set("name", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "count"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "count"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -99,7 +100,7 @@ func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.
 			set("count", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseUint(v, 10, 16)
 			if err != nil {
@@ -114,7 +115,7 @@ func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.
 			set("port", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "ratio"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "ratio"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseFloat(v, 64)
 			if err != nil {
@@ -129,7 +130,7 @@ func scalarsApplyEnv(cfg *Scalars, ec configulator.EnvContext, set configulator.
 			set("ratio", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "verbose"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "verbose"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseBool(v)
 			if err != nil {

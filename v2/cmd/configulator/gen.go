@@ -18,6 +18,7 @@ const (
 
 const (
 	pkgCfg   = "github.com/USA-RedDragon/configulator/v2"
+	pkgImpl  = "github.com/USA-RedDragon/configulator/v2/impl"
 	pkgPFlag = "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	pfl      = "github.com/spf13/pflag"
 )
@@ -66,6 +67,7 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 	e.f.HeaderComment("//go:build goexperiment.jsonv2")
 	e.f.ImportName(pkgCfg, "configulator")
 	e.f.ImportAlias(pkgCfg, "configulator")
+	e.f.ImportName(pkgImpl, "impl")
 	e.f.ImportAlias(pkgPFlag, "cpflag")
 	e.f.ImportName(pfl, "pflag")
 

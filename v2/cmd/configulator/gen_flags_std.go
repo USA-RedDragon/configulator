@@ -170,7 +170,7 @@ func stdConv(target *Field, path string) []Code {
 		return []Code{Id("pv").Op(":=").Add(get).Assert(String())}
 	case KindSliceScalar:
 		code := []Code{Id("raw").Op(":=").Add(get).Assert(String())}
-		code = append(code, parseList(target, Qual(pkgCfg, "SplitList").Call(Id("raw"), Lit(",")), Lit(path), Lit("-").Op("+").Id("fn"), Id("raw"))...)
+		code = append(code, parseList(target, Qual(pkgImpl, "SplitList").Call(Id("raw"), Lit(",")), Lit(path), Lit("-").Op("+").Id("fn"), Id("raw"))...)
 		return append(code, Id("pv").Op(":=").Id("lst"))
 	case KindBool:
 		return []Code{Id("pv").Op(":=").Add(get).Assert(Bool())}

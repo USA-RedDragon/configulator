@@ -18,7 +18,7 @@ func envNameCall(segments []string) *Statement {
 	for _, s := range segments {
 		args = append(args, Lit(s))
 	}
-	return Qual(pkgCfg, "EnvName").Call(args...)
+	return Qual(pkgImpl, "EnvName").Call(args...)
 }
 
 func (e *emitter) envFields(fields []*Field) []Code {
@@ -71,7 +71,7 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 		}, Id("d")
 	case KindStdSlot:
 		return []Code{
-			Var().Id("slot").Qual(pkgCfg, f.SlotType),
+			Var().Id("slot").Qual(pkgImpl, f.SlotType),
 			If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v"))), Err().Op("!=").Nil()).Block(parseErr()),
 			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, convNamed(f.Type, Id("sv"))
@@ -81,7 +81,7 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 			If(Err().Op(":=").Id("tl").Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v"))), Err().Op("!=").Nil()).Block(parseErr()),
 		}, Id("tl")
 	case KindSliceScalar:
-		return parseList(f, Qual(pkgCfg, "SplitList").Call(Id("v"), Id("ec").Dot("ArraySeparator")), Lit(path), Id("n"), Id("v")),
+		return parseList(f, Qual(pkgImpl, "SplitList").Call(Id("v"), Id("ec").Dot("ArraySeparator")), Lit(path), Id("n"), Id("v")),
 			Id("lst")
 	case KindPointer:
 		switch f.Elem.Kind {

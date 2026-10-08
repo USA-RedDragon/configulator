@@ -10,6 +10,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 	"math"
 	"slices"
@@ -84,7 +85,7 @@ func (s *optionalsShadow) applyTo(cfg *Optionals, sep string, set configulator.S
 	return nil
 }
 func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseUint(v, 10, 16)
 			if err != nil {
@@ -100,14 +101,14 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 			set("port", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
 		if v, ok := ec.Getenv(n); ok {
 			pv := v
 			cfg.Name = &pv
 			set("name", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "cert"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "cert"); true {
 		if v, ok := ec.Getenv(n); ok {
 			{
 				var e TLSConfig
@@ -123,7 +124,7 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 			set("tls.cert", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "min-version"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "min-version"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseUint(v, 10, 16)
 			if err != nil {

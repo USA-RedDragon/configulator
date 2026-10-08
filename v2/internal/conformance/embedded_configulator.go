@@ -10,6 +10,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 	"slices"
 	"strings"
@@ -57,13 +58,13 @@ func (s *embeddedShadow) applyTo(cfg *Embedded, sep string, set configulator.Set
 	return nil
 }
 func embeddedApplyEnv(cfg *Embedded, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "region"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "region"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.Base.Region = v
 			set("region", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "zone"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "zone"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.Zone = v
 			set("zone", configulator.LayerEnv, n)

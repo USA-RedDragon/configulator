@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	configulator "github.com/USA-RedDragon/configulator/v2"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 )
 
 // Kind classifies a field for emission.
@@ -26,7 +26,7 @@ const (
 	KindSliceStruct // slice of structs (file only, spec rule 6)
 	KindMapScalar   // map[string]scalar (file only)
 	KindMapStruct   // map[string]struct (file only)
-	KindDuration    // time.Duration -> configulator.Duration slot
+	KindDuration    // time.Duration -> impl.Duration slot
 	KindStdSlot     // other stdtypes sentinel slot
 	KindTextLeaf    // non-struct type implementing TextUnmarshaler, decoded as a leaf
 )
@@ -539,25 +539,25 @@ func isNamed(t types.Type, pkgPath, name string) bool {
 func parseStdSlot(slot string, text []byte) error {
 	switch slot {
 	case "IPNet":
-		return new(configulator.IPNet).UnmarshalText(text)
+		return new(impl.IPNet).UnmarshalText(text)
 	case "FileMode":
-		return new(configulator.FileMode).UnmarshalText(text)
+		return new(impl.FileMode).UnmarshalText(text)
 	case "Location":
-		return new(configulator.Location).UnmarshalText(text)
+		return new(impl.Location).UnmarshalText(text)
 	case "TCPAddr":
-		return new(configulator.TCPAddr).UnmarshalText(text)
+		return new(impl.TCPAddr).UnmarshalText(text)
 	case "UDPAddr":
-		return new(configulator.UDPAddr).UnmarshalText(text)
+		return new(impl.UDPAddr).UnmarshalText(text)
 	case "HardwareAddr":
-		return new(configulator.HardwareAddr).UnmarshalText(text)
+		return new(impl.HardwareAddr).UnmarshalText(text)
 	case "URL":
-		return new(configulator.URL).UnmarshalText(text)
+		return new(impl.URL).UnmarshalText(text)
 	case "Month":
-		return new(configulator.Month).UnmarshalText(text)
+		return new(impl.Month).UnmarshalText(text)
 	case "Complex64":
-		return new(configulator.Complex64).UnmarshalText(text)
+		return new(impl.Complex64).UnmarshalText(text)
 	case "Complex128":
-		return new(configulator.Complex128).UnmarshalText(text)
+		return new(impl.Complex128).UnmarshalText(text)
 	default:
 		return fmt.Errorf("no default parser for slot %s", slot)
 	}

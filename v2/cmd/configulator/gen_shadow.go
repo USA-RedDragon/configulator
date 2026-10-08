@@ -64,7 +64,7 @@ func (e *emitter) shadowFieldType(f *Field) *Statement {
 	case KindInt, KindUint, KindFloat:
 		return Op("*").Add(fieldGoType(f.Type.Underlying()))
 	case KindDuration, KindStdSlot:
-		return Op("*").Qual(pkgCfg, f.SlotType)
+		return Op("*").Qual(pkgImpl, f.SlotType)
 	case KindTextLeaf:
 		return Op("*").Add(fieldGoType(f.Type))
 	case KindStruct:

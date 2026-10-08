@@ -70,12 +70,12 @@ func defaultValue(f *Field, def string, path, sep Code) ([]Code, *Statement) {
 		return nil, Qual("time", "Duration").Call(Lit(int64(d)))
 	case KindStdSlot:
 		return []Code{
-			Var().Id("slot").Qual(pkgCfg, f.SlotType),
+			Var().Id("slot").Qual(pkgImpl, f.SlotType),
 			Id("_").Op("=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Lit(def))),
 			List(Id("v"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, convNamed(f.Type, Id("v"))
 	case KindSliceScalar:
-		parts := Qual(pkgCfg, "SplitList").Call(Lit(def), sep)
+		parts := Qual(pkgImpl, "SplitList").Call(Lit(def), sep)
 		return parseList(f, parts, path, Lit("default tag"), Lit(def)), Id("lst")
 	default:
 		panic("defaultValue: unhandled kind " + f.Tag)

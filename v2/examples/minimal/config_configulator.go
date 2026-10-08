@@ -9,6 +9,7 @@ import (
 	v2 "encoding/json/v2"
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"math"
 	"strconv"
 	"strings"
@@ -56,13 +57,13 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 	return nil
 }
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.Name = v
 			set("name", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "port"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseUint(v, 10, 16)
 			if err != nil {

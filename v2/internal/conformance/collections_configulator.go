@@ -10,6 +10,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 	"math"
 	"slices"
@@ -42,7 +43,7 @@ func CollectionsSchema() *configulator.Schema[Collections] {
 }
 func collectionsApplyDefaults(cfg *Collections, sep string, set configulator.SetOrigin) error {
 	{
-		lst := configulator.SplitList("a,b", sep)
+		lst := impl.SplitList("a,b", sep)
 		cfg.Tags = lst
 		set("tags", configulator.LayerDefault, "default tag")
 	}
@@ -112,14 +113,14 @@ func (s *collectionsShadow) applyTo(cfg *Collections, sep string, set configulat
 	return nil
 }
 func collectionsApplyEnv(cfg *Collections, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tags"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tags"); true {
 		if v, ok := ec.Getenv(n); ok {
-			lst := configulator.SplitList(v, ec.ArraySeparator)
+			lst := impl.SplitList(v, ec.ArraySeparator)
 			cfg.Tags = lst
 			set("tags", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "log-level"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "log-level"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.LogLevel = v
 			set("log-level", configulator.LayerEnv, n)

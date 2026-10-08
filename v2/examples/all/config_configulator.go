@@ -10,6 +10,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"github.com/spf13/pflag"
 	"slices"
 	"strconv"
@@ -73,13 +74,13 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 	return nil
 }
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "host"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.HTTP.Host = v
 			set("http.host", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "port"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -94,14 +95,14 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 			set("http.port", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "stuff"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "stuff"); true {
 		if v, ok := ec.Getenv(n); ok {
-			lst := configulator.SplitList(v, ec.ArraySeparator)
+			lst := impl.SplitList(v, ec.ArraySeparator)
 			cfg.HTTP.Stuff = lst
 			set("http.stuff", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "enable"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "enable"); true {
 		if v, ok := ec.Getenv(n); ok {
 			p, err := strconv.ParseBool(v)
 			if err != nil {

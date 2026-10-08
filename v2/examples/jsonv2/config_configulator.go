@@ -9,13 +9,14 @@ import (
 	v2 "encoding/json/v2"
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
+	"github.com/USA-RedDragon/configulator/v2/impl"
 	"strings"
 	"time"
 )
 
 type configShadow struct {
-	Listen  *string                `json:"listen" toml:"listen" yaml:"listen"`
-	Timeout *configulator.Duration `json:"timeout" toml:"timeout" yaml:"timeout"`
+	Listen  *string        `json:"listen" toml:"listen" yaml:"listen"`
+	Timeout *impl.Duration `json:"timeout" toml:"timeout" yaml:"timeout"`
 }
 
 // ConfigSchema returns the generated schema for Config.
@@ -62,13 +63,13 @@ func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrig
 	return nil
 }
 func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.SetOrigin) error {
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "listen"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "listen"); true {
 		if v, ok := ec.Getenv(n); ok {
 			cfg.Listen = v
 			set("listen", configulator.LayerEnv, n)
 		}
 	}
-	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "timeout"); true {
+	if n := impl.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "timeout"); true {
 		if v, ok := ec.Getenv(n); ok {
 			d, err := time.ParseDuration(v)
 			if err != nil {
@@ -123,7 +124,7 @@ func (s *configShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			switch v.Kind() {
 			case 'n':
 			case '"':
-				var slot configulator.Duration
+				var slot impl.Duration
 				if err := slot.UnmarshalText([]byte(v.String())); err != nil {
 					return err
 				}

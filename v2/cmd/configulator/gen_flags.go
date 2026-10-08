@@ -316,7 +316,7 @@ func slotParse(f *Field, path string, source *Statement, in, out string) []Code 
 		val = Lit("(redacted)")
 	}
 	return []Code{
-		Var().Id("slot").Qual(pkgCfg, f.SlotType),
+		Var().Id("slot").Qual(pkgImpl, f.SlotType),
 		If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Id(in))), Err().Op("!=").Nil()).Block(
 			Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
 				Id("Path"): Lit(path), Id("Source"): source, Id("Value"): val, Id("Err"): Err(),

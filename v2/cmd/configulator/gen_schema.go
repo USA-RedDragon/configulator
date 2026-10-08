@@ -280,6 +280,11 @@ func sampleValue(f *Field) string {
 			return "[" + strings.Join(parts, ", ") + "]"
 		case KindFloat:
 			return yamlFloat(f.Default)
+		case KindBool:
+			if b, err := strconv.ParseBool(f.Default); err == nil {
+				return strconv.FormatBool(b)
+			}
+			return f.Default
 		default:
 			return f.Default
 		}

@@ -19,10 +19,10 @@ import (
 )
 
 type scalarsShadow struct {
-	Name    *string  `json:"name" toml:"name" yaml:"name"`
-	Count   *int64   `json:"count" toml:"count" yaml:"count"`
-	Port    *uint16  `json:"port" toml:"port" yaml:"port"`
-	Ratio   *float64 `json:"ratio" toml:"ratio" yaml:"ratio"`
+	Name    *string  `json:"name"    toml:"name"    yaml:"name"`
+	Count   *int64   `json:"count"   toml:"count"   yaml:"count"`
+	Port    *uint16  `json:"port"    toml:"port"    yaml:"port"`
+	Ratio   *float64 `json:"ratio"   toml:"ratio"   yaml:"ratio"`
 	Verbose *bool    `json:"verbose" toml:"verbose" yaml:"verbose"`
 }
 

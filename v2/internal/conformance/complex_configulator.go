@@ -18,10 +18,10 @@ import (
 )
 
 type complexShadow struct {
-	Z        *impl.Complex128   `json:"z" toml:"z" yaml:"z"`
+	Z        *impl.Complex128   `json:"z"        toml:"z"        yaml:"z"`
 	Exponent *impl.Complex128   `json:"exponent" toml:"exponent" yaml:"exponent"`
-	W        *impl.Complex64    `json:"w" toml:"w" yaml:"w"`
-	Zs       *[]impl.Complex128 `json:"zs" toml:"zs" yaml:"zs"`
+	W        *impl.Complex64    `json:"w"        toml:"w"        yaml:"w"`
+	Zs       *[]impl.Complex128 `json:"zs"       toml:"zs"       yaml:"zs"`
 }
 
 // ComplexSchema returns the generated schema for Complex.

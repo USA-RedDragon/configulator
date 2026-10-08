@@ -20,7 +20,7 @@ import (
 )
 
 type serverShadow struct {
-	Addr   *string `json:"addr" toml:"addr" yaml:"addr"`
+	Addr   *string `json:"addr"   toml:"addr"   yaml:"addr"`
 	Weight *uint16 `json:"weight" toml:"weight" yaml:"weight"`
 }
 
@@ -29,10 +29,10 @@ type poolShadow struct {
 }
 
 type collectionsShadow struct {
-	Tags     *[]string              `json:"tags" toml:"tags" yaml:"tags"`
-	Labels   *map[string]string     `json:"labels" toml:"labels" yaml:"labels"`
-	Servers  *[]serverShadow        `json:"servers" toml:"servers" yaml:"servers"`
-	Pools    *map[string]poolShadow `json:"pools" toml:"pools" yaml:"pools"`
+	Tags     *[]string              `json:"tags"      toml:"tags"      yaml:"tags"`
+	Labels   *map[string]string     `json:"labels"    toml:"labels"    yaml:"labels"`
+	Servers  *[]serverShadow        `json:"servers"   toml:"servers"   yaml:"servers"`
+	Pools    *map[string]poolShadow `json:"pools"     toml:"pools"     yaml:"pools"`
 	LogLevel *string                `json:"log-level" toml:"log-level" yaml:"log-level"`
 }
 

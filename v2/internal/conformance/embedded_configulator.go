@@ -18,7 +18,7 @@ import (
 
 type embeddedShadow struct {
 	Region *string `json:"region" toml:"region" yaml:"region"`
-	Zone   *string `json:"zone" toml:"zone" yaml:"zone"`
+	Zone   *string `json:"zone"   toml:"zone"   yaml:"zone"`
 }
 
 // EmbeddedSchema returns the generated schema for Embedded.

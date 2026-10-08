@@ -16,7 +16,7 @@ import (
 )
 
 type dBConfigShadow struct {
-	URL  *string `json:"url" toml:"url" yaml:"url"`
+	URL  *string `json:"url"  toml:"url"  yaml:"url"`
 	Pool *uint16 `json:"pool" toml:"pool" yaml:"pool"`
 }
 

@@ -19,7 +19,7 @@ import (
 
 type configShadow struct {
 	Listen *string `json:"listen" toml:"listen" yaml:"listen"`
-	Debug  *bool   `json:"debug" toml:"debug" yaml:"debug"`
+	Debug  *bool   `json:"debug"  toml:"debug"  yaml:"debug"`
 }
 
 // ConfigSchema returns the generated schema for Config.

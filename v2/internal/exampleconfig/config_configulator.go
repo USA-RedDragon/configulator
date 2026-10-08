@@ -32,9 +32,9 @@ type dBShadow struct {
 
 type configShadow struct {
 	LogLevel *string        `json:"log-level" toml:"log-level" yaml:"log-level"`
-	Timeout  *impl.Duration `json:"timeout" toml:"timeout" yaml:"timeout"`
-	HTTP     *hTTPShadow    `json:"http" toml:"http" yaml:"http"`
-	DB       *dBShadow      `json:"db" toml:"db" yaml:"db"`
+	Timeout  *impl.Duration `json:"timeout"   toml:"timeout"   yaml:"timeout"`
+	HTTP     *hTTPShadow    `json:"http"      toml:"http"      yaml:"http"`
+	DB       *dBShadow      `json:"db"        toml:"db"        yaml:"db"`
 }
 
 // ConfigSchema returns the generated schema for Config.

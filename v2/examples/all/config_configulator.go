@@ -19,13 +19,13 @@ import (
 )
 
 type hTTPConfigShadow struct {
-	Host  *string   `json:"host" toml:"host" yaml:"host"`
-	Port  *int      `json:"port" toml:"port" yaml:"port"`
+	Host  *string   `json:"host"  toml:"host"  yaml:"host"`
+	Port  *int      `json:"port"  toml:"port"  yaml:"port"`
 	Stuff *[]string `json:"stuff" toml:"stuff" yaml:"stuff"`
 }
 
 type configShadow struct {
-	HTTP   *hTTPConfigShadow `json:"http" toml:"http" yaml:"http"`
+	HTTP   *hTTPConfigShadow `json:"http"   toml:"http"   yaml:"http"`
 	Enable *bool             `json:"enable" toml:"enable" yaml:"enable"`
 }
 

@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"go/types"
+	"strconv"
+	"strings"
 
 	. "github.com/dave/jennifer/jen"
 )
@@ -108,10 +110,42 @@ func (e *emitter) emitShadowStruct(name string, fields []*Field) {
 	e.shadows[name] = true
 	e.shadowOrder = append(e.shadowOrder, name)
 	e.shadowFields[name] = fields
-	var defs []Code
-	for _, f := range fields {
-		tags := map[string]string{"json": f.Tag, "yaml": f.Tag, "toml": f.Tag}
-		defs = append(defs, Id(goName(f)).Add(e.shadowFieldType(f)).Tag(tags))
+	tags := alignedTags(fields)
+	defs := make([]Code, 0, len(fields))
+	for i, f := range fields {
+		defs = append(defs, Id(goName(f)).Add(e.shadowFieldType(f)).Op(tags[i]))
 	}
 	e.decl().Type().Id(name).Struct(defs...)
+}
+
+// alignedTags returns the struct tag literal for each field: its name under
+// the json, toml and yaml keys, padded so the keys line up in columns.
+func alignedTags(fields []*Field) []string {
+	keys := []string{"json", "toml", "yaml"}
+	parts := make([][]string, len(fields))
+	widths := make([]int, len(keys))
+	for i, f := range fields {
+		for j, k := range keys {
+			p := k + ":" + strconv.Quote(f.Tag)
+			parts[i] = append(parts[i], p)
+			widths[j] = max(widths[j], runeLen(p))
+		}
+	}
+	out := make([]string, len(fields))
+	for i, row := range parts {
+		var b strings.Builder
+		for j, p := range row {
+			b.WriteString(p)
+			if j < len(row)-1 {
+				b.WriteString(strings.Repeat(" ", widths[j]-runeLen(p)+1))
+			}
+		}
+		tag := b.String()
+		if strings.Contains(tag, "`") {
+			out[i] = strconv.Quote(tag)
+		} else {
+			out[i] = "`" + tag + "`"
+		}
+	}
+	return out
 }

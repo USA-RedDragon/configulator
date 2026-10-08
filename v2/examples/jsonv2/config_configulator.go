@@ -16,7 +16,7 @@ import (
 )
 
 type configShadow struct {
-	Listen  *string        `json:"listen" toml:"listen" yaml:"listen"`
+	Listen  *string        `json:"listen"  toml:"listen"  yaml:"listen"`
 	Timeout *impl.Duration `json:"timeout" toml:"timeout" yaml:"timeout"`
 }
 

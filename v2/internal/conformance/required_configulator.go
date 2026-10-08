@@ -22,15 +22,15 @@ type rNestedShadow struct {
 }
 
 type rOptShadow struct {
-	Leaf  *string `json:"leaf" toml:"leaf" yaml:"leaf"`
+	Leaf  *string `json:"leaf"  toml:"leaf"  yaml:"leaf"`
 	Other *string `json:"other" toml:"other" yaml:"other"`
 }
 
 type requiredShadow struct {
-	Top    *string        `json:"top" toml:"top" yaml:"top"`
+	Top    *string        `json:"top"    toml:"top"    yaml:"top"`
 	Nested *rNestedShadow `json:"nested" toml:"nested" yaml:"nested"`
-	Opt    *rOptShadow    `json:"opt" toml:"opt" yaml:"opt"`
-	Items  *[]rOptShadow  `json:"items" toml:"items" yaml:"items"`
+	Opt    *rOptShadow    `json:"opt"    toml:"opt"    yaml:"opt"`
+	Items  *[]rOptShadow  `json:"items"  toml:"items"  yaml:"items"`
 }
 
 func requiredConditionalRequired(cfg *Required) []string {

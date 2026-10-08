@@ -19,14 +19,14 @@ import (
 )
 
 type tLSConfigShadow struct {
-	Cert       *string `json:"cert" toml:"cert" yaml:"cert"`
+	Cert       *string `json:"cert"        toml:"cert"        yaml:"cert"`
 	MinVersion *uint16 `json:"min-version" toml:"min-version" yaml:"min-version"`
 }
 
 type optionalsShadow struct {
 	Port *uint16          `json:"port" toml:"port" yaml:"port"`
 	Name *string          `json:"name" toml:"name" yaml:"name"`
-	TLS  *tLSConfigShadow `json:"tls" toml:"tls" yaml:"tls"`
+	TLS  *tLSConfigShadow `json:"tls"  toml:"tls"  yaml:"tls"`
 }
 
 // OptionalsSchema returns the generated schema for Optionals.

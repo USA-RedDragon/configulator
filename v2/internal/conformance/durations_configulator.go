@@ -20,7 +20,7 @@ import (
 
 type durationsShadow struct {
 	Timeout *impl.Duration `json:"timeout" toml:"timeout" yaml:"timeout"`
-	Label   *string        `json:"label" toml:"label" yaml:"label"`
+	Label   *string        `json:"label"   toml:"label"   yaml:"label"`
 }
 
 // DurationsSchema returns the generated schema for Durations.

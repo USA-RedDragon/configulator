@@ -17,9 +17,9 @@ import (
 )
 
 type nCRuleShadow struct {
-	From  *int64 `json:"from" toml:"from" yaml:"from"`
+	From  *int64 `json:"from"  toml:"from"  yaml:"from"`
 	Range *int64 `json:"range" toml:"range" yaml:"range"`
-	On    *bool  `json:"on" toml:"on" yaml:"on"`
+	On    *bool  `json:"on"    toml:"on"    yaml:"on"`
 }
 
 type nCLevelShadow struct {
@@ -27,16 +27,16 @@ type nCLevelShadow struct {
 }
 
 type nCPeerShadow struct {
-	Name  *string                  `json:"name" toml:"name" yaml:"name"`
+	Name  *string                  `json:"name"  toml:"name"  yaml:"name"`
 	Slots *int64                   `json:"slots" toml:"slots" yaml:"slots"`
 	Rules *[]nCRuleShadow          `json:"rules" toml:"rules" yaml:"rules"`
-	Tags  *map[string]nCRuleShadow `json:"tags" toml:"tags" yaml:"tags"`
+	Tags  *map[string]nCRuleShadow `json:"tags"  toml:"tags"  yaml:"tags"`
 	Inner *nCLevelShadow           `json:"inner" toml:"inner" yaml:"inner"`
-	Opt   *nCLevelShadow           `json:"opt" toml:"opt" yaml:"opt"`
+	Opt   *nCLevelShadow           `json:"opt"   toml:"opt"   yaml:"opt"`
 }
 
 type nestedCollectionsShadow struct {
-	Peers  *[]nCPeerShadow          `json:"peers" toml:"peers" yaml:"peers"`
+	Peers  *[]nCPeerShadow          `json:"peers"   toml:"peers"   yaml:"peers"`
 	ByName *map[string]nCPeerShadow `json:"by-name" toml:"by-name" yaml:"by-name"`
 }
 

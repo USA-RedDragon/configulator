@@ -68,6 +68,7 @@ func styleProblems(src []byte) []string {
 		return append(out, err.Error())
 	}
 	out = append(out, importProblems(fset, f)...)
+	out = append(out, tagProblems(f)...)
 	lines := strings.Split(string(src), "\n")
 	for i, d := range f.Decls {
 		if i == 0 {
@@ -89,6 +90,33 @@ func styleProblems(src []byte) []string {
 			out = append(out, "contains "+bad)
 		}
 	}
+	return out
+}
+
+// tagProblems reports a struct whose field tags don't line up: each key
+// must start in the same column on every field.
+func tagProblems(f *ast.File) []string {
+	var out []string
+	ast.Inspect(f, func(n ast.Node) bool {
+		st, ok := n.(*ast.StructType)
+		if !ok {
+			return true
+		}
+		cols := map[string]int{}
+		for _, fl := range st.Fields.List {
+			if fl.Tag == nil {
+				continue
+			}
+			for _, key := range []string{"toml:", "yaml:"} {
+				col := strings.Index(fl.Tag.Value, key)
+				if prev, seen := cols[key]; seen && prev != col {
+					out = append(out, "unaligned struct tag "+fl.Tag.Value)
+				}
+				cols[key] = col
+			}
+		}
+		return true
+	})
 	return out
 }
 

@@ -28,14 +28,14 @@ type nPoolShadow struct {
 }
 
 type nDBShadow struct {
-	URL  *string      `json:"url" toml:"url" yaml:"url"`
+	URL  *string      `json:"url"  toml:"url"  yaml:"url"`
 	Pool *nPoolShadow `json:"pool" toml:"pool" yaml:"pool"`
 }
 
 type nestedShadow struct {
 	AppName *string      `json:"app-name" toml:"app-name" yaml:"app-name"`
-	HTTP    *nHTTPShadow `json:"http" toml:"http" yaml:"http"`
-	DB      *nDBShadow   `json:"db" toml:"db" yaml:"db"`
+	HTTP    *nHTTPShadow `json:"http"     toml:"http"     yaml:"http"`
+	DB      *nDBShadow   `json:"db"       toml:"db"       yaml:"db"`
 }
 
 // NestedSchema returns the generated schema for Nested.

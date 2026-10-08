@@ -21,11 +21,11 @@ import (
 )
 
 type attributesShadow struct {
-	Token   *int64  `json:"token" toml:"token" yaml:"token"`
+	Token   *int64  `json:"token"   toml:"token"   yaml:"token"`
 	Renamed *string `json:"renamed" toml:"renamed" yaml:"renamed"`
-	NoEnv   *string `json:"no-env" toml:"no-env" yaml:"no-env"`
+	NoEnv   *string `json:"no-env"  toml:"no-env"  yaml:"no-env"`
 	NoFlag  *string `json:"no-flag" toml:"no-flag" yaml:"no-flag"`
-	Port    *uint16 `json:"port" toml:"port" yaml:"port"`
+	Port    *uint16 `json:"port"    toml:"port"    yaml:"port"`
 }
 
 // AttributesSchema returns the generated schema for Attributes.

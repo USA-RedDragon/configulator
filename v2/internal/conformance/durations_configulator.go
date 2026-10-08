@@ -206,7 +206,7 @@ var _ json.UnmarshalerFrom = (*durationsShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Durations) PrintConfig() string {
+func (c Durations) PrintConfig() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "timeout = %v\n", c.Timeout)
 	fmt.Fprintf(&b, "label = %v\n", c.Label)

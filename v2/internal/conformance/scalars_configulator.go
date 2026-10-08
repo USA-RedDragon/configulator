@@ -352,7 +352,7 @@ var _ json.UnmarshalerFrom = (*scalarsShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Scalars) PrintConfig() string {
+func (c Scalars) PrintConfig() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "name = %v\n", c.Name)
 	fmt.Fprintf(&b, "count = %v\n", c.Count)

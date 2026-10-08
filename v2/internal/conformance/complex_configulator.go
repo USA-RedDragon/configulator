@@ -418,7 +418,7 @@ var _ json.UnmarshalerFrom = (*complexShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Complex) PrintConfig() string {
+func (c Complex) PrintConfig() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "z = %v\n", c.Z)
 	fmt.Fprintf(&b, "exponent = %v\n", c.Exponent)

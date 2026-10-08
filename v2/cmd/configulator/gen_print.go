@@ -20,7 +20,11 @@ func (e *emitter) emitPrintConfig() {
 	e.decl().Comment("PrintConfig renders every field as \"path = value\" lines, redacting")
 	e.f.Comment("fields tagged secret:\"true\". The origin Report holds no values,")
 	e.f.Comment("so this is the only place redaction happens.")
-	e.f.Func().Params(Id("c").Op("*").Id(n)).Id("PrintConfig").Params().String().Block(body...)
+	recv := Op("*").Id(n)
+	if e.m.ValueRecv {
+		recv = Id(n)
+	}
+	e.f.Func().Params(Id("c").Add(recv)).Id("PrintConfig").Params().String().Block(body...)
 }
 
 func (e *emitter) printFields(fields []*Field, prefix string) []Code {

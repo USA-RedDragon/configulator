@@ -426,7 +426,7 @@ var _ json.UnmarshalerFrom = (*rOptShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Required) PrintConfig() string {
+func (c Required) PrintConfig() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "top = %v\n", c.Top)
 	fmt.Fprintf(&b, "nested.leaf = %v\n", c.Nested.Leaf)

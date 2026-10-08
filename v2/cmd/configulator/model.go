@@ -51,6 +51,7 @@ type Field struct {
 	Fields   []*Field // struct / element fields
 	Elem     *Field   // element for slices/maps/pointers
 	Embedded bool     // promoted from an embedded struct
+	Var      *types.Var
 }
 
 // Model describes one config type for the generator.
@@ -60,6 +61,9 @@ type Model struct {
 	PkgName     string
 	Fields      []*Field
 	HasValidate bool
+	// ValueRecv is set when the type's own methods all have value
+	// receivers, so PrintConfig uses one too.
+	ValueRecv bool
 }
 
 // stdSlot returns the configulator sentinel slot for the stdlib type full,
@@ -104,6 +108,7 @@ func buildModel(named *types.Named, outPkg *types.Package, noValidate bool) (*Mo
 		return nil, fmt.Errorf("%s: no Validate() error method; add one or pass -no-validate", obj.Name())
 	}
 	m.HasValidate = hasValidate(named)
+	m.ValueRecv = valueReceivers(named)
 
 	fields, err := walkStruct(st, outPkg, obj.Name())
 	if err != nil {
@@ -134,6 +139,27 @@ func hasValidate(t types.Type) bool {
 	return false
 }
 
+// valueReceivers reports whether named has methods and all of them, other
+// than a PrintConfig left by an earlier run, have value receivers.
+func valueReceivers(named *types.Named) bool {
+	found := false
+	for i := 0; i < named.NumMethods(); i++ {
+		fn := named.Method(i)
+		if fn.Name() == "PrintConfig" {
+			continue
+		}
+		sig, ok := fn.Type().(*types.Signature)
+		if !ok || sig.Recv() == nil {
+			continue
+		}
+		if _, ptr := sig.Recv().Type().(*types.Pointer); ptr {
+			return false
+		}
+		found = true
+	}
+	return found
+}
+
 func walkStruct(st *types.Struct, outPkg *types.Package, path string) ([]*Field, error) {
 	var out []*Field
 	for i := 0; i < st.NumFields(); i++ {
@@ -152,6 +178,11 @@ func walkStruct(st *types.Struct, outPkg *types.Package, path string) ([]*Field,
 			for _, f := range sub {
 				f.GoName = fv.Name() + "." + f.GoName
 				f.Embedded = true
+				// Drop the embedded names when the field is promoted to st
+				// without ambiguity, so selectors read cfg.Name.
+				if obj, _, _ := types.LookupFieldOrMethod(st, false, f.Var.Pkg(), f.Var.Name()); obj == f.Var {
+					f.GoName = f.Var.Name()
+				}
 			}
 			out = append(out, sub...)
 			continue
@@ -172,6 +203,7 @@ func walkStruct(st *types.Struct, outPkg *types.Package, path string) ([]*Field,
 		}
 
 		f := &Field{
+			Var:      fv,
 			GoName:   fv.Name(),
 			Tag:      name,
 			Type:     fv.Type(),

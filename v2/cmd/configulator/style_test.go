@@ -162,3 +162,19 @@ func assumedName(p string) string {
 	}
 	return base
 }
+
+// TestPrintConfigReceiver checks that PrintConfig takes the receiver kind
+// the type's own methods use, so the type doesn't mix the two.
+func TestPrintConfigReceiver(t *testing.T) {
+	t.Parallel()
+	for recv, want := range map[string]bool{"Cfg": true, "*Cfg": false} {
+		src := "package fixture\n\ntype Cfg struct {\n\tA string `name:\"a\"`\n}\n\nfunc (c " + recv + ") Validate() error { return nil }\n"
+		m, err := buildFixtureModel(t, src, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if m.ValueRecv != want {
+			t.Errorf("Validate on %s: ValueRecv = %v, want %v", recv, m.ValueRecv, want)
+		}
+	}
+}

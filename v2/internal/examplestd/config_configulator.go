@@ -199,7 +199,7 @@ var _ json.UnmarshalerFrom = (*configShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Config) PrintConfig() string {
+func (c Config) PrintConfig() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "host = %v\n", c.Host)
 	fmt.Fprintf(&b, "port = %v\n", c.Port)

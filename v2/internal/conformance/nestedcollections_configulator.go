@@ -609,7 +609,7 @@ var _ json.UnmarshalerFrom = (*nCLevelShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *NestedCollections) PrintConfig() string {
+func (c NestedCollections) PrintConfig() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "peers = %v\n", c.Peers)
 	fmt.Fprintf(&b, "by-name = %v\n", c.ByName)

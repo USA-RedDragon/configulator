@@ -330,7 +330,7 @@ var _ json.UnmarshalerFrom = (*attributesShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Attributes) PrintConfig() string {
+func (c Attributes) PrintConfig() string {
 	var b strings.Builder
 	b.WriteString("token = (redacted)\n")
 	fmt.Fprintf(&b, "renamed = %v\n", c.Renamed)

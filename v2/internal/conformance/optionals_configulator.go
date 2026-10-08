@@ -382,7 +382,7 @@ var _ json.UnmarshalerFrom = (*tLSConfigShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Optionals) PrintConfig() string {
+func (c Optionals) PrintConfig() string {
 	var b strings.Builder
 	if c.Port == nil {
 		b.WriteString("port = <unset>\n")

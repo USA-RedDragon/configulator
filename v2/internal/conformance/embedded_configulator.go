@@ -31,7 +31,7 @@ func EmbeddedSchema() *configulator.Schema[Embedded] {
 }
 
 func embeddedApplyDefaults(cfg *Embedded, _ string, set configulator.SetOrigin) error {
-	cfg.Base.Region = "us-east-1"
+	cfg.Region = "us-east-1"
 	set("region", configulator.LayerDefault, "default tag")
 	cfg.Zone = "a"
 	set("zone", configulator.LayerDefault, "default tag")
@@ -51,7 +51,7 @@ func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, se
 
 func (s *embeddedShadow) applyTo(cfg *Embedded, _ string, set configulator.SetOrigin, file string) error {
 	if s.Region != nil {
-		cfg.Base.Region = *s.Region
+		cfg.Region = *s.Region
 		set("region", configulator.LayerFile, file)
 	}
 	if s.Zone != nil {
@@ -63,7 +63,7 @@ func (s *embeddedShadow) applyTo(cfg *Embedded, _ string, set configulator.SetOr
 
 func embeddedApplyEnv(cfg *Embedded, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n, v, ok := ec.Lookup("region"); ok {
-		cfg.Base.Region = v
+		cfg.Region = v
 		set("region", configulator.LayerEnv, n)
 	}
 	if n, v, ok := ec.Lookup("zone"); ok {
@@ -115,7 +115,7 @@ func embeddedApplyPFlags(cfg *Embedded, fs *pflag.FlagSet, _ *cpflag.Options, _ 
 				Source: "--" + n,
 			}
 		}
-		cfg.Base.Region = v
+		cfg.Region = v
 		set("region", configulator.LayerCLI, "--"+n)
 	}
 	if n := "zone"; fs.Changed(n) {
@@ -187,9 +187,9 @@ var _ json.UnmarshalerFrom = (*embeddedShadow)(nil)
 // PrintConfig renders every field as "path = value" lines, redacting
 // fields tagged secret:"true". The origin Report holds no values,
 // so this is the only place redaction happens.
-func (c *Embedded) PrintConfig() string {
+func (c Embedded) PrintConfig() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "region = %v\n", c.Base.Region)
+	fmt.Fprintf(&b, "region = %v\n", c.Region)
 	fmt.Fprintf(&b, "zone = %v\n", c.Zone)
 	return b.String()
 }

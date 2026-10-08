@@ -20,11 +20,13 @@ type Options struct {
 
 // Hooks is provided by generated code (-flags=pflag).
 type Hooks[C any] struct {
-	// Register adds every config flag to fs. It returns an error on a
-	// duplicate name, since pflag would panic.
+	// Register adds every config flag to fs. It returns a
+	// *configulator.FlagConflictError on a duplicate name or shorthand,
+	// since pflag would panic.
 	Register func(fs *pflag.FlagSet, o *Options) error
-	// Apply copies every changed flag onto the config.
-	Apply func(cfg *C, fs *pflag.FlagSet, o *Options, set configulator.SetOrigin) error
+	// Apply copies every changed flag onto the config. sep is the list
+	// separator for the defaults of an optional struct a flag allocates.
+	Apply func(cfg *C, fs *pflag.FlagSet, o *Options, sep string, set configulator.SetOrigin) error
 }
 
 // Bind adds the config flags to fs right away (cobra parses args before
@@ -61,9 +63,14 @@ func Bind[C any](c *configulator.Configulator[C], fs *pflag.FlagSet, h Hooks[C],
 		if len(fo.Search) > 0 {
 			def = fo.Search[0]
 		}
-		if fs.Lookup(name) != nil {
-			regErr = fmt.Errorf("flag --%s already registered on this FlagSet; set FileOptions.FlagName to avoid the collision", name)
-		} else {
+		switch {
+		case len(short) != 1:
+			regErr = fmt.Errorf("FileOptions.Shorthand %q must be a single ASCII character", short)
+		case fs.Lookup(name) != nil:
+			regErr = &configulator.FlagConflictError{Flag: name, Existing: name}
+		case fs.ShorthandLookup(short) != nil:
+			regErr = &configulator.FlagConflictError{Flag: name, Shorthand: short, Existing: fs.ShorthandLookup(short).Name}
+		default:
 			fs.StringP(name, short, def, "config file")
 			configFlag = name
 		}
@@ -73,11 +80,11 @@ func Bind[C any](c *configulator.Configulator[C], fs *pflag.FlagSet, h Hooks[C],
 		regErr = h.Register(fs, o)
 	}
 
-	apply := func(cfg *C, set configulator.SetOrigin) error {
+	apply := func(cfg *C, sep string, set configulator.SetOrigin) error {
 		if h.Apply == nil {
 			return nil
 		}
-		return h.Apply(cfg, fs, o, set)
+		return h.Apply(cfg, fs, o, sep, set)
 	}
 	configPath := func() (string, bool) {
 		if configFlag == "" {

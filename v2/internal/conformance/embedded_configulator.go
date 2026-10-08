@@ -11,6 +11,7 @@ import (
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
+	"slices"
 	"strings"
 )
 
@@ -27,14 +28,14 @@ func EmbeddedSchema() *configulator.Schema[Embedded] {
 		DecodeFile:    embeddedDecodeFile,
 	}
 }
-func embeddedApplyDefaults(cfg *Embedded, set configulator.SetOrigin) error {
+func embeddedApplyDefaults(cfg *Embedded, sep string, set configulator.SetOrigin) error {
 	cfg.Base.Region = "us-east-1"
 	set("region", configulator.LayerDefault, "default tag")
 	cfg.Zone = "a"
 	set("zone", configulator.LayerDefault, "default tag")
 	return nil
 }
-func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, set configulator.SetOrigin, file string) error {
+func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, sep string, set configulator.SetOrigin, file string) error {
 	var sh embeddedShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -42,9 +43,9 @@ func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, se
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *embeddedShadow) applyTo(cfg *Embedded, set configulator.SetOrigin, file string) error {
+func (s *embeddedShadow) applyTo(cfg *Embedded, sep string, set configulator.SetOrigin, file string) error {
 	if s.Region != nil {
 		cfg.Base.Region = *s.Region
 		set("region", configulator.LayerFile, file)
@@ -79,16 +80,20 @@ func EmbeddedPFlagHooks() cpflag.Hooks[Embedded] {
 	}
 }
 func embeddedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"region"}, o.Separator), strings.Join([]string{"zone"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"region"}, o.Separator), strings.Join([]string{"zone"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.String(strings.Join([]string{"region"}, o.Separator), "us-east-1", "")
-	fs.String(strings.Join([]string{"zone"}, o.Separator), "a", "")
+	fs.String(names[0], "us-east-1", "")
+	fs.String(names[1], "a", "")
 	return nil
 }
-func embeddedApplyPFlags(cfg *Embedded, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func embeddedApplyPFlags(cfg *Embedded, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"region"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

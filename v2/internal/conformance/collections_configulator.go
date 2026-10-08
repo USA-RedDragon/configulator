@@ -12,6 +12,7 @@ import (
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -39,14 +40,17 @@ func CollectionsSchema() *configulator.Schema[Collections] {
 		DecodeFile:    collectionsDecodeFile,
 	}
 }
-func collectionsApplyDefaults(cfg *Collections, set configulator.SetOrigin) error {
-	cfg.Tags = []string{"a", "b"}
-	set("tags", configulator.LayerDefault, "default tag")
+func collectionsApplyDefaults(cfg *Collections, sep string, set configulator.SetOrigin) error {
+	{
+		lst := configulator.SplitList("a,b", sep)
+		cfg.Tags = lst
+		set("tags", configulator.LayerDefault, "default tag")
+	}
 	cfg.LogLevel = "info"
 	set("log-level", configulator.LayerDefault, "default tag")
 	return nil
 }
-func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collections, set configulator.SetOrigin, file string) error {
+func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collections, sep string, set configulator.SetOrigin, file string) error {
 	var sh collectionsShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -54,9 +58,9 @@ func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collectio
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *collectionsShadow) applyTo(cfg *Collections, set configulator.SetOrigin, file string) error {
+func (s *collectionsShadow) applyTo(cfg *Collections, sep string, set configulator.SetOrigin, file string) error {
 	if s.Tags != nil {
 		cfg.Tags = *s.Tags
 		set("tags", configulator.LayerFile, file)
@@ -110,7 +114,8 @@ func (s *collectionsShadow) applyTo(cfg *Collections, set configulator.SetOrigin
 func collectionsApplyEnv(cfg *Collections, ec configulator.EnvContext, set configulator.SetOrigin) error {
 	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tags"); true {
 		if v, ok := ec.Getenv(n); ok {
-			cfg.Tags = configulator.SplitList(v, ec.ArraySeparator)
+			lst := configulator.SplitList(v, ec.ArraySeparator)
+			cfg.Tags = lst
 			set("tags", configulator.LayerEnv, n)
 		}
 	}
@@ -131,16 +136,21 @@ func CollectionsPFlagHooks() cpflag.Hooks[Collections] {
 	}
 }
 func collectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"tags"}, o.Separator), strings.Join([]string{"log-level"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"tags"}, o.Separator), strings.Join([]string{"log-level"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.StringSlice(strings.Join([]string{"tags"}, o.Separator), []string{"a", "b"}, "")
-	fs.String(strings.Join([]string{"log-level"}, o.Separator), "info", "")
+	fs.StringSlice(names[0], nil, "")
+	fs.Lookup(names[0]).DefValue = "[a,b]"
+	fs.String(names[1], "info", "")
 	return nil
 }
-func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"tags"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetStringSlice(n)
 		if err != nil {

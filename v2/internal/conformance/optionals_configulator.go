@@ -12,6 +12,7 @@ import (
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -34,7 +35,7 @@ func OptionalsSchema() *configulator.Schema[Optionals] {
 		DecodeFile:    optionalsDecodeFile,
 	}
 }
-func optionalsApplyDefaults(cfg *Optionals, set configulator.SetOrigin) error {
+func optionalsApplyDefaults(cfg *Optionals, sep string, set configulator.SetOrigin) error {
 	{
 		nameDefault := "opt-name"
 		cfg.Name = &nameDefault
@@ -42,7 +43,7 @@ func optionalsApplyDefaults(cfg *Optionals, set configulator.SetOrigin) error {
 	}
 	return nil
 }
-func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, set configulator.SetOrigin, file string) error {
+func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, sep string, set configulator.SetOrigin, file string) error {
 	var sh optionalsShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -50,9 +51,9 @@ func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, 
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *optionalsShadow) applyTo(cfg *Optionals, set configulator.SetOrigin, file string) error {
+func (s *optionalsShadow) applyTo(cfg *Optionals, sep string, set configulator.SetOrigin, file string) error {
 	if s.Port != nil {
 		v := *s.Port
 		cfg.Port = &v
@@ -101,21 +102,24 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 	}
 	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "name"); true {
 		if v, ok := ec.Getenv(n); ok {
-			cfg.Name = &v
+			pv := v
+			cfg.Name = &pv
 			set("name", configulator.LayerEnv, n)
 		}
 	}
 	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "tls", "cert"); true {
 		if v, ok := ec.Getenv(n); ok {
-			var e TLSConfig
-			if cfg.TLS != nil {
-				e = *cfg.TLS
-			} else {
-				e.MinVersion = uint16(12)
-				set("tls.min-version", configulator.LayerDefault, "element default")
+			{
+				var e TLSConfig
+				if cfg.TLS != nil {
+					e = *cfg.TLS
+				} else {
+					e.MinVersion = uint16(12)
+					set("tls.min-version", configulator.LayerDefault, "element default")
+				}
+				e.Cert = v
+				cfg.TLS = &e
 			}
-			e.Cert = v
-			cfg.TLS = &e
 			set("tls.cert", configulator.LayerEnv, n)
 		}
 	}
@@ -130,15 +134,17 @@ func optionalsApplyEnv(cfg *Optionals, ec configulator.EnvContext, set configula
 					Value:  v,
 				}
 			}
-			var e TLSConfig
-			if cfg.TLS != nil {
-				e = *cfg.TLS
-			} else {
-				e.MinVersion = uint16(12)
-				set("tls.min-version", configulator.LayerDefault, "element default")
+			{
+				var e TLSConfig
+				if cfg.TLS != nil {
+					e = *cfg.TLS
+				} else {
+					e.MinVersion = uint16(12)
+					set("tls.min-version", configulator.LayerDefault, "element default")
+				}
+				e.MinVersion = uint16(p)
+				cfg.TLS = &e
 			}
-			e.MinVersion = uint16(p)
-			cfg.TLS = &e
 			set("tls.min-version", configulator.LayerEnv, n)
 		}
 	}
@@ -153,16 +159,22 @@ func OptionalsPFlagHooks() cpflag.Hooks[Optionals] {
 	}
 }
 func optionalsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"tls"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"tls", "cert"}, o.Separator), strings.Join([]string{"tls", "min-version"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.Uint16(strings.Join([]string{"port"}, o.Separator), uint16(0), "")
-	fs.String(strings.Join([]string{"name"}, o.Separator), "", "")
+	fs.Uint16(names[0], uint16(0), "")
+	fs.String(names[1], "", "")
+	fs.String(names[2], "", "")
+	fs.Uint16(names[3], uint16(12), "")
 	return nil
 }
-func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"port"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {
@@ -172,7 +184,8 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 				Source: "--" + n,
 			}
 		}
-		cfg.Port = &v
+		pv := v
+		cfg.Port = &pv
 		set("port", configulator.LayerCLI, "--"+n)
 	}
 	if n := strings.Join([]string{"name"}, o.Separator); fs.Changed(n) {
@@ -184,8 +197,53 @@ func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, 
 				Source: "--" + n,
 			}
 		}
-		cfg.Name = &v
+		pv := v
+		cfg.Name = &pv
 		set("name", configulator.LayerCLI, "--"+n)
+	}
+	if n := strings.Join([]string{"tls", "cert"}, o.Separator); fs.Changed(n) {
+		v, err := fs.GetString(n)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "tls.cert",
+				Source: "--" + n,
+			}
+		}
+		{
+			var e TLSConfig
+			if cfg.TLS != nil {
+				e = *cfg.TLS
+			} else {
+				e.MinVersion = uint16(12)
+				set("tls.min-version", configulator.LayerDefault, "element default")
+			}
+			e.Cert = v
+			cfg.TLS = &e
+		}
+		set("tls.cert", configulator.LayerCLI, "--"+n)
+	}
+	if n := strings.Join([]string{"tls", "min-version"}, o.Separator); fs.Changed(n) {
+		v, err := fs.GetUint16(n)
+		if err != nil {
+			return &configulator.ParseError{
+				Err:    err,
+				Path:   "tls.min-version",
+				Source: "--" + n,
+			}
+		}
+		{
+			var e TLSConfig
+			if cfg.TLS != nil {
+				e = *cfg.TLS
+			} else {
+				e.MinVersion = uint16(12)
+				set("tls.min-version", configulator.LayerDefault, "element default")
+			}
+			e.MinVersion = v
+			cfg.TLS = &e
+		}
+		set("tls.min-version", configulator.LayerCLI, "--"+n)
 	}
 	return nil
 }
@@ -332,10 +390,11 @@ func (c *Optionals) PrintConfig() string {
 	} else {
 		b.WriteString(fmt.Sprintf("name = %v\n", *c.Name))
 	}
-	if c.TLS == nil {
+	if p := c.TLS; p == nil {
 		b.WriteString("tls = <unset>\n")
 	} else {
-		b.WriteString(fmt.Sprintf("tls = %v\n", *c.TLS))
+		b.WriteString(fmt.Sprintf("tls.cert = %v\n", p.Cert))
+		b.WriteString(fmt.Sprintf("tls.min-version = %v\n", p.MinVersion))
 	}
 	return b.String()
 }

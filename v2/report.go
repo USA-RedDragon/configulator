@@ -2,7 +2,10 @@
 
 package configulator
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // Layer identifies which configuration source supplied a value.
 type Layer uint8
@@ -86,6 +89,20 @@ func (r *Report) Origin(path string) (Origin, bool) {
 	}
 	o, ok := r.origins[path]
 	return o, ok
+}
+
+// setUnder reports whether path, or any path below it (a field of a struct
+// or an element of a collection), has an origin.
+func (r *Report) setUnder(path string) bool {
+	if _, ok := r.origins[path]; ok {
+		return true
+	}
+	for p := range r.origins {
+		if len(p) > len(path) && strings.HasPrefix(p, path) && (p[len(path)] == '.' || p[len(path)] == '[') {
+			return true
+		}
+	}
+	return false
 }
 
 // Paths returns every recorded path, sorted.

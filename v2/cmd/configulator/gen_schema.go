@@ -74,7 +74,7 @@ func schemaField(f *Field) map[string]any {
 		s["type"] = "object"
 		s["additionalProperties"] = schemaField(f.Elem)
 	}
-	if f.Default != "" {
+	if f.Default != "" && !f.Secret {
 		if d := schemaDefault(f); d != nil {
 			s["default"] = d
 		}
@@ -146,15 +146,12 @@ func sampleFields(b *strings.Builder, fields []*Field, depth int) {
 				continue
 			}
 			if f.Default != "" {
-				fmt.Fprintf(b, "%s%s: %s\n", ind, f.Tag, sampleValue(f))
+				fmt.Fprintf(b, "%s%s: %s\n", ind, f.Tag, secretOr(f, sampleValue(f)))
 				continue
 			}
-			fmt.Fprintf(b, "%s# %s: %s\n", ind, f.Tag, sampleValue(f))
+			fmt.Fprintf(b, "%s# %s: %s\n", ind, f.Tag, secretOr(f, sampleValue(f)))
 		default:
-			val := sampleValue(f)
-			if f.Secret {
-				val = `"(secret)"`
-			}
+			val := secretOr(f, sampleValue(f))
 			if f.Default == "" && f.Kind != KindBool {
 				fmt.Fprintf(b, "%s# %s: %s\n", ind, f.Tag, val)
 			} else {
@@ -174,7 +171,7 @@ func exampleField(f *Field) []string {
 		if f.Elem.Kind == KindStruct {
 			return append([]string{f.Tag + ":"}, indentLines(exampleFields(f.Elem.Fields), "  ")...)
 		}
-		return []string{f.Tag + ": " + sampleValue(f)}
+		return []string{f.Tag + ": " + secretOr(f, sampleValue(f))}
 	case KindSliceStruct:
 		item := exampleFields(f.Elem.Fields)
 		if len(item) == 0 {
@@ -191,11 +188,16 @@ func exampleField(f *Field) []string {
 	case KindMapScalar:
 		return []string{f.Tag + ":", "  example: " + sampleValue(f.Elem)}
 	default:
-		if f.Secret {
-			return []string{f.Tag + `: "(secret)"`}
-		}
-		return []string{f.Tag + ": " + sampleValue(f)}
+		return []string{f.Tag + ": " + secretOr(f, sampleValue(f))}
 	}
+}
+
+// secretOr returns val, or a "(secret)" placeholder for a secret field.
+func secretOr(f *Field, val string) string {
+	if f.Secret {
+		return `"(secret)"`
+	}
+	return val
 }
 
 func exampleFields(fields []*Field) []string {
@@ -327,7 +329,7 @@ func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagP
 			}
 		}
 		def := ""
-		if f.Default != "" {
+		if f.Default != "" && !f.Secret {
 			def = "`" + f.Default + "`"
 		}
 		switch f.Kind {

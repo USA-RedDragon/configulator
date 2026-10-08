@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/USA-RedDragon/configulator/v2/internal/seam"
@@ -24,7 +25,7 @@ type Configulator[C any] struct {
 	readFile func(string) ([]byte, error)
 
 	// Set by a flag adapter's Bind.
-	flagApply      func(*C, SetOrigin) error
+	flagApply      func(*C, string, SetOrigin) error
 	flagConfigPath func() (path string, changed bool)
 	bindErr        error
 
@@ -67,8 +68,9 @@ func (c *Configulator[C]) WithEnvironmentVariables(opts *EnvironmentVariableOpti
 	return c
 }
 
-// WithArraySeparator sets the list separator for env vars and defaults.
-// Flags keep pflag's comma handling.
+// WithArraySeparator sets the list separator for env vars and list
+// defaults, including defaults inside list and map elements. The default
+// is ",". Flags always split lists on ",".
 func (c *Configulator[C]) WithArraySeparator(sep string) *Configulator[C] {
 	c.arraySep = sep
 	return c
@@ -92,7 +94,7 @@ func (c *Configulator[C]) WithReadFile(f func(string) ([]byte, error)) *Configul
 func registerSeam[C any](c *Configulator[C]) {
 	seam.Register(c, seam.Flag[C, *FileOptions, SetOrigin]{
 		FileOptions: func() *FileOptions { return c.fileOpts },
-		Install: func(apply func(*C, SetOrigin) error, configPath func() (string, bool), regErr error) {
+		Install: func(apply func(*C, string, SetOrigin) error, configPath func() (string, bool), regErr error) {
 			c.flagApply = apply
 			c.flagConfigPath = configPath
 			if regErr != nil && c.bindErr == nil {
@@ -111,7 +113,7 @@ func (c *Configulator[C]) Default() (C, error) {
 	if c.schema == nil || c.schema.ApplyDefaults == nil {
 		return cfg, fmt.Errorf("configulator: nil Schema or Schema.ApplyDefaults; use the generated ConfigSchema()")
 	}
-	err := c.schema.ApplyDefaults(&cfg, func(string, Layer, string) {})
+	err := c.schema.ApplyDefaults(&cfg, c.arraySep, func(string, Layer, string) {})
 	return cfg, err
 }
 
@@ -157,7 +159,7 @@ func (c *Configulator[C]) load() (*C, error) {
 	c.cfg = cfg
 
 	set := c.report.set
-	if err := c.schema.ApplyDefaults(cfg, set); err != nil {
+	if err := c.schema.ApplyDefaults(cfg, c.arraySep, set); err != nil {
 		return cfg, err
 	}
 
@@ -181,7 +183,7 @@ func (c *Configulator[C]) load() (*C, error) {
 				return cfg, err
 			}
 			staged := *cfg
-			if err := c.schema.DecodeFile(data, dec, &staged, set, res.Path); err != nil {
+			if err := c.schema.DecodeFile(data, dec, &staged, c.arraySep, set, res.Path); err != nil {
 				return cfg, err
 			}
 			*cfg = staged
@@ -202,15 +204,20 @@ func (c *Configulator[C]) load() (*C, error) {
 
 	if c.flagApply != nil {
 		staged := *cfg
-		if err := c.flagApply(&staged, set); err != nil {
+		if err := c.flagApply(&staged, c.arraySep, set); err != nil {
 			return cfg, err
 		}
 		*cfg = staged
 	}
 
-	// A default: tag satisfies required:"true".
-	for _, path := range c.schema.Required {
-		if _, ok := c.report.Origin(path); !ok {
+	// A default: tag satisfies required:"true", and a required struct is
+	// satisfied by any value under it.
+	required := c.schema.Required
+	if c.schema.ConditionalRequired != nil {
+		required = slices.Concat(required, c.schema.ConditionalRequired(cfg))
+	}
+	for _, path := range required {
+		if !c.report.setUnder(path) {
 			return cfg, &RequiredError{Path: path}
 		}
 	}

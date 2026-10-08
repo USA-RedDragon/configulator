@@ -12,6 +12,7 @@ import (
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -41,7 +42,7 @@ func NestedSchema() *configulator.Schema[Nested] {
 		DecodeFile:    nestedDecodeFile,
 	}
 }
-func nestedApplyDefaults(cfg *Nested, set configulator.SetOrigin) error {
+func nestedApplyDefaults(cfg *Nested, sep string, set configulator.SetOrigin) error {
 	cfg.AppName = "myapp"
 	set("app-name", configulator.LayerDefault, "default tag")
 	cfg.HTTP.Host = "localhost"
@@ -54,7 +55,7 @@ func nestedApplyDefaults(cfg *Nested, set configulator.SetOrigin) error {
 	set("db.pool.size", configulator.LayerDefault, "default tag")
 	return nil
 }
-func nestedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nested, set configulator.SetOrigin, file string) error {
+func nestedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nested, sep string, set configulator.SetOrigin, file string) error {
 	var sh nestedShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -62,9 +63,9 @@ func nestedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nested, set co
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *nestedShadow) applyTo(cfg *Nested, set configulator.SetOrigin, file string) error {
+func (s *nestedShadow) applyTo(cfg *Nested, sep string, set configulator.SetOrigin, file string) error {
 	if s.AppName != nil {
 		cfg.AppName = *s.AppName
 		set("app-name", configulator.LayerFile, file)
@@ -153,19 +154,23 @@ func NestedPFlagHooks() cpflag.Hooks[Nested] {
 	}
 }
 func nestedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"app-name"}, o.Separator), strings.Join([]string{"http", "host"}, o.Separator), strings.Join([]string{"http", "port"}, o.Separator), strings.Join([]string{"db", "url"}, o.Separator), strings.Join([]string{"db", "pool", "size"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"app-name"}, o.Separator), strings.Join([]string{"http", "host"}, o.Separator), strings.Join([]string{"http", "port"}, o.Separator), strings.Join([]string{"db", "url"}, o.Separator), strings.Join([]string{"db", "pool", "size"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.String(strings.Join([]string{"app-name"}, o.Separator), "myapp", "")
-	fs.String(strings.Join([]string{"http", "host"}, o.Separator), "localhost", "")
-	fs.Uint16(strings.Join([]string{"http", "port"}, o.Separator), uint16(8080), "")
-	fs.String(strings.Join([]string{"db", "url"}, o.Separator), "postgres://localhost/db", "")
-	fs.Uint16(strings.Join([]string{"db", "pool", "size"}, o.Separator), uint16(10), "")
+	fs.String(names[0], "myapp", "")
+	fs.String(names[1], "localhost", "")
+	fs.Uint16(names[2], uint16(8080), "")
+	fs.String(names[3], "postgres://localhost/db", "")
+	fs.Uint16(names[4], uint16(10), "")
 	return nil
 }
-func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"app-name"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

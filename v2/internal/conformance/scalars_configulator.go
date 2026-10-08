@@ -12,6 +12,7 @@ import (
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -32,7 +33,7 @@ func ScalarsSchema() *configulator.Schema[Scalars] {
 		DecodeFile:    scalarsDecodeFile,
 	}
 }
-func scalarsApplyDefaults(cfg *Scalars, set configulator.SetOrigin) error {
+func scalarsApplyDefaults(cfg *Scalars, sep string, set configulator.SetOrigin) error {
 	cfg.Name = "svc"
 	set("name", configulator.LayerDefault, "default tag")
 	cfg.Port = uint16(8080)
@@ -43,7 +44,7 @@ func scalarsApplyDefaults(cfg *Scalars, set configulator.SetOrigin) error {
 	set("verbose", configulator.LayerDefault, "default tag")
 	return nil
 }
-func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, set configulator.SetOrigin, file string) error {
+func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, sep string, set configulator.SetOrigin, file string) error {
 	var sh scalarsShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -51,9 +52,9 @@ func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, set 
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *scalarsShadow) applyTo(cfg *Scalars, set configulator.SetOrigin, file string) error {
+func (s *scalarsShadow) applyTo(cfg *Scalars, sep string, set configulator.SetOrigin, file string) error {
 	if s.Name != nil {
 		cfg.Name = *s.Name
 		set("name", configulator.LayerFile, file)
@@ -154,19 +155,23 @@ func ScalarsPFlagHooks() cpflag.Hooks[Scalars] {
 	}
 }
 func scalarsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"count"}, o.Separator), strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"ratio"}, o.Separator), strings.Join([]string{"verbose"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"name"}, o.Separator), strings.Join([]string{"count"}, o.Separator), strings.Join([]string{"port"}, o.Separator), strings.Join([]string{"ratio"}, o.Separator), strings.Join([]string{"verbose"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.String(strings.Join([]string{"name"}, o.Separator), "svc", "")
-	fs.Int64(strings.Join([]string{"count"}, o.Separator), int64(0), "")
-	fs.Uint16(strings.Join([]string{"port"}, o.Separator), uint16(8080), "")
-	fs.Float64(strings.Join([]string{"ratio"}, o.Separator), 1.5, "")
-	fs.Bool(strings.Join([]string{"verbose"}, o.Separator), false, "")
+	fs.String(names[0], "svc", "")
+	fs.Int64(names[1], int64(0), "")
+	fs.Uint16(names[2], uint16(8080), "")
+	fs.Float64(names[3], 1.5, "")
+	fs.Bool(names[4], false, "")
 	return nil
 }
-func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"name"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

@@ -7,13 +7,21 @@ type SetOrigin func(path string, layer Layer, detail string)
 
 // Schema is filled in by generated code (ConfigSchema()).
 type Schema[C any] struct {
-	ApplyDefaults func(*C, SetOrigin) error
+	// ApplyDefaults sets every default: tag. sep is the list separator set
+	// by WithArraySeparator, which splits list defaults.
+	ApplyDefaults func(cfg *C, sep string, set SetOrigin) error
 	// DecodeFile decodes data into a generated shadow struct, then copies
-	// the fields present in the file onto cfg.
-	DecodeFile func(data []byte, u Unmarshal, cfg *C, set SetOrigin, file string) error
+	// the fields present in the file onto cfg. sep splits the list
+	// defaults of the elements it builds.
+	DecodeFile func(data []byte, u Unmarshal, cfg *C, sep string, set SetOrigin, file string) error
 	ApplyEnv   func(cfg *C, ec EnvContext, set SetOrigin) error
-	// Required lists the dotted paths of required:"true" fields.
+	// Required lists the dotted paths of required:"true" fields outside
+	// optional structs.
 	Required []string
+	// ConditionalRequired returns the dotted paths of required:"true"
+	// fields whose container exists in cfg: an optional struct some layer
+	// allocated, or an element of a list or map. Nil if there are none.
+	ConditionalRequired func(cfg *C) []string
 }
 
 // EnvContext is what the generated env code needs at Load.

@@ -44,10 +44,10 @@ func NestedCollectionsSchema() *configulator.Schema[NestedCollections] {
 		DecodeFile:    nestedCollectionsDecodeFile,
 	}
 }
-func nestedCollectionsApplyDefaults(cfg *NestedCollections, set configulator.SetOrigin) error {
+func nestedCollectionsApplyDefaults(cfg *NestedCollections, sep string, set configulator.SetOrigin) error {
 	return nil
 }
-func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *NestedCollections, set configulator.SetOrigin, file string) error {
+func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *NestedCollections, sep string, set configulator.SetOrigin, file string) error {
 	var sh nestedCollectionsShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -55,9 +55,9 @@ func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nes
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *nestedCollectionsShadow) applyTo(cfg *NestedCollections, set configulator.SetOrigin, file string) error {
+func (s *nestedCollectionsShadow) applyTo(cfg *NestedCollections, sep string, set configulator.SetOrigin, file string) error {
 	if s.Peers != nil {
 		out := make([]NCPeer, len(*s.Peers))
 		for i, esh := range *s.Peers {
@@ -258,14 +258,9 @@ func NestedCollectionsPFlagHooks() cpflag.Hooks[NestedCollections] {
 	}
 }
 func nestedCollectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
-		}
-	}
 	return nil
 }
-func nestedCollectionsApplyPFlags(cfg *NestedCollections, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func nestedCollectionsApplyPFlags(cfg *NestedCollections, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	return nil
 }
 func (s *nestedCollectionsShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {

@@ -46,6 +46,16 @@ func (e *emitter) quoteKeyName() string {
 }
 
 func emit(m *Model, flagsMode string) ([]byte, error) {
+	switch flagsMode {
+	case flagsPFlag:
+		if err := checkFlagTags(flagFields(m.Fields, pflagOK)); err != nil {
+			return nil, err
+		}
+	case flagsStd:
+		if err := checkFlagTags(flagFields(m.Fields, stdOK)); err != nil {
+			return nil, err
+		}
+	}
 	e := &emitter{
 		m: m, f: NewFilePathName(m.PkgPath, m.PkgName),
 		shadows:      map[string]bool{},
@@ -129,6 +139,13 @@ func (e *emitter) emitSchemaCtor() {
 		}
 		d[Id("Required")] = Index().String().Values(lits...)
 	}
+	if cond := e.condRequired(e.m.Fields, pathExpr{}, func(f *Field) *Statement { return cfgSel("cfg", f) }, false, 0); len(cond) > 0 {
+		fn := lowerFirst(n) + "ConditionalRequired"
+		d[Id("ConditionalRequired")] = Id(fn)
+		body := append([]Code{Var().Id("req").Index().String()}, cond...)
+		body = append(body, Return(Id("req")))
+		e.f.Func().Id(fn).Params(Id("cfg").Op("*").Id(n)).Index().String().Block(body...)
+	}
 	e.f.Comment(fmt.Sprintf("%sSchema returns the generated schema for %s.", n, n))
 	e.f.Func().Id(n+"Schema").Params().Op("*").Qual(pkgCfg, "Schema").Index(Id(n)).Block(
 		Return(Op("&").Qual(pkgCfg, "Schema").Index(Id(n)).Values(d)),
@@ -148,4 +165,69 @@ func requiredPaths(fields []*Field, prefix string) []string {
 		}
 	}
 	return out
+}
+
+// condRequired returns statements appending to req the paths of
+// required:"true" fields that apply only when their container exists: an
+// optional struct some layer allocated, or an element of a list or map.
+// sel selects a field of fields, and depth numbers the generated variables.
+func (e *emitter) condRequired(fields []*Field, p pathExpr, sel func(*Field) *Statement, cond bool, depth int) []Code {
+	var out []Code
+	for _, f := range fields {
+		fp := p.child(f.Tag)
+		if p.v == "" && p.suffix == "" {
+			fp = pathExpr{suffix: f.Tag}
+		}
+		if cond && f.Required {
+			out = append(out, Id("req").Op("=").Append(Id("req"), fp.code()))
+		}
+		switch f.Kind {
+		case KindStruct:
+			out = append(out, e.condRequired(f.Fields, fp, sel, cond, depth)...)
+		case KindPointer:
+			if f.Elem.Kind != KindStruct {
+				continue
+			}
+			v := depthName("p", depth)
+			inner := e.condRequired(f.Elem.Fields, fp, func(sf *Field) *Statement { return relSel(Id(v), sf) }, true, depth+1)
+			if len(inner) > 0 {
+				out = append(out, If(Id(v).Op(":=").Add(sel(f)), Id(v).Op("!=").Nil()).Block(inner...))
+			}
+		case KindSliceStruct, KindMapStruct:
+			out = append(out, e.condRequiredElems(f, fp, sel(f), depth)...)
+		default:
+		}
+	}
+	return out
+}
+
+// condRequiredElems is condRequired for every element of the list or map f,
+// selected by coll. Map keys are visited in sorted order so the first
+// missing path reported is stable.
+func (e *emitter) condRequiredElems(f *Field, fp pathExpr, coll *Statement, depth int) []Code {
+	el, idx := depthName("el", depth), depthName("rp", depth)
+	usesEl := false
+	inner := e.condRequired(f.Elem.Fields, pathExpr{v: idx}, func(sf *Field) *Statement {
+		usesEl = true
+		return relSel(Id(el), sf)
+	}, true, depth+1)
+	if len(inner) == 0 {
+		return nil
+	}
+	if f.Kind == KindSliceStruct {
+		i := depthName("ri", depth)
+		vars := Id(i)
+		if usesEl {
+			vars = List(Id(i), Id(el))
+		}
+		body := append([]Code{Id(idx).Op(":=").Add(fp.with("[")).Op("+").Qual("strconv", "Itoa").Call(Id(i)).Op("+").Lit("]")}, inner...)
+		return []Code{For(vars.Op(":=").Range().Add(coll)).Block(body...)}
+	}
+	k := depthName("rk", depth)
+	body := []Code{Id(idx).Op(":=").Add(fp.with(".")).Op("+").Id(e.quoteKeyName()).Call(Id(k))}
+	if usesEl {
+		body = append(body, Id(el).Op(":=").Add(coll.Clone()).Index(Id(k)))
+	}
+	body = append(body, inner...)
+	return []Code{For(List(Id("_"), Id(k)).Op(":=").Range().Qual("slices", "Sorted").Call(Qual("maps", "Keys").Call(coll))).Block(body...)}
 }

@@ -11,6 +11,7 @@ import (
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
+	"slices"
 	"strings"
 	"time"
 )
@@ -28,12 +29,12 @@ func DurationsSchema() *configulator.Schema[Durations] {
 		DecodeFile:    durationsDecodeFile,
 	}
 }
-func durationsApplyDefaults(cfg *Durations, set configulator.SetOrigin) error {
+func durationsApplyDefaults(cfg *Durations, sep string, set configulator.SetOrigin) error {
 	cfg.Timeout = time.Duration(int64(30000000000))
 	set("timeout", configulator.LayerDefault, "default tag")
 	return nil
 }
-func durationsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Durations, set configulator.SetOrigin, file string) error {
+func durationsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Durations, sep string, set configulator.SetOrigin, file string) error {
 	var sh durationsShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -41,9 +42,9 @@ func durationsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Durations, 
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *durationsShadow) applyTo(cfg *Durations, set configulator.SetOrigin, file string) error {
+func (s *durationsShadow) applyTo(cfg *Durations, sep string, set configulator.SetOrigin, file string) error {
 	if s.Timeout != nil {
 		v, ok := s.Timeout.Value()
 		if !ok {
@@ -94,16 +95,20 @@ func DurationsPFlagHooks() cpflag.Hooks[Durations] {
 	}
 }
 func durationsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"timeout"}, o.Separator), strings.Join([]string{"label"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"timeout"}, o.Separator), strings.Join([]string{"label"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.Duration(strings.Join([]string{"timeout"}, o.Separator), time.Duration(int64(30000000000)), "")
-	fs.String(strings.Join([]string{"label"}, o.Separator), "", "")
+	fs.Duration(names[0], time.Duration(int64(30000000000)), "")
+	fs.String(names[1], "", "")
 	return nil
 }
-func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"timeout"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetDuration(n)
 		if err != nil {

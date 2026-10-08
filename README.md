@@ -101,8 +101,12 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
 - `Report()` lists where each field's value came from: its default, the
   config file, an environment variable or a flag, naming which one
 - Fields tagged `secret:"true"` are redacted in `PrintConfig()` output and in
-  error messages
-- Fields tagged `required:"true"` make `Load()` fail if nothing sets them
+  error messages, and their defaults are left out of the generated docs,
+  samples and flag help
+- Fields tagged `required:"true"` make `Load()` fail if nothing sets them. A
+  required struct is set when any field in it is. Inside an optional struct
+  or a list or map element, it's only checked when that struct or element
+  exists
 - The generator can also print a JSON Schema, a sample config file (YAML,
   JSON or TOML), or a Markdown table of every option
 
@@ -111,12 +115,12 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
 | Tag | Meaning |
 | --- | --- |
 | `name:"key"` | Key in files, env and flags. Falls back to the `json` or `yaml` tag |
-| `default:"value"` | Default value, checked when generating |
+| `default:"value"` | Default value, checked when generating. A list default is split with `WithArraySeparator` (default `,`) and parsed at load |
 | `description:"text"` | Flag help text, and the description in generated docs |
 | `env:"NAME"` | Use `NAME` for this field's part of the env var name. `env:"-"` skips env |
 | `flag:"name"` | Use `name` for this field's part of the flag name. `flag:"-"` skips flags |
-| `short:"p"` | Flag shorthand (pflag only) |
-| `secret:"true"` | Redact in `PrintConfig()` and error messages |
+| `short:"p"` | Flag shorthand (pflag only). `-h` and duplicates are rejected when generating |
+| `secret:"true"` | Redact in `PrintConfig()`, error messages, generated docs and flag help |
 | `required:"true"` | `Load()` fails if nothing sets it |
 | `opaque:"true"` | Decode the type with its `UnmarshalText` method |
 
@@ -132,7 +136,7 @@ turned into `_`: `http.listen-port` is `MYAPP_HTTP_LISTEN_PORT`.
 | `-output` | Output file, default `<type>_configulator.go` (lowercased) |
 | `-flags` | `pflag` (default), `std` or `none` |
 | `-no-validate` | Don't require a `Validate() error` method |
-| `-schema` | Print a JSON Schema instead of generating code |
+| `-schema` | Print a JSON Schema instead of generating code. It rejects unknown keys like `StrictJSON` does; for YAML or TOML, use the decoder's strict mode to match |
 | `-sample` | Print a sample config instead of generating code. `-format` picks `yaml` (default), `json` or `toml` |
 | `-markdown` | Print a Markdown table of every option instead of generating code. `-env-prefix`, `-env-separator` and `-flag-separator` set how names are shown |
 | `-markdown-file` | With `-markdown`, write the table into a file between the configulator markers |

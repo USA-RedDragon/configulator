@@ -12,20 +12,20 @@ func (e *emitter) emitDecodeFile() {
 	n := e.m.TypeName
 	e.f.Func().Id(lowerFirst(n)+"DecodeFile").Params(
 		Id("data").Index().Byte(), Id("u").Qual(pkgCfg, "Unmarshal"),
-		Id("cfg").Op("*").Id(n), Id("set").Qual(pkgCfg, "SetOrigin"), Id("file").String(),
+		Id("cfg").Op("*").Id(n), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"), Id("file").String(),
 	).Error().Block(
 		Var().Id("sh").Id(shadowName(n)),
 		If(Err().Op(":=").Id("u").Call(Id("data"), Op("&").Id("sh")), Err().Op("!=").Nil()).Block(
 			Return(Op("&").Qual(pkgCfg, "DecodeError").Values(Dict{Id("Path"): Id("file"), Id("Err"): Err()})),
 		),
-		Return(Id("sh").Dot("applyTo").Call(Id("cfg"), Id("set"), Id("file"))),
+		Return(Id("sh").Dot("applyTo").Call(Id("cfg"), Id("sep"), Id("set"), Id("file"))),
 	)
 }
 
 func (e *emitter) emitApplyTo(shadow string, fields []*Field, pathPrefix string) {
 	body := append(e.applyToFields(fields, "s", pathPrefix), Return(Nil()))
 	e.f.Func().Params(Id("s").Op("*").Id(shadow)).Id("applyTo").Params(
-		Id("cfg").Op("*").Id(e.typeForShadow(shadow)), Id("set").Qual(pkgCfg, "SetOrigin"), Id("file").String(),
+		Id("cfg").Op("*").Id(e.typeForShadow(shadow)), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"), Id("file").String(),
 	).Error().Block(body...)
 }
 
@@ -72,9 +72,13 @@ func (e *emitter) applyToFields(fields []*Field, src, pathPrefix string) []Code 
 			e.emitNestedApplyTo(f)
 		case KindPointer:
 			out = append(out, e.applyToPointer(f, src, path)...)
-		case KindSliceScalar, KindMapScalar:
+		case KindSliceScalar:
 			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
-				cfgSel("cfg", f).Op("=").Op("*").Add(sel.Clone()), recFile,
+				append(fileList(f, sel.Clone(), cfgSel("cfg", f), Lit(path)), recFile)...,
+			))
+		case KindMapScalar:
+			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
+				append(fileList(f, sel.Clone(), cfgSel("cfg", f), Lit(path)), recFile)...,
 			))
 		case KindSliceStruct:
 			out = append(out, e.collApply(f, sel, cfgSel("cfg", f), pathExpr{suffix: path}, 0)...)
@@ -151,14 +155,14 @@ func depthName(name string, depth int) string {
 }
 
 // elemDefaults sets the defaults of a newly constructed element, recursing
-// into nested structs, and records their origin.
-func (e *emitter) elemDefaults(fields []*Field, dst *Statement, p pathExpr) []Code {
+// into nested structs, and records their origin. sep splits list defaults.
+func (e *emitter) elemDefaults(fields []*Field, dst *Statement, p pathExpr, sep Code) []Code {
 	var out []Code
 	for _, f := range fields {
 		target := dst.Clone().Dot(goName(f))
 		fp := p.child(f.Tag)
 		if f.Kind == KindStruct {
-			out = append(out, e.elemDefaults(f.Fields, target, fp)...)
+			out = append(out, e.elemDefaults(f.Fields, target, fp, sep)...)
 			continue
 		}
 		if f.Default == "" {
@@ -166,11 +170,11 @@ func (e *emitter) elemDefaults(fields []*Field, dst *Statement, p pathExpr) []Co
 		}
 		var assign []Code
 		if f.Kind == KindPointer {
-			prep, val := defaultValue(f.Elem, f.Default, fp.suffix)
+			prep, val := defaultValue(f.Elem, f.Default, fp.code(), sep)
 			assign = append(assign, prep...)
 			assign = append(assign, Id("d").Op(":=").Add(val), target.Op("=").Op("&").Id("d"))
 		} else {
-			prep, val := defaultValue(f, f.Default, fp.suffix)
+			prep, val := defaultValue(f, f.Default, fp.code(), sep)
 			assign = append(assign, prep...)
 			assign = append(assign, target.Op("=").Add(val))
 		}
@@ -211,9 +215,13 @@ func (e *emitter) elemApply(fields []*Field, src, dst *Statement, p pathExpr, de
 				),
 				target.Op("=").Add(castStd(f)), rec,
 			))
-		case KindSliceScalar, KindMapScalar:
+		case KindSliceScalar:
 			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
-				target.Op("=").Op("*").Add(sel.Clone()), rec,
+				append(fileList(f, sel.Clone(), target, fp.code()), rec)...,
+			))
+		case KindMapScalar:
+			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
+				append(fileList(f, sel.Clone(), target, fp.code()), rec)...,
 			))
 		case KindStruct:
 			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
@@ -242,7 +250,7 @@ func (e *emitter) pointerApply(f *Field, sel, target *Statement, p pathExpr, dep
 		)}
 	case KindStruct:
 		n := depthName("e", depth)
-		defaults := e.elemDefaults(f.Elem.Fields, Id(n), p)
+		defaults := e.elemDefaults(f.Elem.Fields, Id(n), p, Id("sep"))
 		apply := e.elemApply(f.Elem.Fields, sel, Id(n), p, depth+1)
 		inner := make([]Code, 0, 3+len(defaults)+len(apply))
 		inner = append(inner, Id(n).Op(":=").Add(fieldGoType(f.Elem.Type)).Values())
@@ -282,7 +290,7 @@ func (e *emitter) collApply(f *Field, sel, target *Statement, p pathExpr, depth 
 		keyVar = k
 	}
 	ep := pathExpr{v: idx}
-	defaults := e.elemDefaults(f.Elem.Fields, Id(el), ep)
+	defaults := e.elemDefaults(f.Elem.Fields, Id(el), ep, Id("sep"))
 	apply := e.elemApply(f.Elem.Fields, Id(esh), Id(el), ep, depth+1)
 	loop := make([]Code, 0, 3+len(defaults)+len(apply))
 	loop = append(loop, Var().Id(el).Add(elemType.Clone()), keyStmt)

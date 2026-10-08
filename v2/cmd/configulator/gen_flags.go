@@ -1,8 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"go/types"
 	"strconv"
-	"strings"
 	"time"
 
 	. "github.com/dave/jennifer/jen"
@@ -18,30 +19,7 @@ func (e *emitter) emitPFlagHooks() {
 		})),
 	)
 
-	type flagField struct {
-		f    *Field
-		segs []string
-		path string
-	}
-	var flags []flagField
-	var walk func(fields []*Field, segs []string, path string)
-	walk = func(fields []*Field, segs []string, path string) {
-		for _, f := range fields {
-			s2 := append(append([]string{}, segs...), f.flagSeg())
-			p2 := joinPath(path, f.Tag)
-			switch f.Kind {
-			case KindStruct:
-				walk(f.Fields, s2, p2)
-			case KindSliceStruct, KindMapStruct, KindMapScalar:
-				// collections can't be set from flags
-			default:
-				if !f.FlagSkip {
-					flags = append(flags, flagField{f, s2, p2})
-				}
-			}
-		}
-	}
-	walk(e.m.Fields, nil, "")
+	flags := flagFields(e.m.Fields, pflagOK)
 
 	flagName := func(segs []string) *Statement {
 		lits := make([]Code, 0, len(segs))
@@ -51,18 +29,40 @@ func (e *emitter) emitPFlagHooks() {
 		return Qual("strings", "Join").Call(Index().String().Values(lits...), Id("o").Dot("Separator"))
 	}
 
-	reg := make([]Code, 0, len(flags)+2)
-	lookups := make([]Code, 0, len(flags))
+	names := make([]Code, 0, len(flags))
+	shorts := make([]Code, 0, len(flags))
+	anyShort := false
 	for _, ff := range flags {
-		lookups = append(lookups, flagName(ff.segs))
+		names = append(names, flagName(ff.segs))
+		shorts = append(shorts, Lit(ff.f.Short))
+		anyShort = anyShort || ff.f.Short != ""
 	}
-	reg = append(reg, For(List(Id("_"), Id("name")).Op(":=").Range().Index().String().Values(lookups...)).Block(
-		If(Id("fs").Dot("Lookup").Call(Id("name")).Op("!=").Nil()).Block(
-			Return(Qual("fmt", "Errorf").Call(Lit("flag --%s already registered on this FlagSet"), Id("name"))),
+	check := []Code{
+		If(Id("fs").Dot("Lookup").Call(Id("name")).Op("!=").Nil().Op("||").
+			Qual("slices", "Contains").Call(Id("names").Index(Empty(), Id("i")), Id("name"))).Block(
+			Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{Id("Flag"): Id("name"), Id("Existing"): Id("name")})),
 		),
-	))
-	for _, ff := range flags {
-		reg = append(reg, e.registerFlag(ff.f, flagName(ff.segs)))
+	}
+	var reg []Code
+	if len(flags) > 0 {
+		reg = append(reg, Id("names").Op(":=").Index().String().Values(names...))
+	}
+	if anyShort {
+		reg = append(reg, Id("shorts").Op(":=").Index().String().Values(shorts...))
+		check = append(check, If(
+			Id("s").Op(":=").Id("shorts").Index(Id("i")), Id("s").Op("!=").Lit("").Op("&&").Id("fs").Dot("ShorthandLookup").Call(Id("s")).Op("!=").Nil(),
+		).Block(
+			Return(Op("&").Qual(pkgCfg, "FlagConflictError").Values(Dict{
+				Id("Flag"): Id("name"), Id("Shorthand"): Id("s"),
+				Id("Existing"): Id("fs").Dot("ShorthandLookup").Call(Id("s")).Dot("Name"),
+			})),
+		))
+	}
+	if len(flags) > 0 {
+		reg = append(reg, For(List(Id("i"), Id("name")).Op(":=").Range().Id("names")).Block(check...))
+	}
+	for i, ff := range flags {
+		reg = append(reg, registerFlag(ff.f, Id("names").Index(Lit(i)))...)
 	}
 	reg = append(reg, Return(Nil()))
 	e.f.Func().Id(lowerFirst(n)+"RegisterPFlags").Params(
@@ -71,13 +71,61 @@ func (e *emitter) emitPFlagHooks() {
 
 	app := make([]Code, 0, len(flags)+1)
 	for _, ff := range flags {
-		app = append(app, e.applyFlag(ff.f, ff.path, flagName(ff.segs)))
+		app = append(app, e.applyFlag(ff, flagName(ff.segs)))
 	}
 	app = append(app, Return(Nil()))
 	e.f.Func().Id(lowerFirst(n)+"ApplyPFlags").Params(
 		Id("cfg").Op("*").Id(n), Id("fs").Op("*").Qual(pfl, "FlagSet"),
-		Id("o").Op("*").Qual(pkgPFlag, "Options"), Id("set").Qual(pkgCfg, "SetOrigin"),
+		Id("o").Op("*").Qual(pkgPFlag, "Options"), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"),
 	).Error().Block(app...)
+}
+
+// flagFields returns the leaves an adapter registers as flags, in order:
+// those ok accepts, skipping any field tagged flag:"-" with its subtree.
+func flagFields(fields []*Field, ok func(*Field) bool) []leaf {
+	var out []leaf
+	for _, l := range leaves(fields, (*Field).flagSeg, func(f *Field) bool { return f.FlagSkip }) {
+		if ok(l.f) {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+func pflagOK(f *Field) bool {
+	reg, _, _, ok := pflagTypeOps(f)
+	return ok && reg != ""
+}
+
+func stdOK(f *Field) bool {
+	_, ok := stdKind(f)
+	return ok
+}
+
+// checkFlagTags rejects flag tags that pflag would panic on or that would
+// take over help: a shorthand that isn't one ASCII character, a shorthand
+// used twice, short:"h", and a top-level flag named help.
+func checkFlagTags(flags []leaf) error {
+	shorts := map[string]string{}
+	for _, ff := range flags {
+		if len(ff.segs) == 1 && ff.segs[0] == "help" {
+			return fmt.Errorf("%s: flag --help is reserved for help; rename it with flag:\"name\" or skip it with flag:\"-\"", ff.path)
+		}
+		s := ff.f.Short
+		switch {
+		case s == "":
+			continue
+		case len(s) != 1 || s[0] > 127:
+			return fmt.Errorf("%s: short:%q must be a single ASCII character", ff.path, s)
+		case s == "h":
+			return fmt.Errorf(`%s: short:"h" is reserved for help`, ff.path)
+		}
+		if prev, ok := shorts[s]; ok {
+			return fmt.Errorf("%s: short:%q is also used by %s", ff.path, s, prev)
+		}
+		shorts[s] = ff.path
+	}
+	return nil
 }
 
 func pflagTypeOps(f *Field) (reg, get string, def *Statement, ok bool) {
@@ -129,20 +177,45 @@ func pflagTypeOps(f *Field) (reg, get string, def *Statement, ok bool) {
 		}
 		return reg, get, zeroDefault(f.Elem), true
 	case KindSliceScalar:
-		if f.Elem.Kind != KindString {
-			return "", "", nil, false
+		if native := pflagNativeSlice(f.Elem); native != "" {
+			return native + "Slice", "Get" + native + "Slice", Nil(), true
 		}
-		if f.Default == "" {
-			return "StringSlice", "GetStringSlice", Nil(), true
-		}
-		parts := strings.Split(f.Default, ",")
-		lits := make([]Code, 0, len(parts))
-		for _, s := range parts {
-			lits = append(lits, Lit(s))
-		}
-		return "StringSlice", "GetStringSlice", Index().String().Values(lits...), true
+		return "StringSlice", "GetStringSlice", Nil(), listElemOK(f.Elem)
 	default:
 		return "", "", nil, false
+	}
+}
+
+// pflagNativeSlice names the pflag slice type for elem, like "Int" for
+// IntSlice, or returns "" when the list is a StringSlice parsed by the
+// generated code.
+func pflagNativeSlice(elem *Field) string {
+	if isNamed(elem.Type, "time", "Duration") {
+		return "Duration"
+	}
+	b, ok := types.Unalias(elem.Type).(*types.Basic)
+	if !ok {
+		return ""
+	}
+	switch b.Kind() {
+	case types.String:
+		return "String"
+	case types.Bool:
+		return "Bool"
+	case types.Int:
+		return "Int"
+	case types.Int32:
+		return "Int32"
+	case types.Int64:
+		return "Int64"
+	case types.Uint:
+		return "Uint"
+	case types.Float32:
+		return "Float32"
+	case types.Float64:
+		return "Float64"
+	default:
+		return ""
 	}
 }
 
@@ -174,35 +247,62 @@ func zeroDefault(f *Field) *Statement {
 	}
 }
 
-func (e *emitter) registerFlag(f *Field, name *Statement) Code {
+// registerFlag registers f under name. A list flag shows its default as
+// written in the tag, since the tag is split with the separator only at
+// load. A secret field's default is left out of the flag so it doesn't show
+// in --help; ApplyDefaults still sets it.
+func registerFlag(f *Field, name *Statement) []Code {
+	if f.Secret {
+		noDefault := *f
+		noDefault.Default = ""
+		f = &noDefault
+	}
 	reg, _, def, ok := pflagTypeOps(f)
 	if !ok {
-		return Null()
+		return nil
 	}
-	return Id("fs").Dot(reg).Call(name, def, Lit(f.Desc))
+	call := Id("fs").Dot(reg).Call(name.Clone(), def, Lit(f.Desc))
+	if f.Short != "" {
+		call = Id("fs").Dot(reg+"P").Call(name.Clone(), Lit(f.Short), def, Lit(f.Desc))
+	}
+	out := []Code{call}
+	if f.Kind == KindSliceScalar && f.Default != "" {
+		out = append(out, Id("fs").Dot("Lookup").Call(name.Clone()).Dot("DefValue").Op("=").Lit("["+f.Default+"]"))
+	}
+	return out
 }
 
-func (e *emitter) applyFlag(f *Field, path string, name *Statement) Code {
+func (e *emitter) applyFlag(l leaf, name *Statement) Code {
+	f, path := l.f, l.path
 	_, get, _, ok := pflagTypeOps(f)
 	if !ok {
 		return Null()
 	}
-	assign := []Code{flagAssign(f)}
-	if f.Kind == KindStdSlot {
-		assign = append(slotParse(f, path, Lit("--").Op("+").Id("n"), "v", "sv"),
-			cfgSel("cfg", f).Op("=").Add(Id("sv")))
+	source := func() *Statement { return Lit("--").Op("+").Id("n") }
+	var prep []Code
+	var val *Statement
+	switch {
+	case f.Kind == KindStdSlot:
+		prep, val = slotParse(f, path, source(), "v", "sv"), Id("sv")
+	case f.Kind == KindSliceScalar && pflagNativeSlice(f.Elem) == "":
+		prep = parseList(f, Id("v"), Lit(path), source(), Qual("strings", "Join").Call(Id("v"), Lit(",")))
+		val = Id("lst")
+	case f.Kind == KindPointer:
+		prep, val = []Code{Id("pv").Op(":=").Add(convNamed(f.Elem.Type, Id("v")))}, Op("&").Id("pv")
+	default:
+		val = convNamed(f.Type, Id("v"))
 	}
-	body := make([]Code, 0, 2+len(assign)+1)
-	body = append(body,
+	body := []Code{
 		List(Id("v"), Err()).Op(":=").Id("fs").Dot(get).Call(Id("n")),
 		If(Err().Op("!=").Nil()).Block(
 			Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
-				Id("Path"): Lit(path), Id("Source"): Lit("--").Op("+").Id("n"), Id("Err"): Err(),
+				Id("Path"): Lit(path), Id("Source"): source(), Id("Err"): Err(),
 			})),
 		),
-	)
-	body = append(body, assign...)
-	body = append(body, Id("set").Call(Lit(path), Qual(pkgCfg, "LayerCLI"), Lit("--").Op("+").Id("n")))
+	}
+	body = append(body, prep...)
+	body = append(body, e.chainAssign(l, Id("sep"), func(t *Statement) []Code { return []Code{t.Op("=").Add(val)} })...)
+	body = append(body, Id("set").Call(Lit(path), Qual(pkgCfg, "LayerCLI"), source()))
 	return If(
 		Id("n").Op(":=").Add(name), Id("fs").Dot("Changed").Call(Id("n")),
 	).Block(body...)
@@ -224,13 +324,4 @@ func slotParse(f *Field, path string, source *Statement, in, out string) []Code 
 		),
 		List(Id(out), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 	}
-}
-
-func flagAssign(f *Field) Code {
-	if f.Kind == KindPointer {
-		return cfgSel("cfg", f).Op("=").Op("&").Id("v")
-	}
-	// exact-width Get* returns the exact type; platform int/uint need no cast,
-	// but a named type over a basic (type LogLevel string) still does
-	return cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Id("v")))
 }

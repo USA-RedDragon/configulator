@@ -13,7 +13,7 @@ type Flag[C any, FO any, SO any] struct {
 	// It returns nil without WithFile.
 	FileOptions func() FO
 	// Install stores the adapter's hooks for Load to run.
-	Install func(apply func(*C, SO) error, configPath func() (string, bool), regErr error)
+	Install func(apply func(*C, string, SO) error, configPath func() (string, bool), regErr error)
 }
 
 var (

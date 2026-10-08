@@ -29,7 +29,7 @@ func (e *emitter) emitApplyDefaults() {
 	walk(e.m.Fields, nil)
 	body = append(body, Return(Nil()))
 	e.f.Func().Id(lowerFirst(n)+"ApplyDefaults").Params(
-		Id("cfg").Op("*").Id(n), Id("set").Qual(pkgCfg, "SetOrigin"),
+		Id("cfg").Op("*").Id(n), Id("sep").String(), Id("set").Qual(pkgCfg, "SetOrigin"),
 	).Error().Block(body...)
 }
 
@@ -37,11 +37,11 @@ func (e *emitter) defaultAssign(f *Field, path string) []Code {
 	rec := Id("set").Call(Lit(path), Qual(pkgCfg, "LayerDefault"), Lit("default tag"))
 	if f.Kind == KindPointer {
 		tmp := lowerFirst(strings.ReplaceAll(goName(f), ".", "")) + "Default"
-		prep, val := defaultValue(f.Elem, f.Default, path)
+		prep, val := defaultValue(f.Elem, f.Default, Lit(path), Id("sep"))
 		prep = append(prep, Id(tmp).Op(":=").Add(val), cfgSel("cfg", f).Op("=").Op("&").Id(tmp), rec)
 		return []Code{Block(prep...)}
 	}
-	prep, val := defaultValue(f, f.Default, path)
+	prep, val := defaultValue(f, f.Default, Lit(path), Id("sep"))
 	if len(prep) == 0 {
 		return []Code{cfgSel("cfg", f).Op("=").Add(val), rec}
 	}
@@ -50,8 +50,10 @@ func (e *emitter) defaultAssign(f *Field, path string) []Code {
 }
 
 // defaultValue returns statements to run first and an expression of f's type
-// holding the default. checkDefault has already validated def.
-func defaultValue(f *Field, def, path string) ([]Code, *Statement) {
+// holding the default. checkDefault has already validated def, except a
+// list's elements, which are split with sep at load time and return a
+// ParseError for path from the statements if one doesn't parse.
+func defaultValue(f *Field, def string, path, sep Code) ([]Code, *Statement) {
 	switch f.Kind {
 	case KindString:
 		return nil, convNamed(f.Type, Lit(def))
@@ -73,14 +75,10 @@ func defaultValue(f *Field, def, path string) ([]Code, *Statement) {
 			List(Id("v"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, Id("v")
 	case KindSliceScalar:
-		parts := strings.Split(def, ",")
-		lits := make([]Code, 0, len(parts))
-		for _, el := range parts {
-			lits = append(lits, Lit(el))
-		}
-		return nil, fieldGoType(f.Type.Underlying()).Values(lits...)
+		parts := Qual(pkgCfg, "SplitList").Call(Lit(def), sep)
+		return parseList(f, parts, path, Lit("default tag"), Lit(def)), Id("lst")
 	default:
-		panic("defaultValue: unhandled kind for " + path)
+		panic("defaultValue: unhandled kind " + f.Tag)
 	}
 }
 

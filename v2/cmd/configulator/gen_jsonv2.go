@@ -147,22 +147,10 @@ func (e *emitter) fastScalar(f *Field, kind rune, assign func() []Code, want str
 
 func (e *emitter) fastNumeric(f *Field, sel func() *Statement) []Code {
 	t := f.Type.Underlying().String()
-	read := []Code{
+	read := append([]Code{
 		List(Id("num"), Err()).Op(":=").Id("v").Dot(numMethod(f.Kind)).Call(),
 		If(Err().Op("!=").Nil()).Block(Return(Err())),
-	}
-	if f.Bits != 0 && f.Bits != 64 {
-		switch f.Kind {
-		case KindInt:
-			read = append(read, If(Id("num").Op("<").Qual("math", fmt.Sprintf("MinInt%d", f.Bits)).
-				Op("||").Id("num").Op(">").Qual("math", fmt.Sprintf("MaxInt%d", f.Bits))).Block(
-				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id("num")))))
-		case KindUint:
-			read = append(read, If(Id("num").Op(">").Qual("math", fmt.Sprintf("MaxUint%d", f.Bits))).Block(
-				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id("num")))))
-		default:
-		}
-	}
+	}, rangeCheck(f, "num")...)
 	conv := Id(t).Call(Id("num"))
 	if t == "int64" && f.Kind == KindInt || t == "uint64" && f.Kind == KindUint || t == "float64" && f.Kind == KindFloat {
 		conv = Id("num")
@@ -177,6 +165,26 @@ func (e *emitter) fastNumeric(f *Field, sel func() *Statement) []Code {
 			Default().Block(Return(Qual("fmt", "Errorf").Call(
 				Lit(f.Tag+": expected a number, got %v"), Id("v").Dot("Kind").Call()))),
 		),
+	}
+}
+
+// rangeCheck returns an error for a decoded number v that overflows f's
+// sized integer type.
+func rangeCheck(f *Field, v string) []Code {
+	if f.Bits == 0 || f.Bits == 64 {
+		return nil
+	}
+	t := f.Type.Underlying().String()
+	switch f.Kind {
+	case KindInt:
+		return []Code{If(Id(v).Op("<").Qual("math", fmt.Sprintf("MinInt%d", f.Bits)).
+			Op("||").Id(v).Op(">").Qual("math", fmt.Sprintf("MaxInt%d", f.Bits))).Block(
+			Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id(v))))}
+	case KindUint:
+		return []Code{If(Id(v).Op(">").Qual("math", fmt.Sprintf("MaxUint%d", f.Bits))).Block(
+			Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id(v))))}
+	default:
+		return nil
 	}
 }
 
@@ -220,11 +228,26 @@ func scalarElemReader(f *Field, dst string) []Code {
 		read = append(read,
 			List(Id("raw"), Err()).Op(":=").Id("v").Dot(numMethod(f.Kind)).Call(),
 			If(Err().Op("!=").Nil()).Block(Return(Err())))
+		read = append(read, rangeCheck(f, "raw")...)
 		if (f.Kind == KindInt && t == "int64") || (f.Kind == KindUint && t == "uint64") || (f.Kind == KindFloat && t == "float64") {
 			read = append(read, Id(dst).Op(":=").Id("raw"))
 		} else {
 			read = append(read, Id(dst).Op(":=").Id(t).Call(Id("raw")))
 		}
+	case KindDuration, KindStdSlot:
+		read = append(read,
+			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('"')).Block(
+				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a text element (e.g. "+slotHint(f.SlotType)+"), got %v"), Id("v").Dot("Kind").Call()))),
+			Var().Id(dst).Qual(pkgCfg, f.SlotType),
+			If(Err().Op(":=").Id(dst).Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
+		)
+	case KindTextLeaf:
+		read = append(read,
+			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('"')).Block(
+				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a text element, got %v"), Id("v").Dot("Kind").Call()))),
+			Var().Id(dst).Add(fieldGoType(f.Type)),
+			If(Err().Op(":=").Id(dst).Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
+		)
 	default:
 		panic("scalarElemReader: unsupported element kind for " + f.Tag)
 	}
@@ -248,7 +271,7 @@ func nullOrOpen(f *Field, open rune, want string, body []Code) []Code {
 }
 
 func (e *emitter) fastSliceScalar(f *Field, sel func() *Statement) []Code {
-	elemT := fieldGoType(f.Elem.Type)
+	elemT := listShadowElem(f.Elem)
 	body := []Code{
 		Id("out").Op(":=").Index().Add(elemT.Clone()).Values(),
 		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune(']')).Block(
@@ -276,7 +299,7 @@ func (e *emitter) fastSliceStruct(f *Field, sel func() *Statement) []Code {
 }
 
 func (e *emitter) fastMapScalar(f *Field, sel func() *Statement) []Code {
-	elemT := fieldGoType(f.Elem.Type)
+	elemT := listShadowElem(f.Elem)
 	body := []Code{
 		Id("out").Op(":=").Map(String()).Add(elemT.Clone()).Values(),
 		For(Id("dec").Dot("PeekKind").Call().Op("!=").LitRune('}')).Block(

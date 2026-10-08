@@ -73,12 +73,12 @@ func (e *emitter) shadowFieldType(f *Field) *Statement {
 	case KindPointer:
 		return e.shadowFieldType(f.Elem)
 	case KindSliceScalar:
-		return Op("*").Index().Add(fieldGoType(f.Elem.Type))
+		return Op("*").Index().Add(listShadowElem(f.Elem))
 	case KindSliceStruct:
 		e.ensureShadow(f.Elem)
 		return Op("*").Index().Id(e.shadowFor(f.Elem.Type))
 	case KindMapScalar:
-		return Op("*").Map(String()).Add(fieldGoType(f.Elem.Type))
+		return Op("*").Map(String()).Add(listShadowElem(f.Elem))
 	case KindMapStruct:
 		e.ensureShadow(f.Elem)
 		return Op("*").Map(String()).Id(e.shadowFor(f.Elem.Type))

@@ -307,10 +307,13 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 			return err
 		}
 		f.Elem = elem
-		if elem.Kind == KindStruct {
+		switch {
+		case elem.Kind == KindStruct:
 			f.Kind = KindSliceStruct
-		} else {
+		case listElemOK(elem):
 			f.Kind = KindSliceScalar
+		default:
+			return fmt.Errorf("%s: list of %s is not supported", fieldPath, types.TypeString(u.Elem(), nil))
 		}
 		if f.Kind == KindSliceStruct && (f.EnvName != "" || f.FlagName != "") {
 			return fmt.Errorf("%s: env:/flag: opt-in on a list of structs (file-only, SPEC rule 6)", fieldPath)
@@ -324,10 +327,13 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 			return err
 		}
 		f.Elem = elem
-		if elem.Kind == KindStruct {
+		switch {
+		case elem.Kind == KindStruct:
 			f.Kind = KindMapStruct
-		} else {
+		case listElemOK(elem):
 			f.Kind = KindMapScalar
+		default:
+			return fmt.Errorf("%s: map of %s is not supported", fieldPath, types.TypeString(u.Elem(), nil))
 		}
 		if f.EnvName != "" || f.FlagName != "" {
 			return fmt.Errorf("%s: env:/flag: opt-in on a map (file-only, SPEC rule 6)", fieldPath)

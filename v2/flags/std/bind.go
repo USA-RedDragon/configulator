@@ -21,10 +21,14 @@ type Options struct {
 
 // Hooks is provided by generated code (-flags=std).
 type Hooks[C any] struct {
+	// Register adds every config flag to fs. It returns a
+	// *configulator.FlagConflictError on a duplicate name, since flag
+	// would panic.
 	Register func(fs *flag.FlagSet, o *Options) error
 	// Apply copies the set flags onto the config. isSet holds the names
-	// that were set on the command line (from flag.Visit).
-	Apply func(cfg *C, fs *flag.FlagSet, o *Options, isSet map[string]bool, set configulator.SetOrigin) error
+	// that were set on the command line (from flag.Visit). sep is the list
+	// separator for the defaults of an optional struct a flag allocates.
+	Apply func(cfg *C, fs *flag.FlagSet, o *Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error
 }
 
 // Bind adds the config flags to fs and applies them at Load.
@@ -55,7 +59,7 @@ func Bind[C any](c *configulator.Configulator[C], fs *flag.FlagSet, h Hooks[C], 
 				name = "config"
 			}
 			if fs.Lookup(name) != nil {
-				regErr = fmt.Errorf("flag -%s already registered on this FlagSet; set FileOptions.FlagName to avoid the collision", name)
+				regErr = &configulator.FlagConflictError{Flag: name, Existing: name}
 			} else {
 				def := ""
 				if len(fo.Search) > 0 {
@@ -71,13 +75,13 @@ func Bind[C any](c *configulator.Configulator[C], fs *flag.FlagSet, h Hooks[C], 
 		regErr = h.Register(fs, o)
 	}
 
-	apply := func(cfg *C, set configulator.SetOrigin) error {
+	apply := func(cfg *C, sep string, set configulator.SetOrigin) error {
 		if h.Apply == nil {
 			return nil
 		}
 		isSet := map[string]bool{}
 		fs.Visit(func(f *flag.Flag) { isSet[f.Name] = true })
-		return h.Apply(cfg, fs, o, isSet, set)
+		return h.Apply(cfg, fs, o, isSet, sep, set)
 	}
 	configPath := func() (string, bool) {
 		if configFlag == "" {

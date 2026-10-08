@@ -11,6 +11,7 @@ import (
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	cpflag "github.com/USA-RedDragon/configulator/v2/flags/pflag"
 	"github.com/spf13/pflag"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -33,14 +34,14 @@ func ConfigSchema() *configulator.Schema[Config] {
 		DecodeFile:    configDecodeFile,
 	}
 }
-func configApplyDefaults(cfg *Config, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
 	cfg.HTTP.Host = "localhost"
 	set("http.host", configulator.LayerDefault, "default tag")
 	cfg.HTTP.Port = 8080
 	set("http.port", configulator.LayerDefault, "default tag")
 	return nil
 }
-func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, set configulator.SetOrigin, file string) error {
+func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -48,9 +49,9 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, set co
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *configShadow) applyTo(cfg *Config, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	if s.HTTP != nil {
 		if s.HTTP.Host != nil {
 			cfg.HTTP.Host = *s.HTTP.Host
@@ -95,7 +96,8 @@ func configApplyEnv(cfg *Config, ec configulator.EnvContext, set configulator.Se
 	}
 	if n := configulator.EnvName(ec.Opts.Prefix, ec.Opts.Separator, "http", "stuff"); true {
 		if v, ok := ec.Getenv(n); ok {
-			cfg.HTTP.Stuff = configulator.SplitList(v, ec.ArraySeparator)
+			lst := configulator.SplitList(v, ec.ArraySeparator)
+			cfg.HTTP.Stuff = lst
 			set("http.stuff", configulator.LayerEnv, n)
 		}
 	}
@@ -125,18 +127,22 @@ func ConfigPFlagHooks() cpflag.Hooks[Config] {
 	}
 }
 func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
-	for _, name := range []string{strings.Join([]string{"http", "host"}, o.Separator), strings.Join([]string{"http", "port"}, o.Separator), strings.Join([]string{"http", "stuff"}, o.Separator), strings.Join([]string{"enable"}, o.Separator)} {
-		if fs.Lookup(name) != nil {
-			return fmt.Errorf("flag --%s already registered on this FlagSet", name)
+	names := []string{strings.Join([]string{"http", "host"}, o.Separator), strings.Join([]string{"http", "port"}, o.Separator), strings.Join([]string{"http", "stuff"}, o.Separator), strings.Join([]string{"enable"}, o.Separator)}
+	for i, name := range names {
+		if fs.Lookup(name) != nil || slices.Contains(names[:i], name) {
+			return &configulator.FlagConflictError{
+				Existing: name,
+				Flag:     name,
+			}
 		}
 	}
-	fs.String(strings.Join([]string{"http", "host"}, o.Separator), "localhost", "host to listen on")
-	fs.Int(strings.Join([]string{"http", "port"}, o.Separator), 8080, "port to listen on")
-	fs.StringSlice(strings.Join([]string{"http", "stuff"}, o.Separator), nil, "some stuff")
-	fs.Bool(strings.Join([]string{"enable"}, o.Separator), false, "enable the service")
+	fs.String(names[0], "localhost", "host to listen on")
+	fs.Int(names[1], 8080, "port to listen on")
+	fs.StringSlice(names[2], nil, "some stuff")
+	fs.Bool(names[3], false, "enable the service")
 	return nil
 }
-func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, set configulator.SetOrigin) error {
+func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
 	if n := strings.Join([]string{"http", "host"}, o.Separator); fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

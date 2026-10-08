@@ -11,6 +11,7 @@ import (
 	"fmt"
 	configulator "github.com/USA-RedDragon/configulator/v2"
 	std "github.com/USA-RedDragon/configulator/v2/flags/std"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -28,12 +29,12 @@ func ConfigSchema() *configulator.Schema[Config] {
 		DecodeFile:    configDecodeFile,
 	}
 }
-func configApplyDefaults(cfg *Config, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
 	cfg.Listen = ":8080"
 	set("listen", configulator.LayerDefault, "default tag")
 	return nil
 }
-func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, set configulator.SetOrigin, file string) error {
+func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	var sh configShadow
 	if err := u(data, &sh); err != nil {
 		return &configulator.DecodeError{
@@ -41,9 +42,9 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, set co
 			Path: file,
 		}
 	}
-	return sh.applyTo(cfg, set, file)
+	return sh.applyTo(cfg, sep, set, file)
 }
-func (s *configShadow) applyTo(cfg *Config, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
 	if s.Listen != nil {
 		cfg.Listen = *s.Listen
 		set("listen", configulator.LayerFile, file)
@@ -87,16 +88,20 @@ func ConfigStdFlagHooks() std.Hooks[Config] {
 	}
 }
 func configRegisterStdFlags(fs *flag.FlagSet, o *std.Options) error {
-	for _, fn := range []string{strings.Join([]string{"listen"}, o.Separator), strings.Join([]string{"debug"}, o.Separator)} {
-		if fs.Lookup(fn) != nil {
-			return fmt.Errorf("flag -%s already registered on this FlagSet", fn)
+	names := []string{strings.Join([]string{"listen"}, o.Separator), strings.Join([]string{"debug"}, o.Separator)}
+	for i, fn := range names {
+		if fs.Lookup(fn) != nil || slices.Contains(names[:i], fn) {
+			return &configulator.FlagConflictError{
+				Existing: fn,
+				Flag:     fn,
+			}
 		}
 	}
-	fs.String(strings.Join([]string{"listen"}, o.Separator), ":8080", "listen address")
-	fs.Bool(strings.Join([]string{"debug"}, o.Separator), false, "debug mode")
+	fs.String(names[0], ":8080", "listen address")
+	fs.Bool(names[1], false, "debug mode")
 	return nil
 }
-func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *std.Options, isSet map[string]bool, set configulator.SetOrigin) error {
+func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *std.Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error {
 	if fn := strings.Join([]string{"listen"}, o.Separator); isSet[fn] {
 		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
 		cfg.Listen = pv

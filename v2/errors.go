@@ -100,3 +100,23 @@ type OpaqueSpellingError struct {
 func (e *OpaqueSpellingError) Error() string {
 	return fmt.Sprintf("%s: expected a text scalar (e.g. %s), got a nested table/mapping", e.Path, e.Hint)
 }
+
+// FlagConflictError is returned by Load when a flag adapter's Bind could
+// not add a flag because its name or shorthand is already taken, by a flag
+// already on the FlagSet or by another config field. pflag and flag panic
+// on a duplicate, so Bind returns this through Load instead.
+type FlagConflictError struct {
+	// Flag is the name of the flag being added, without dashes.
+	Flag string
+	// Shorthand is set when the shorthand conflicts rather than the name.
+	Shorthand string
+	// Existing is the flag that already holds the name or shorthand.
+	Existing string
+}
+
+func (e *FlagConflictError) Error() string {
+	if e.Shorthand != "" {
+		return fmt.Sprintf("flag %q: shorthand %q is already used by flag %q", e.Flag, e.Shorthand, e.Existing)
+	}
+	return fmt.Sprintf("flag %q is already defined; rename one of them (flag:\"name\" tag, FileOptions.FlagName) or skip the field with flag:\"-\"", e.Flag)
+}

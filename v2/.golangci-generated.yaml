@@ -1,0 +1,56 @@
+# Lints the generated *_configulator.go files under examples/ and
+# internal/, as the lint-generated job in .github/workflows/v2.yaml does.
+# revive skips files marked "Code generated", so that job rewrites the
+# marker first.
+version: "2"
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - revive
+    - unused
+    - ineffassign
+    - errcheck
+    - unconvert
+    - wastedassign
+    - forcetypeassert
+  settings:
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: redundant-import-alias
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+  exclusions:
+    generated: disable
+    rules:
+      - path-except: _configulator\.go$
+        linters: [govet, staticcheck, revive, unused, ineffassign, errcheck, unconvert, wastedassign, forcetypeassert]
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+    - gci
+  exclusions:
+    generated: disable

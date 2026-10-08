@@ -7,11 +7,11 @@ v2/cmd/configulator/gen_flags_std.go	125	121
 v2/cmd/configulator/gen_jsonv2.go	104	101
 v2/cmd/configulator/gen_lists.go	74	73
 v2/cmd/configulator/gen_print.go	52	50
-v2/cmd/configulator/gen_sample_formats.go	99	83
-v2/cmd/configulator/gen_schema.go	216	197
+v2/cmd/configulator/gen_sample_formats.go	128	107
+v2/cmd/configulator/gen_schema.go	236	215
 v2/cmd/configulator/gen_shadow.go	51	44
 v2/cmd/configulator/load.go	29	17
-v2/cmd/configulator/main.go	115	0
+v2/cmd/configulator/main.go	127	11
 v2/cmd/configulator/markdown_file.go	43	39
 v2/cmd/configulator/model.go	327	286
 v2/compat.go	2	0

@@ -35,7 +35,7 @@ func ScalarsSchema() *configulator.Schema[Scalars] {
 	}
 }
 
-func scalarsApplyDefaults(cfg *Scalars, sep string, set configulator.SetOrigin) error {
+func scalarsApplyDefaults(cfg *Scalars, _ string, set configulator.SetOrigin) error {
 	cfg.Name = "svc"
 	set("name", configulator.LayerDefault, "default tag")
 	cfg.Port = uint16(8080)
@@ -58,7 +58,7 @@ func scalarsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Scalars, sep 
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *scalarsShadow) applyTo(cfg *Scalars, sep string, set configulator.SetOrigin, file string) error {
+func (s *scalarsShadow) applyTo(cfg *Scalars, _ string, set configulator.SetOrigin, file string) error {
 	if s.Name != nil {
 		cfg.Name = *s.Name
 		set("name", configulator.LayerFile, file)
@@ -150,7 +150,7 @@ func ScalarsPFlagHooks() cpflag.Hooks[Scalars] {
 	}
 }
 
-func scalarsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
+func scalarsRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 	names := []string{
 		"name",
 		"count",
@@ -180,7 +180,7 @@ func scalarsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func scalarsApplyPFlags(cfg *Scalars, fs *pflag.FlagSet, _ *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "name"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

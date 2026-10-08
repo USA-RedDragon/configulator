@@ -38,7 +38,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 	}
 }
 
-func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) error {
 	cfg.HTTP.Host = "localhost"
 	set("http.host", configulator.LayerDefault, "default tag")
 	cfg.HTTP.Port = 8080
@@ -57,7 +57,7 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin, file string) error {
 	if s.HTTP != nil {
 		if s.HTTP.Host != nil {
 			cfg.HTTP.Host = *s.HTTP.Host
@@ -154,7 +154,7 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "http" + o.Separator + "host"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

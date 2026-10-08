@@ -33,7 +33,7 @@ func ComplexSchema() *configulator.Schema[Complex] {
 	}
 }
 
-func complexApplyDefaults(cfg *Complex, sep string, set configulator.SetOrigin) error {
+func complexApplyDefaults(cfg *Complex, _ string, set configulator.SetOrigin) error {
 	{
 		var slot impl.Complex128
 		_ = slot.UnmarshalText([]byte("1+2i"))
@@ -55,7 +55,7 @@ func complexDecodeFile(data []byte, u configulator.Unmarshal, cfg *Complex, sep 
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *complexShadow) applyTo(cfg *Complex, sep string, set configulator.SetOrigin, file string) error {
+func (s *complexShadow) applyTo(cfg *Complex, _ string, set configulator.SetOrigin, file string) error {
 	if s.Z != nil {
 		v, ok := s.Z.Value()
 		if !ok {
@@ -183,7 +183,7 @@ func ComplexPFlagHooks() cpflag.Hooks[Complex] {
 	}
 }
 
-func complexRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
+func complexRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 	names := []string{
 		"z",
 		"exponent",
@@ -211,7 +211,7 @@ func complexRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func complexApplyPFlags(cfg *Complex, fs *pflag.FlagSet, _ *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "z"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

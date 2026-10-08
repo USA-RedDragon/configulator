@@ -67,7 +67,7 @@ func collectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Collectio
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *collectionsShadow) applyTo(cfg *Collections, sep string, set configulator.SetOrigin, file string) error {
+func (s *collectionsShadow) applyTo(cfg *Collections, _ string, set configulator.SetOrigin, file string) error {
 	if s.Tags != nil {
 		cfg.Tags = *s.Tags
 		set("tags", configulator.LayerFile, file)
@@ -140,7 +140,7 @@ func CollectionsPFlagHooks() cpflag.Hooks[Collections] {
 	}
 }
 
-func collectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
+func collectionsRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 	names := []string{
 		"tags",
 		"log-level",
@@ -165,7 +165,7 @@ func collectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func collectionsApplyPFlags(cfg *Collections, fs *pflag.FlagSet, _ *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "tags"; fs.Changed(n) {
 		v, err := fs.GetStringSlice(n)
 		if err != nil {

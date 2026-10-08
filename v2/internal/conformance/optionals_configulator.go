@@ -38,7 +38,7 @@ func OptionalsSchema() *configulator.Schema[Optionals] {
 	}
 }
 
-func optionalsApplyDefaults(cfg *Optionals, sep string, set configulator.SetOrigin) error {
+func optionalsApplyDefaults(cfg *Optionals, _ string, set configulator.SetOrigin) error {
 	{
 		nameDefault := "opt-name"
 		cfg.Name = &nameDefault
@@ -58,7 +58,7 @@ func optionalsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Optionals, 
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *optionalsShadow) applyTo(cfg *Optionals, sep string, set configulator.SetOrigin, file string) error {
+func (s *optionalsShadow) applyTo(cfg *Optionals, _ string, set configulator.SetOrigin, file string) error {
 	if s.Port != nil {
 		v := *s.Port
 		cfg.Port = &v
@@ -185,7 +185,7 @@ func optionalsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func optionalsApplyPFlags(cfg *Optionals, fs *pflag.FlagSet, o *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "port"; fs.Changed(n) {
 		v, err := fs.GetUint16(n)
 		if err != nil {

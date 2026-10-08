@@ -47,7 +47,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 	}
 }
 
-func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) error {
 	cfg.LogLevel = "info"
 	set("log-level", configulator.LayerDefault, "default tag")
 	cfg.Timeout = time.Duration(int64(30000000000))
@@ -70,7 +70,7 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin, file string) error {
 	if s.LogLevel != nil {
 		cfg.LogLevel = *s.LogLevel
 		set("log-level", configulator.LayerFile, file)
@@ -185,7 +185,7 @@ func configRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func configApplyPFlags(cfg *Config, fs *pflag.FlagSet, o *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "log-level"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

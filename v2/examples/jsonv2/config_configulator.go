@@ -29,7 +29,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 	}
 }
 
-func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) error {
 	cfg.Listen = ":8080"
 	set("listen", configulator.LayerDefault, "default tag")
 	cfg.Timeout = time.Duration(int64(30000000000))
@@ -48,7 +48,7 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin, file string) error {
 	if s.Listen != nil {
 		cfg.Listen = *s.Listen
 		set("listen", configulator.LayerFile, file)

@@ -47,7 +47,7 @@ func NestedSchema() *configulator.Schema[Nested] {
 	}
 }
 
-func nestedApplyDefaults(cfg *Nested, sep string, set configulator.SetOrigin) error {
+func nestedApplyDefaults(cfg *Nested, _ string, set configulator.SetOrigin) error {
 	cfg.AppName = "myapp"
 	set("app-name", configulator.LayerDefault, "default tag")
 	cfg.HTTP.Host = "localhost"
@@ -72,7 +72,7 @@ func nestedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nested, sep st
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *nestedShadow) applyTo(cfg *Nested, sep string, set configulator.SetOrigin, file string) error {
+func (s *nestedShadow) applyTo(cfg *Nested, _ string, set configulator.SetOrigin, file string) error {
 	if s.AppName != nil {
 		cfg.AppName = *s.AppName
 		set("app-name", configulator.LayerFile, file)
@@ -182,7 +182,7 @@ func nestedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func nestedApplyPFlags(cfg *Nested, fs *pflag.FlagSet, o *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "app-name"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

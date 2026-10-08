@@ -49,7 +49,7 @@ func NestedCollectionsSchema() *configulator.Schema[NestedCollections] {
 	}
 }
 
-func nestedCollectionsApplyDefaults(cfg *NestedCollections, sep string, set configulator.SetOrigin) error {
+func nestedCollectionsApplyDefaults(_ *NestedCollections, _ string, _ configulator.SetOrigin) error {
 	return nil
 }
 
@@ -64,7 +64,7 @@ func nestedCollectionsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Nes
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *nestedCollectionsShadow) applyTo(cfg *NestedCollections, sep string, set configulator.SetOrigin, file string) error {
+func (s *nestedCollectionsShadow) applyTo(cfg *NestedCollections, _ string, set configulator.SetOrigin, file string) error {
 	if s.Peers != nil {
 		out := make([]NCPeer, len(*s.Peers))
 		for i, esh := range *s.Peers {
@@ -254,7 +254,7 @@ func (s *nestedCollectionsShadow) applyTo(cfg *NestedCollections, sep string, se
 	return nil
 }
 
-func nestedCollectionsApplyEnv(cfg *NestedCollections, ec configulator.EnvContext, set configulator.SetOrigin) error {
+func nestedCollectionsApplyEnv(_ *NestedCollections, _ configulator.EnvContext, _ configulator.SetOrigin) error {
 	return nil
 }
 
@@ -266,11 +266,11 @@ func NestedCollectionsPFlagHooks() cpflag.Hooks[NestedCollections] {
 	}
 }
 
-func nestedCollectionsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
+func nestedCollectionsRegisterPFlags(_ *pflag.FlagSet, _ *cpflag.Options) error {
 	return nil
 }
 
-func nestedCollectionsApplyPFlags(cfg *NestedCollections, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func nestedCollectionsApplyPFlags(_ *NestedCollections, _ *pflag.FlagSet, _ *cpflag.Options, _ string, _ configulator.SetOrigin) error {
 	return nil
 }
 

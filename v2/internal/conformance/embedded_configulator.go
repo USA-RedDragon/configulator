@@ -30,7 +30,7 @@ func EmbeddedSchema() *configulator.Schema[Embedded] {
 	}
 }
 
-func embeddedApplyDefaults(cfg *Embedded, sep string, set configulator.SetOrigin) error {
+func embeddedApplyDefaults(cfg *Embedded, _ string, set configulator.SetOrigin) error {
 	cfg.Base.Region = "us-east-1"
 	set("region", configulator.LayerDefault, "default tag")
 	cfg.Zone = "a"
@@ -49,7 +49,7 @@ func embeddedDecodeFile(data []byte, u configulator.Unmarshal, cfg *Embedded, se
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *embeddedShadow) applyTo(cfg *Embedded, sep string, set configulator.SetOrigin, file string) error {
+func (s *embeddedShadow) applyTo(cfg *Embedded, _ string, set configulator.SetOrigin, file string) error {
 	if s.Region != nil {
 		cfg.Base.Region = *s.Region
 		set("region", configulator.LayerFile, file)
@@ -81,7 +81,7 @@ func EmbeddedPFlagHooks() cpflag.Hooks[Embedded] {
 	}
 }
 
-func embeddedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
+func embeddedRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 	names := []string{
 		"region",
 		"zone",
@@ -105,7 +105,7 @@ func embeddedRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func embeddedApplyPFlags(cfg *Embedded, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func embeddedApplyPFlags(cfg *Embedded, fs *pflag.FlagSet, _ *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "region"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

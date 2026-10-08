@@ -1,7 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"go/ast"
+	"go/format"
+	"go/parser"
+	"go/token"
 	"go/types"
 	"strings"
 	"unicode"
@@ -98,8 +103,61 @@ func emit(m *Model, flagsMode string) ([]byte, error) {
 		)
 	}
 
-	src := []byte(fmt.Sprintf("%#v", e.f))
+	src, err := blankUnusedParams([]byte(fmt.Sprintf("%#v", e.f)))
+	if err != nil {
+		return nil, err
+	}
 	return imports.Process("", src, &imports.Options{FormatOnly: true, Comments: true, TabIndent: true, TabWidth: 8})
+}
+
+// blankUnusedParams renames each function parameter the body never uses to
+// _. The generated functions fill Schema and Hooks fields, so their
+// signatures are fixed even when a config type needs only some of the
+// parameters.
+func blankUnusedParams(src []byte) ([]byte, error) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range f.Decls {
+		fn, ok := d.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		used := usedNames(fn.Body)
+		for _, field := range fn.Type.Params.List {
+			for _, name := range field.Names {
+				if !used[name.Name] {
+					name.Name = "_"
+				}
+			}
+		}
+	}
+	var buf bytes.Buffer
+	if err := format.Node(&buf, fset, f); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// usedNames returns the identifiers n refers to, leaving out the field and
+// method names after a dot.
+func usedNames(n ast.Node) map[string]bool {
+	used := map[string]bool{}
+	var visit func(ast.Node) bool
+	visit = func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.SelectorExpr:
+			ast.Inspect(n.X, visit)
+			return false
+		case *ast.Ident:
+			used[n.Name] = true
+		}
+		return true
+	}
+	ast.Inspect(n, visit)
+	return used
 }
 
 // decl starts a new top-level declaration, separated from the previous

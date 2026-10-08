@@ -31,7 +31,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 	}
 }
 
-func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) error {
 	cfg.Listen = ":8080"
 	set("listen", configulator.LayerDefault, "default tag")
 	return nil
@@ -48,7 +48,7 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin, file string) error {
 	if s.Listen != nil {
 		cfg.Listen = *s.Listen
 		set("listen", configulator.LayerFile, file)
@@ -89,7 +89,7 @@ func ConfigStdFlagHooks() cstd.Hooks[Config] {
 	}
 }
 
-func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
+func configRegisterStdFlags(fs *flag.FlagSet, _ *cstd.Options) error {
 	names := []string{
 		"listen",
 		"debug",
@@ -113,7 +113,7 @@ func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
 	return nil
 }
 
-func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *cstd.Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error {
+func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, _ *cstd.Options, isSet map[string]bool, _ string, set configulator.SetOrigin) error {
 	if fn := "listen"; isSet[fn] {
 		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
 		cfg.Listen = pv

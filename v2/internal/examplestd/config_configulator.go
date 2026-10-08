@@ -32,7 +32,7 @@ func ConfigSchema() *configulator.Schema[Config] {
 	}
 }
 
-func configApplyDefaults(cfg *Config, sep string, set configulator.SetOrigin) error {
+func configApplyDefaults(cfg *Config, _ string, set configulator.SetOrigin) error {
 	cfg.Host = "localhost"
 	set("host", configulator.LayerDefault, "default tag")
 	cfg.Port = uint16(8080)
@@ -51,7 +51,7 @@ func configDecodeFile(data []byte, u configulator.Unmarshal, cfg *Config, sep st
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *configShadow) applyTo(cfg *Config, sep string, set configulator.SetOrigin, file string) error {
+func (s *configShadow) applyTo(cfg *Config, _ string, set configulator.SetOrigin, file string) error {
 	if s.Host != nil {
 		cfg.Host = *s.Host
 		set("host", configulator.LayerFile, file)
@@ -92,7 +92,7 @@ func ConfigStdFlagHooks() cstd.Hooks[Config] {
 	}
 }
 
-func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
+func configRegisterStdFlags(fs *flag.FlagSet, _ *cstd.Options) error {
 	names := []string{
 		"host",
 		"port",
@@ -116,7 +116,7 @@ func configRegisterStdFlags(fs *flag.FlagSet, o *cstd.Options) error {
 	return nil
 }
 
-func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, o *cstd.Options, isSet map[string]bool, sep string, set configulator.SetOrigin) error {
+func configApplyStdFlags(cfg *Config, fs *flag.FlagSet, _ *cstd.Options, isSet map[string]bool, _ string, set configulator.SetOrigin) error {
 	if fn := "host"; isSet[fn] {
 		pv := fs.Lookup(fn).Value.(flag.Getter).Get().(string)
 		cfg.Host = pv

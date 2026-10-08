@@ -37,7 +37,7 @@ func AttributesSchema() *configulator.Schema[Attributes] {
 	}
 }
 
-func attributesApplyDefaults(cfg *Attributes, sep string, set configulator.SetOrigin) error {
+func attributesApplyDefaults(_ *Attributes, _ string, _ configulator.SetOrigin) error {
 	return nil
 }
 
@@ -52,7 +52,7 @@ func attributesDecodeFile(data []byte, u configulator.Unmarshal, cfg *Attributes
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *attributesShadow) applyTo(cfg *Attributes, sep string, set configulator.SetOrigin, file string) error {
+func (s *attributesShadow) applyTo(cfg *Attributes, _ string, set configulator.SetOrigin, file string) error {
 	if s.Token != nil {
 		cfg.Token = *s.Token
 		set("token", configulator.LayerFile, file)
@@ -122,7 +122,7 @@ func AttributesPFlagHooks() cpflag.Hooks[Attributes] {
 	}
 }
 
-func attributesRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
+func attributesRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 	names := []string{
 		"token",
 		"rn",
@@ -160,7 +160,7 @@ func attributesRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func attributesApplyPFlags(cfg *Attributes, fs *pflag.FlagSet, _ *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "token"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

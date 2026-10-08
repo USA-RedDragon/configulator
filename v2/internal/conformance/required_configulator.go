@@ -56,7 +56,7 @@ func RequiredSchema() *configulator.Schema[Required] {
 	}
 }
 
-func requiredApplyDefaults(cfg *Required, sep string, set configulator.SetOrigin) error {
+func requiredApplyDefaults(_ *Required, _ string, _ configulator.SetOrigin) error {
 	return nil
 }
 
@@ -71,7 +71,7 @@ func requiredDecodeFile(data []byte, u configulator.Unmarshal, cfg *Required, se
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *requiredShadow) applyTo(cfg *Required, sep string, set configulator.SetOrigin, file string) error {
+func (s *requiredShadow) applyTo(cfg *Required, _ string, set configulator.SetOrigin, file string) error {
 	if s.Top != nil {
 		cfg.Top = *s.Top
 		set("top", configulator.LayerFile, file)
@@ -190,7 +190,7 @@ func requiredRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func requiredApplyPFlags(cfg *Required, fs *pflag.FlagSet, o *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "top"; fs.Changed(n) {
 		v, err := fs.GetString(n)
 		if err != nil {

@@ -32,7 +32,7 @@ func DurationsSchema() *configulator.Schema[Durations] {
 	}
 }
 
-func durationsApplyDefaults(cfg *Durations, sep string, set configulator.SetOrigin) error {
+func durationsApplyDefaults(cfg *Durations, _ string, set configulator.SetOrigin) error {
 	cfg.Timeout = time.Duration(int64(30000000000))
 	set("timeout", configulator.LayerDefault, "default tag")
 	return nil
@@ -49,7 +49,7 @@ func durationsDecodeFile(data []byte, u configulator.Unmarshal, cfg *Durations, 
 	return sh.applyTo(cfg, sep, set, file)
 }
 
-func (s *durationsShadow) applyTo(cfg *Durations, sep string, set configulator.SetOrigin, file string) error {
+func (s *durationsShadow) applyTo(cfg *Durations, _ string, set configulator.SetOrigin, file string) error {
 	if s.Timeout != nil {
 		v, ok := s.Timeout.Value()
 		if !ok {
@@ -97,7 +97,7 @@ func DurationsPFlagHooks() cpflag.Hooks[Durations] {
 	}
 }
 
-func durationsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
+func durationsRegisterPFlags(fs *pflag.FlagSet, _ *cpflag.Options) error {
 	names := []string{
 		"timeout",
 		"label",
@@ -121,7 +121,7 @@ func durationsRegisterPFlags(fs *pflag.FlagSet, o *cpflag.Options) error {
 	return nil
 }
 
-func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, o *cpflag.Options, sep string, set configulator.SetOrigin) error {
+func durationsApplyPFlags(cfg *Durations, fs *pflag.FlagSet, _ *cpflag.Options, _ string, set configulator.SetOrigin) error {
 	if n := "timeout"; fs.Changed(n) {
 		v, err := fs.GetDuration(n)
 		if err != nil {

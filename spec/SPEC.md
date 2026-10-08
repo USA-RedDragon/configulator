@@ -1,6 +1,6 @@
 # configulator behavioral specification
 
-Version: 0.1.2 (see `SPEC_VERSION`)
+Version: 0.2.0 (see `SPEC_VERSION`)
 
 This document governs two implementations:
 
@@ -82,11 +82,14 @@ independent YAML parsers, not configulator.
    sentinel key.
 
 9. **Origin reporting.** Dotted paths map to `{layer, detail}` where detail
-   is the file path, env var name, or flag name. Path grammar: tag names
-   joined by `.`; list indices as `[i]`; map keys quoted when they contain
-   `.` or `[`. Recording is **per element** inside collections. Fields never
-   set and lacking a default have no entry. A report requested before load
-   is empty, never an error or null.
+   is the file path, env var name, or flag name (`--name`). A `default` tag
+   records detail `default tag`, and an element default `element default`.
+   Path grammar: tag names joined by `.`; list indices as `[i]`; map keys
+   quoted with `"` when they contain `.` or `[`, and inside the quotes `\`
+   and `"` are escaped with a backslash (`pools."q\"x.y".size`). Recording
+   is **per element** inside collections. Fields never set and lacking a
+   default have no entry. A report requested before load is empty, never
+   an error or null.
 
 10. **Zero values.** A field absent from every layer with no default keeps
     the language zero value.
@@ -108,6 +111,8 @@ independent YAML parsers, not configulator.
 | Unknown-key rejection | decoder | json/v2: available (`RejectUnknownMembers`); goccy: opt-in; go-toml: decoder-level | `deny_unknown_fields`, derive-time, file layer only |
 | Duplicate keys in one file | decoder | json/v2 rejects; goccy last-wins; go-toml errors | serde_json last-wins; yaml/toml per parser |
 | Dual-interface leaf types (e.g. `TextUnmarshaler` + `UnmarshalJSON`) | decoder | dispatch differs per decoder; not silently allowed — generator warns | n/a (leaves use `FromStr`) |
+| Decoder selection | configulator | by lowercased file extension (`Decoders` map) | one `FileLoader` for every path |
+| Negative durations | configulator | allowed (`-1h`) | parse error (`Duration` is unsigned) |
 
 Pinned versions: pflag v1.0.6+, goccy/go-yaml v1.19.2+, pelletier/go-toml/v2
 v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
@@ -128,9 +133,31 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
   `3`, as Go's `strconv.ParseComplex` reads it. A file may also hold a plain
   number. `j` in place of `i` is a parse error. Go: `complex64` and
   `complex128`. Rust: `configulator::Complex64` and `Complex128`.
-- Decoder-map keys are lowercased extensions matched literally — no
+- Decoder-map keys (Go) are lowercased extensions matched literally — no
   aliasing; register both `.yml` and `.yaml` to accept both. An
   extension-less path is an error naming the path.
+- File scalar types are strict, as in Go's `encoding/json/v2`: a number for
+  a string field, a string for a number or bool field, and a fraction for an
+  integer field are errors. An integer for a float field is fine.
+- Bools in env vars, flag values and defaults use Go's `strconv.ParseBool`
+  spellings: `1`, `t`, `T`, `TRUE`, `true`, `True`, `0`, `f`, `F`, `FALSE`,
+  `false`, `False`. Anything else is a parse error.
+- Durations use Go's `time.ParseDuration` syntax and must fit in an int64
+  of nanoseconds (about 2562047h). They print as Go's `Duration.String()`.
+- Secrets: no error message quotes the value of a field marked secret,
+  whatever layer it came from. The value shows as `(redacted)`.
+- Flag help shows each flag's default, except for secret fields. The
+  `--config` flag's help is `config file`, with the first search path as
+  its default.
+- `PrintConfig` prints one `path = value` line per leaf, in field order,
+  with nested structs flattened into dotted paths. Values print as Go's
+  `%v` would: `[a b]` for a list, `map[a:x b:y]` for a map (keys sorted),
+  `[{h:1 1}]` for a list of structs, `30s` for a duration. An unset optional
+  prints `<unset>`, and an unset optional struct prints one `<unset>` line
+  for itself. A secret prints `(redacted)`, and so does a whole list or map
+  of structs that holds a secret anywhere.
+- The generator CLIs exit 2 on a usage error, with a message starting
+  `configulator:`.
 
 ## Conformance corpus
 
@@ -145,11 +172,29 @@ Layout: `spec/cases/<case>/` containing:
   passed to the library as empty, so the library default applies.
 - `shape` — one of the shape names below
 - `expect.json` — expected config as a nested JSON object, **or**
-- `expect_errors.json` — `{"kind": "<logical kind>", "contains": [..]}`
+- `expect_errors.json` — `{"kind": "<logical kind>", "contains": [..],
+  "excludes": [..]}`. The message must contain every `contains` string and
+  none of the `excludes` strings.
 - `expect_origins.json` — optional; dotted path → `{"layer", "detail"}`.
+  A file-layer detail is matched against the end of the path the runner
+  passed, since that path depends on where the corpus lives.
 
-Error kinds: `ExplicitFileMissing`, `SearchPathUnreadable`, `ParseError`,
-`UnknownKey`, `ValidationError`, `BadEnvOptions`.
+`config.json` is loaded as a search path. It may be a directory, to test a
+search path that can't be read.
+
+Error kinds:
+
+- `ExplicitFileMissing`: a `--config` or explicit path that can't be read
+- `SearchPathUnreadable`: a search path that exists but can't be read
+- `DecodeError`: the file decoder failed, including type mismatches and
+  out-of-range numbers
+- `UnknownKey`: the file has a key no field matches
+- `ParseError`: an env var, flag value or default failed to parse
+- `RequiredError`: a required field no layer set
+- `ValidationError`: the config's validation hook failed
+- `BadEnvOptions`: a lowercase prefix or a separator containing `-`
+- `FlagError`: the argument parser rejected the command line, such as an
+  unknown flag
 
 **Shapes** are hand-written once per language, field-for-field identical:
 
@@ -160,6 +205,10 @@ Error kinds: `ExplicitFileMissing`, `SearchPathUnreadable`, `ParseError`,
 - `optionals`: optional u16, optional string (with default), optional struct
 - `durations`: duration leaf plus a plain string
 - `complex`: complex128 and complex64 leaves and a list of complex128
+- `required`: required fields at the top level, in a nested struct, in an
+  optional struct and in list elements, plus a validation hook
+- `attributes`: a secret, env and flag renames, env and flag skips, and a
+  short flag
 
 Shape definitions live in `spec/shapes.md`; each has a `defaults-only` case
 pinning every default and a boundary case pinning integer widths.
@@ -172,9 +221,12 @@ normalized (JSON numbers compare by value, not representation). Cases whose
 
 ## Synchronization
 
-`spec/SPEC_VERSION` holds this document's version. The Go repository
-publishes `spec/` as a tarball on tags named `spec/vX.Y.Z`. The Rust
-repository pins a version in `.spec-pin` and its CI fetches that tarball.
-A change to `spec/` requires both repositories green before the pin
-advances. Rules may be added in minor versions; changed or removed rules
-require a major version and a migration note.
+`spec/SPEC_VERSION` holds this document's version. The Go repository runs
+the corpus from its own `spec/` directory. The Rust CI checks out the
+configulator repository's default branch, fails unless its
+`spec/SPEC_VERSION` equals the `EXPECTED_SPEC_VERSION` pinned in the Rust
+workflow, and runs the corpus from that checkout. A change to `spec/` bumps
+`SPEC_VERSION`. Cases Rust can't pass yet go in `spec/skip-rust.txt`, and
+the Rust pin moves to the new version once its corpus job passes. Rules may
+be added in minor versions; changed or removed rules require a major
+version and a migration note.

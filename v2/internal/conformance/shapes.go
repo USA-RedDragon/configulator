@@ -6,7 +6,10 @@
 // the shape implementations the corpus runner uses.
 package conformance
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Scalars struct {
 	Name    string  `name:"name" json:"name" default:"svc"`
@@ -113,6 +116,39 @@ type Complex struct {
 }
 
 func (Complex) Validate() error { return nil }
+
+type Required struct {
+	Top    string  `name:"top" json:"top" required:"true"`
+	Nested RNested `name:"nested" json:"nested"`
+	Opt    *ROpt   `name:"opt" json:"opt"`
+	Items  []ROpt  `name:"items" json:"items"`
+}
+
+type RNested struct {
+	Leaf string `name:"leaf" json:"leaf" required:"true"`
+}
+
+type ROpt struct {
+	Leaf  string `name:"leaf" json:"leaf" required:"true"`
+	Other string `name:"other" json:"other"`
+}
+
+func (r Required) Validate() error {
+	if r.Top == "invalid" {
+		return errors.New("top must not be invalid")
+	}
+	return nil
+}
+
+type Attributes struct {
+	Token   int64  `name:"token" json:"token" secret:"true"`
+	Renamed string `name:"renamed" json:"renamed" env:"RN" flag:"rn"`
+	NoEnv   string `name:"no-env" json:"no-env" env:"-"`
+	NoFlag  string `name:"no-flag" json:"no-flag" flag:"-"`
+	Port    uint16 `name:"port" json:"port" short:"p"`
+}
+
+func (Attributes) Validate() error { return nil }
 
 // golden fixture only, not a corpus shape
 

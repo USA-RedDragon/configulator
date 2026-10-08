@@ -162,7 +162,7 @@ func (s *dBConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Uint()
 				if err != nil {
-					return err
+					return fmt.Errorf("pool: %w", err)
 				}
 				if num > math.MaxUint16 {
 					return fmt.Errorf("pool: %d overflows uint16", num)

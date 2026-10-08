@@ -35,7 +35,7 @@ func specDir(t *testing.T) string {
 type caseInput struct {
 	dir     string
 	shape   string
-	config  []byte // nil if no config.json
+	config  bool // config.json exists, as a file or a directory
 	env     map[string]string
 	argv    []string
 	opts    caseOptions
@@ -55,6 +55,7 @@ type caseOptions struct {
 type expectError struct {
 	Kind     string   `json:"kind"`
 	Contains []string `json:"contains"`
+	Excludes []string `json:"excludes"`
 }
 
 type expectOrigin struct {
@@ -84,8 +85,8 @@ func loadCase(t *testing.T, dir string) caseInput {
 		return true
 	}
 
-	if b, err := os.ReadFile(filepath.Join(dir, "config.json")); err == nil {
-		tc.config = b
+	if _, err := os.Stat(filepath.Join(dir, "config.json")); err == nil {
+		tc.config = true
 	}
 	readJSON("env.json", &tc.env)
 	readJSON("argv.json", &tc.argv)
@@ -121,7 +122,7 @@ func runShape[C any](t *testing.T, tc caseInput, schema *configulator.Schema[C],
 		WithArraySeparator(tc.opts.ArraySep).
 		WithEnviron(func(k string) (string, bool) { v, ok := tc.env[k]; return v, ok })
 
-	if tc.config != nil {
+	if tc.config {
 		c.WithFile(&configulator.FileOptions{Search: []string{filepath.Join(tc.dir, "config.json")}})
 	} else if len(tc.argv) > 0 {
 		// --config cases need the file layer enabled even with no search file
@@ -135,6 +136,10 @@ func runShape[C any](t *testing.T, tc caseInput, schema *configulator.Schema[C],
 		fs := pflag.NewFlagSet("corpus", pflag.ContinueOnError)
 		cpflag.Bind(c, fs, *hooks, &cpflag.Options{Separator: tc.opts.FlagSeparator})
 		if err := fs.Parse(tc.argv); err != nil {
+			if tc.experr != nil && tc.experr.Kind == "FlagError" {
+				checkErrorText(t, tc, err)
+				return
+			}
 			t.Fatalf("case %s: parsing argv: %v", tc.dir, err)
 		}
 	}
@@ -146,11 +151,7 @@ func runShape[C any](t *testing.T, tc caseInput, schema *configulator.Schema[C],
 			t.Fatalf("case %s: expected error kind %s, got nil", tc.dir, tc.experr.Kind)
 		}
 		checkErrorKind(t, tc, err)
-		for _, want := range tc.experr.Contains {
-			if !strings.Contains(err.Error(), want) {
-				t.Errorf("case %s: error %q does not contain %q", tc.dir, err, want)
-			}
-		}
+		checkErrorText(t, tc, err)
 		return
 	}
 	if err != nil {
@@ -178,8 +179,23 @@ func runShape[C any](t *testing.T, tc caseInput, schema *configulator.Schema[C],
 		if got.Layer.String() != want.Layer {
 			t.Errorf("case %s: origin %q layer = %s, want %s", tc.dir, path, got.Layer, want.Layer)
 		}
-		if want.Detail != "" && got.Detail != want.Detail {
+		// A file detail is the path the runner passed, so only its end is fixed.
+		if want.Detail != "" && got.Detail != want.Detail && (want.Layer != "file" || !strings.HasSuffix(got.Detail, want.Detail)) {
 			t.Errorf("case %s: origin %q detail = %q, want %q", tc.dir, path, got.Detail, want.Detail)
+		}
+	}
+}
+
+func checkErrorText(t *testing.T, tc caseInput, err error) {
+	t.Helper()
+	for _, want := range tc.experr.Contains {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("case %s: error %q does not contain %q", tc.dir, err, want)
+		}
+	}
+	for _, bad := range tc.experr.Excludes {
+		if strings.Contains(err.Error(), bad) {
+			t.Errorf("case %s: error %q contains %q", tc.dir, err, bad)
 		}
 	}
 }
@@ -194,10 +210,15 @@ func checkErrorKind(t *testing.T, tc caseInput, err error) {
 	case "SearchPathUnreadable":
 		var e *configulator.SearchPathError
 		ok = errors.As(err, &e)
-	case "ParseError", "UnknownKey":
+	case "ParseError":
 		var pe *configulator.ParseError
+		ok = errors.As(err, &pe)
+	case "DecodeError", "UnknownKey":
 		var de *configulator.DecodeError
-		ok = errors.As(err, &pe) || errors.As(err, &de)
+		ok = errors.As(err, &de)
+	case "RequiredError":
+		var re *configulator.RequiredError
+		ok = errors.As(err, &re)
 	case "ValidationError":
 		ok = true // any non-nil error from Validate
 	case "BadEnvOptions":
@@ -335,6 +356,11 @@ func TestCorpus(t *testing.T) {
 				runShape[Durations](t, tc, DurationsSchema(), nil, func(c *Durations) any {
 					return map[string]any{"timeout": c.Timeout.String(), "label": c.Label}
 				})
+			case "required":
+				runShape[Required](t, tc, RequiredSchema(), nil, func(c *Required) any { return c })
+			case "attributes":
+				h := AttributesPFlagHooks()
+				runShape(t, tc, AttributesSchema(), &h, func(c *Attributes) any { return c })
 			case "complex":
 				h := ComplexPFlagHooks()
 				runShape(t, tc, ComplexSchema(), &h, func(c *Complex) any {

@@ -336,7 +336,7 @@ func (s *nHTTPShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Uint()
 				if err != nil {
-					return err
+					return fmt.Errorf("port: %w", err)
 				}
 				if num > math.MaxUint16 {
 					return fmt.Errorf("port: %d overflows uint16", num)
@@ -431,7 +431,7 @@ func (s *nPoolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Uint()
 				if err != nil {
-					return err
+					return fmt.Errorf("size: %w", err)
 				}
 				if num > math.MaxUint16 {
 					return fmt.Errorf("size: %d overflows uint16", num)

@@ -80,6 +80,7 @@ func TestScalarWidths(t *testing.T) {
 		fixtureFile: bt(widthsFixture),
 		cfgJSON: `{"i": 1, "i8": 2, "i16": 3, "i32": 4, "i64": 5, "u": 6, "u8": 7, "u16": 8, "u32": 9, "u64": 10, "up": 11,
 			"f32": 1.25, "f64": 2.5, "c64": "1i", "c128": "2", "pi8": -1, "pu64": 1, "pf32": 0.5, "pup": 2}`,
+		"f32.json": `{"f32": 1e300}`,
 	}
 	const fromFile = "1 2 3 4 5 6 7 8 9 10 11 1.25 2.5 (0+1i) (2+0i)\n-1 1 0.5 2"
 	cases := []struct {
@@ -96,6 +97,7 @@ func TestScalarWidths(t *testing.T) {
 			"--f32=1.25", "--f64=2.5", "--c64=1i", "--c128=2", "--pi8=-1", "--pu64=1", "--pf32=0.5", "--pup=2"}, fromFile},
 		{"env-f32-overflow", []string{"FX_F32=1e300"}, nil, `error: f32: cannot parse "1e300" from FX_F32`},
 		{"flag-f32-overflow", nil, []string{"--f32=1e300"}, "fail"},
+		{"file-f32-overflow", []string{"CFG_FILE=f32.json"}, nil, "error: decoding f32.json"},
 		{"env-i8-overflow", []string{"FX_I8=300"}, nil, `error: i8: cannot parse "300" from FX_I8`},
 	}
 	for _, mode := range []string{flagsPFlag, flagsStd} {

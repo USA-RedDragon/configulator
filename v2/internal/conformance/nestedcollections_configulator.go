@@ -385,7 +385,7 @@ func (s *nCPeerShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Int()
 				if err != nil {
-					return err
+					return fmt.Errorf("slots: %w", err)
 				}
 				val := num
 				s.Slots = &val
@@ -508,7 +508,7 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Int()
 				if err != nil {
-					return err
+					return fmt.Errorf("from: %w", err)
 				}
 				val := num
 				s.From = &val
@@ -525,7 +525,7 @@ func (s *nCRuleShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Int()
 				if err != nil {
-					return err
+					return fmt.Errorf("range: %w", err)
 				}
 				val := num
 				s.Range = &val
@@ -580,7 +580,7 @@ func (s *nCLevelShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Int()
 				if err != nil {
-					return err
+					return fmt.Errorf("level: %w", err)
 				}
 				val := num
 				s.Level = &val
@@ -607,7 +607,7 @@ func (c *NestedCollections) PrintConfig() string {
 func nestedCollectionsQuoteKey(k string) string {
 	for _, c := range k {
 		if c == '.' || c == '[' {
-			return "\"" + k + "\""
+			return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
 		}
 	}
 	return k

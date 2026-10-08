@@ -1,0 +1,1 @@
+{"tags": ["a", "b"], "labels": {}, "servers": [], "pools": {"q\"x.y": {"size": 2}, "a\\b.c": {"size": 5}, "plain": {"size": 5}}, "log-level": "info"}

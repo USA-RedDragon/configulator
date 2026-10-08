@@ -86,3 +86,26 @@ it — the same element-constructor mechanism as collection element defaults.
 | `exponent` | complex128 / Complex128 | — |
 | `w` | complex64 / Complex64 | — |
 | `zs` | []complex128 / Vec<Complex128> | — |
+
+## required
+
+| tag | type | default |
+|---|---|---|
+| `top` | string / String, required | — |
+| `nested.leaf` | string / String, required | — |
+| `opt` | *ROpt / Option<ROpt> | — |
+| `items` | []ROpt / Vec<ROpt> | — |
+
+ROpt: `leaf` string (required), `other` string.
+Validation fails when `top` is `invalid`, with a message containing
+`invalid`.
+
+## attributes
+
+| tag | type | attributes |
+|---|---|---|
+| `token` | int64 / i64 | secret |
+| `renamed` | string / String | env `RN`, flag `rn` |
+| `no-env` | string / String | env `-` |
+| `no-flag` | string / String | flag `-` |
+| `port` | uint16 / u16 | short `p` |

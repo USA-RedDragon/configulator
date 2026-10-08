@@ -378,7 +378,7 @@ func (s *serverShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Uint()
 				if err != nil {
-					return err
+					return fmt.Errorf("weight: %w", err)
 				}
 				if num > math.MaxUint16 {
 					return fmt.Errorf("weight: %d overflows uint16", num)
@@ -423,7 +423,7 @@ func (s *poolShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Uint()
 				if err != nil {
-					return err
+					return fmt.Errorf("size: %w", err)
 				}
 				if num > math.MaxUint16 {
 					return fmt.Errorf("size: %d overflows uint16", num)
@@ -456,7 +456,7 @@ func (c *Collections) PrintConfig() string {
 func collectionsQuoteKey(k string) string {
 	for _, c := range k {
 		if c == '.' || c == '[' {
-			return "\"" + k + "\""
+			return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(k) + "\""
 		}
 	}
 	return k

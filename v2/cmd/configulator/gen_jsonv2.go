@@ -157,7 +157,7 @@ func (e *emitter) fastNumeric(f *Field, sel func() *Statement) []Code {
 	t := f.Type.Underlying().String()
 	read := append([]Code{
 		List(Id("num"), Err()).Op(":=").Id("v").Dot(numMethod(f.Kind)).Call(),
-		If(Err().Op("!=").Nil()).Block(Return(Err())),
+		If(Err().Op("!=").Nil()).Block(Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %w"), Err()))),
 	}, rangeCheck(f, "num")...)
 	conv := Id(t).Call(Id("num"))
 	if t == "int64" && f.Kind == KindInt || t == "uint64" && f.Kind == KindUint || t == "float64" && f.Kind == KindFloat {
@@ -191,6 +191,9 @@ func rangeCheck(f *Field, v string) []Code {
 	case KindUint:
 		return []Code{If(Id(v).Op(">").Qual("math", fmt.Sprintf("MaxUint%d", f.Bits))).Block(
 			Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %d overflows "+t), Id(v))))}
+	case KindFloat:
+		return []Code{If(Qual("math", "Abs").Call(Id(v)).Op(">").Qual("math", "MaxFloat32")).Block(
+			Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %v overflows "+t), Id(v))))}
 	default:
 		return nil
 	}
@@ -241,7 +244,7 @@ func scalarElemReader(f *Field, dst string) []Code {
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a number element, got %v"), Id("v").Dot("Kind").Call()))))
 		read = append(read,
 			List(Id("raw"), Err()).Op(":=").Id("v").Dot(numMethod(f.Kind)).Call(),
-			If(Err().Op("!=").Nil()).Block(Return(Err())))
+			If(Err().Op("!=").Nil()).Block(Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": %w"), Err()))))
 		read = append(read, rangeCheck(f, "raw")...)
 		if (f.Kind == KindInt && t == "int64") || (f.Kind == KindUint && t == "uint64") || (f.Kind == KindFloat && t == "float64") {
 			read = append(read, Id(dst).Op(":=").Id("raw"))

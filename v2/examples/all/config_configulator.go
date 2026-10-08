@@ -284,7 +284,7 @@ func (s *hTTPConfigShadow) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 			case '0':
 				num, err := v.Int()
 				if err != nil {
-					return err
+					return fmt.Errorf("port: %w", err)
 				}
 				val := int(num)
 				s.Port = &val

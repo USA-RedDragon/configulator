@@ -234,10 +234,12 @@ normalized (JSON numbers compare by value, not representation). Cases whose
 
 `spec/SPEC_VERSION` holds this document's version. The Go repository runs
 the corpus from its own `spec/` directory. The Rust CI checks out the
-configulator repository's default branch, fails unless its
+configulator repository at a pinned commit, fails unless its
 `spec/SPEC_VERSION` equals the `EXPECTED_SPEC_VERSION` pinned in the Rust
-workflow, and runs the corpus from that checkout. A change to `spec/` bumps
-`SPEC_VERSION`. Cases Rust can't pass yet go in `spec/skip-rust.txt`, and
-the Rust pin moves to the new version once its corpus job passes. Rules may
+workflow, and runs the corpus from that checkout. A spec change on the
+configulator default branch never breaks Rust CI by itself. A change to
+`spec/` bumps `SPEC_VERSION`. Cases Rust can't pass yet go in
+`spec/skip-rust.txt`, and Rust moves its commit and version pins together
+once its corpus job passes. Rules may
 be added in minor versions; changed or removed rules require a major
 version and a migration note.

@@ -1,0 +1,7 @@
+# example binaries (go build in examples/<name>/ drops one named after the dir)
+examples/all/all
+examples/minimal/minimal
+examples/jsonv2/jsonv2
+examples/toml/toml
+examples/stdflag/stdflag
+cmd/configulator/configulator

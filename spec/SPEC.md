@@ -138,6 +138,12 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
   extension-less path is an error naming the path.
 - An empty default (Go `default:""`, Rust `default = ""`) is a
   generate-time error. Leave the tag out instead.
+- A default on a leaf decoded by the user's own text parser (Go
+  `UnmarshalText`, Rust `FromStr`) is allowed and parsed at load, since
+  the generator can't run that parser. A bad one is a load error: a
+  `ParseError` with source `default tag` and the field's path, and a
+  secret field's value is redacted. Element defaults behave the same way
+  when the element is built.
 - File scalar types are strict, as in Go's `encoding/json/v2`: a number for
   a string field, a string for a number or bool field, and a fraction for an
   integer field are errors. An integer for a float field is fine.

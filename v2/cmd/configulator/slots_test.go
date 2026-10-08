@@ -136,7 +136,6 @@ func TestOptionalSlotsAndOpaque(t *testing.T) {
 func TestOpaqueGenerateErrors(t *testing.T) {
 	t.Parallel()
 	for name, field := range map[string]string{
-		"default":       "A netip.Addr `name:\"a\" default:\"1.2.3.4\"`",
 		"no-unmarshal":  "A struct{ X int } `name:\"a\" opaque:\"true\"`",
 		"named-no-text": "A Plain `name:\"a\" opaque:\"true\"`",
 	} {

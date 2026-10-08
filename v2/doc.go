@@ -48,7 +48,8 @@
 //
 //   - name:"key" is the key in files, env and flags. It falls back to the
 //     json or yaml tag.
-//   - default:"value" is the default. The generator checks it.
+//   - default:"value" is the default. The generator checks it, except on a
+//     type with its own UnmarshalText, which Load parses instead.
 //   - description:"text" is the flag help and the description in generated
 //     docs.
 //   - env:"NAME" and flag:"name" rename this field's part of the env var or

@@ -171,7 +171,7 @@ func (e *emitter) elemDefaults(fields []*Field, dst *Statement, p pathExpr, sep 
 		}
 		var assign []Code
 		if f.Kind == KindPointer {
-			prep, val := defaultValue(f.Elem, f.Default, fp.code(), sep)
+			prep, val := defaultValue(pointee(f), f.Default, fp.code(), sep)
 			assign = append(assign, prep...)
 			assign = append(assign, Id("d").Op(":=").Add(val), target.Op("=").Op("&").Id("d"))
 		} else {

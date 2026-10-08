@@ -607,7 +607,9 @@ func checkDefault(f *Field) error {
 		return checkDefault(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, SlotType: f.Elem.SlotType, Default: f.Default, Elem: f.Elem.Elem})
 	case KindStdSlot:
 		if f.SlotType == slotText {
-			return fmt.Errorf("default: on a type decoded with its own UnmarshalText is not supported; set it in code")
+			// The type's own UnmarshalText can't run here, so the
+			// generated code parses the default at load.
+			return nil
 		}
 		return parseStdSlot(f.SlotType, []byte(f.Default))
 	case KindMapScalar, KindMapStruct:

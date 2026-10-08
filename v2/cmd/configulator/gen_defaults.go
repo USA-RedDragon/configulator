@@ -37,7 +37,7 @@ func (e *emitter) defaultAssign(f *Field, path string) []Code {
 	rec := Id("set").Call(Lit(path), Qual(pkgCfg, "LayerDefault"), Lit("default tag"))
 	if f.Kind == KindPointer {
 		tmp := lowerFirst(strings.ReplaceAll(goName(f), ".", "")) + "Default"
-		prep, val := defaultValue(f.Elem, f.Default, Lit(path), Id("sep"))
+		prep, val := defaultValue(pointee(f), f.Default, Lit(path), Id("sep"))
 		prep = append(prep, Id(tmp).Op(":=").Add(val), cfgSel("cfg", f).Op("=").Op("&").Id(tmp), rec)
 		return []Code{Block(prep...)}
 	}
@@ -51,8 +51,9 @@ func (e *emitter) defaultAssign(f *Field, path string) []Code {
 
 // defaultValue returns statements to run first and an expression of f's type
 // holding the default. checkDefault has already validated def, except a
-// list's elements, which are split with sep at load time and return a
-// ParseError for path from the statements if one doesn't parse.
+// list's elements, which are split with sep at load time, and a type
+// decoded with its own UnmarshalText, which the generator can't run. Those
+// return a ParseError for path from the statements if they don't parse.
 func defaultValue(f *Field, def string, path, sep Code) ([]Code, *Statement) {
 	switch f.Kind {
 	case KindString:
@@ -69,9 +70,15 @@ func defaultValue(f *Field, def string, path, sep Code) ([]Code, *Statement) {
 		d, _ := time.ParseDuration(def)
 		return nil, Qual("time", "Duration").Call(Lit(int64(d)))
 	case KindStdSlot:
+		parse := Id("_").Op("=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Lit(def)))
+		if f.SlotType == slotText {
+			parse = If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Lit(def))), Err().Op("!=").Nil()).Block(
+				defaultParseError(f, def, path),
+			)
+		}
 		return []Code{
 			Var().Id("slot").Add(slotCode(f)),
-			Id("_").Op("=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Lit(def))),
+			parse,
 			List(Id("v"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, convNamed(f.Type, Id("v"))
 	case KindSliceScalar:
@@ -80,6 +87,27 @@ func defaultValue(f *Field, def string, path, sep Code) ([]Code, *Statement) {
 	default:
 		panic("defaultValue: unhandled kind " + f.Tag)
 	}
+}
+
+// defaultParseError returns the statement that returns a ParseError for
+// the default def of f at path, with err as the cause. A secret field's
+// value is left out.
+func defaultParseError(f *Field, def string, path Code) Code {
+	val, cause := Lit(def), Err()
+	if f.Secret {
+		val, cause = Lit("(redacted)"), Qual(pkgImpl, "Redact").Call(Err(), Lit(def))
+	}
+	return Return(Op("&").Qual(pkgCfg, "ParseError").Values(Dict{
+		Id("Path"): path, Id("Source"): Lit("default tag"), Id("Value"): val, Id("Err"): cause,
+	}))
+}
+
+// pointee returns the element of the optional field f, marked secret when
+// f is.
+func pointee(f *Field) *Field {
+	elem := *f.Elem
+	elem.Secret = f.Secret
+	return &elem
 }
 
 // intLit renders a validated integer default as an untyped constant.

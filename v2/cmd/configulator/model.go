@@ -27,8 +27,7 @@ const (
 	KindMapScalar   // map[string]scalar (file only)
 	KindMapStruct   // map[string]struct (file only)
 	KindDuration    // time.Duration -> impl.Duration slot
-	KindStdSlot     // other stdtypes sentinel slot
-	KindTextLeaf    // non-struct type implementing TextUnmarshaler, decoded as a leaf
+	KindStdSlot     // other sentinel slots, including impl.Text for any TextUnmarshaler
 )
 
 // Field describes one config field for the generator.
@@ -268,6 +267,10 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 		}
 	}
 
+	if namedText(f, t) {
+		return classifyText(f, fieldPath)
+	}
+
 	switch u := t.Underlying().(type) {
 	case *types.Basic:
 		if err := classifyBasic(f, u, fieldPath); err != nil {
@@ -284,7 +287,7 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 			return err
 		}
 		switch elem.Kind {
-		case KindString, KindBool, KindInt, KindUint, KindFloat, KindStruct, KindDuration, KindStdSlot, KindTextLeaf:
+		case KindString, KindBool, KindInt, KindUint, KindFloat, KindStruct, KindDuration, KindStdSlot:
 		default:
 			return fmt.Errorf("%s: pointer to %s is not supported", fieldPath, types.TypeString(u.Elem(), nil))
 		}
@@ -327,9 +330,8 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 			return fmt.Errorf("%s: env:/flag: opt-in on a map (file-only, SPEC rule 6)", fieldPath)
 		}
 	default:
-		if implementsTextUnmarshaler(t) && !isStructKind(t) {
-			f.Kind = KindTextLeaf
-			return nil
+		if implementsTextUnmarshaler(t) {
+			return classifyText(f, fieldPath)
 		}
 		return fmt.Errorf("%s: unsupported type %s", fieldPath, t)
 	}
@@ -337,19 +339,14 @@ func classify(f *Field, outPkg *types.Package, path string) error {
 	return checkFieldDefault(f, fieldPath)
 }
 
-// classifyStruct classifies a struct-kind field as a nested struct, or as
-// an opaque:"true" leaf decoded with its UnmarshalText.
+// classifyStruct classifies a struct-kind field as a nested struct, or as a
+// leaf decoded with its UnmarshalText when it has one.
 func classifyStruct(f *Field, t types.Type, u *types.Struct, outPkg *types.Package, fieldPath string) error {
-	if f.Opaque {
-		if !implementsTextUnmarshaler(t) {
-			return fmt.Errorf("%s: opaque:\"true\" needs a type with an UnmarshalText method", fieldPath)
-		}
-		f.Kind = KindStdSlot
-		f.SlotType = slotText
-		return checkFieldDefault(f, fieldPath)
-	}
 	if implementsTextUnmarshaler(t) {
-		return fmt.Errorf("%s: struct-kind TextUnmarshaler %s has no built-in wrapper; wrap it in your own type or tag the field opaque:\"true\"", fieldPath, t)
+		return classifyText(f, fieldPath)
+	}
+	if f.Opaque {
+		return fmt.Errorf("%s: opaque:\"true\" needs a type with an UnmarshalText method", fieldPath)
 	}
 	f.Kind = KindStruct
 	sub, err := walkStruct(u, outPkg, fieldPath)
@@ -361,6 +358,29 @@ func classifyStruct(f *Field, t types.Type, u *types.Struct, outPkg *types.Packa
 	prefixSubtree(sub, f.GoName)
 	f.Fields = sub
 	return checkSiblingCollisions(sub, fieldPath)
+}
+
+// namedText reports whether t is a named slice or map with UnmarshalText,
+// like net.IP, which is one text value. A named scalar type with
+// UnmarshalText uses it only when tagged opaque:"true".
+func namedText(f *Field, t types.Type) bool {
+	if _, named := t.(*types.Named); !named || !implementsTextUnmarshaler(t) {
+		return false
+	}
+	switch t.Underlying().(type) {
+	case *types.Slice, *types.Map:
+		return true
+	case *types.Basic:
+		return f.Opaque
+	}
+	return false
+}
+
+// classifyText makes f a leaf decoded with its type's UnmarshalText.
+func classifyText(f *Field, fieldPath string) error {
+	f.Kind = KindStdSlot
+	f.SlotType = slotText
+	return checkFieldDefault(f, fieldPath)
 }
 
 // classifySlot classifies named as a sentinel slot. handled reports whether
@@ -439,11 +459,6 @@ func basicBits(b *types.Basic) int {
 	}
 }
 
-func isStructKind(t types.Type) bool {
-	_, ok := t.Underlying().(*types.Struct)
-	return ok
-}
-
 func implementsTextUnmarshaler(t types.Type) bool {
 	for _, recv := range []types.Type{t, types.NewPointer(t)} {
 		ms := types.NewMethodSet(recv)
@@ -498,11 +513,9 @@ func checkDefault(f *Field) error {
 		return checkDefault(&Field{Kind: f.Elem.Kind, Bits: f.Elem.Bits, SlotType: f.Elem.SlotType, Default: f.Default, Elem: f.Elem.Elem})
 	case KindStdSlot:
 		if f.SlotType == slotText {
-			return fmt.Errorf("default: on an opaque:\"true\" type is not supported; set it in code")
+			return fmt.Errorf("default: on a type decoded with its own UnmarshalText is not supported; set it in code")
 		}
 		return parseStdSlot(f.SlotType, []byte(f.Default))
-	case KindTextLeaf:
-		return fmt.Errorf("default: on a custom TextUnmarshaler type is a generate-time error; set it in code")
 	case KindMapScalar, KindMapStruct:
 		return fmt.Errorf("default: on a map is not supported")
 	case KindSliceStruct:

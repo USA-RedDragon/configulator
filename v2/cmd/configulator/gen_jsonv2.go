@@ -123,15 +123,6 @@ func (e *emitter) fastField(f *Field) []Code {
 		return e.fastMapScalar(f, sel)
 	case KindMapStruct:
 		return e.fastMapStruct(f, sel)
-	case KindTextLeaf:
-		return e.fastScalar(f, '"', func() []Code {
-			return []Code{
-				Var().Id("leaf").Add(fieldGoType(f.Type)),
-				If(Err().Op(":=").Id("leaf").Dot("UnmarshalText").Call(
-					Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
-				sel().Op("=").Op("&").Id("leaf"),
-			}
-		}, "a text scalar")
 	}
 	panic("fastField: unhandled kind for " + f.Tag)
 }
@@ -253,13 +244,6 @@ func scalarElemReader(f *Field, dst string) []Code {
 			If(notText).Block(
 				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a text element (e.g. "+slotHint(f.SlotType)+"), got %v"), Id("v").Dot("Kind").Call()))),
 			Var().Id(dst).Add(slotCode(f)),
-			If(Err().Op(":=").Id(dst).Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
-		)
-	case KindTextLeaf:
-		read = append(read,
-			If(Id("v").Dot("Kind").Call().Op("!=").LitRune('"')).Block(
-				Return(Qual("fmt", "Errorf").Call(Lit(f.Tag+": expected a text element, got %v"), Id("v").Dot("Kind").Call()))),
-			Var().Id(dst).Add(fieldGoType(f.Type)),
 			If(Err().Op(":=").Id(dst).Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v").Dot("String").Call())), Err().Op("!=").Nil()).Block(Return(Err())),
 		)
 	default:

@@ -9,7 +9,7 @@ import (
 // listElemOK reports whether a list or map of elem is supported.
 func listElemOK(elem *Field) bool {
 	switch elem.Kind {
-	case KindString, KindBool, KindInt, KindUint, KindFloat, KindDuration, KindStdSlot, KindTextLeaf:
+	case KindString, KindBool, KindInt, KindUint, KindFloat, KindDuration, KindStdSlot:
 		return true
 	default:
 		return false
@@ -17,14 +17,11 @@ func listElemOK(elem *Field) bool {
 }
 
 // listShadowElem renders the shadow element type of a list or map: the basic
-// type under a named one, the sentinel slot for stdlib types, or the type
-// itself for a TextUnmarshaler.
+// type under a named one, or the sentinel slot for text-decoded types.
 func listShadowElem(elem *Field) *Statement {
 	switch elem.Kind {
 	case KindDuration, KindStdSlot:
 		return slotCode(elem)
-	case KindTextLeaf:
-		return fieldGoType(elem.Type)
 	default:
 		return fieldGoType(elem.Type.Underlying())
 	}
@@ -36,8 +33,6 @@ func listNeedsConv(elem *Field) bool {
 	switch elem.Kind {
 	case KindDuration, KindStdSlot:
 		return true
-	case KindTextLeaf:
-		return false
 	default:
 		_, named := types.Unalias(elem.Type).(*types.Named)
 		return named
@@ -139,11 +134,6 @@ func parseElem(elem *Field, in, out string, fail func() Code) []Code {
 			If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(s)), Err().Op("!=").Nil()).Block(fail()),
 			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 			Id(out).Op(":=").Add(convNamed(elem.Type, Id("sv"))),
-		}
-	case KindTextLeaf:
-		return []Code{
-			Var().Id(out).Add(fieldGoType(elem.Type)),
-			If(Err().Op(":=").Id(out).Dot("UnmarshalText").Call(Index().Byte().Parens(s)), Err().Op("!=").Nil()).Block(fail()),
 		}
 	default:
 		panic("parseElem: unsupported element kind for " + elem.Tag)

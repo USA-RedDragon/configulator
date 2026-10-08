@@ -75,11 +75,6 @@ func (e *emitter) envValue(f *Field, path string) ([]Code, *Statement) {
 			If(Err().Op(":=").Id("slot").Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v"))), Err().Op("!=").Nil()).Block(parseErr()),
 			List(Id("sv"), Id("_")).Op(":=").Id("slot").Dot("Value").Call(),
 		}, convNamed(f.Type, Id("sv"))
-	case KindTextLeaf:
-		return []Code{
-			Var().Id("tl").Add(fieldGoType(f.Type)),
-			If(Err().Op(":=").Id("tl").Dot("UnmarshalText").Call(Index().Byte().Parens(Id("v"))), Err().Op("!=").Nil()).Block(parseErr()),
-		}, Id("tl")
 	case KindSliceScalar:
 		return parseList(f, Qual(pkgImpl, "SplitList").Call(Id("v"), Id("ec").Dot("ArraySeparator")), Lit(path), Id("n"), Id("v")),
 			Id("lst")

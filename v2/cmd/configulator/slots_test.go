@@ -8,6 +8,7 @@ import (
 const slotsFixture = `package fixture
 
 import (
+	"fmt"
 	"net"
 	"net/netip"
 	"time"
@@ -19,10 +20,22 @@ type Cfg struct {
 	Z      *complex128    'name:"z"'
 	Net    *net.IPNet     'name:"net"'
 	Month  *time.Month    'name:"month" default:"March"'
-	Addr   netip.Addr     'name:"addr" opaque:"true"'
-	Peer   *netip.Addr    'name:"peer" opaque:"true"'
-	Allow  []netip.Prefix 'name:"allow" opaque:"true"'
+	Addr   netip.Addr     'name:"addr"'
+	Peer   *netip.Addr    'name:"peer"'
+	Allow  []netip.Prefix 'name:"allow"'
+	IP     net.IP         'name:"ip"'
+	Level  Verbosity         'name:"level" opaque:"true"'
 	Unset  *time.Duration 'name:"unset"'
+}
+
+type Verbosity int
+
+func (l *Verbosity) UnmarshalText(b []byte) error {
+	if string(b) != "debug" {
+		return fmt.Errorf("unknown level %q", b)
+	}
+	*l = -4
+	return nil
 }
 
 func (Cfg) Validate() error { return nil }
@@ -60,12 +73,13 @@ func main() {
 		fmt.Println("unset", cfg.Wait, cfg.Z, cfg.Net, cfg.Peer)
 		return
 	}
-	fmt.Println(*cfg.Wait, *cfg.Grace, *cfg.Z, cfg.Net.String(), *cfg.Month, cfg.Addr, *cfg.Peer, cfg.Allow, cfg.Unset == nil)
+	fmt.Println(*cfg.Wait, *cfg.Grace, *cfg.Z, cfg.Net.String(), *cfg.Month, cfg.Addr, *cfg.Peer, cfg.Allow, cfg.IP, cfg.Level, cfg.Unset == nil)
 }
 `
 
 // TestOptionalSlotsAndOpaque loads pointers to slot types (durations,
-// complex numbers, stdlib types) and opaque:"true" fields from each layer.
+// complex numbers, stdlib types) and fields decoded with their own
+// UnmarshalText from each layer.
 func TestOptionalSlotsAndOpaque(t *testing.T) {
 	t.Parallel()
 	stdMain := strings.NewReplacer(
@@ -76,11 +90,11 @@ func TestOptionalSlotsAndOpaque(t *testing.T) {
 	).Replace(slotsMain)
 	files := map[string]string{
 		fixtureFile:    bt(slotsFixture),
-		cfgJSON:        `{"wait": "1m", "z": 2, "net": "10.0.0.0/8", "month": "July", "addr": "1.2.3.4", "peer": "::1", "allow": ["10.0.0.0/8"]}`,
-		cfgYAML:        "wait: 1m\nz: 2\nnet: 10.0.0.0/8\nmonth: July\naddr: 1.2.3.4\npeer: '::1'\nallow: [10.0.0.0/8]\n",
+		cfgJSON:        `{"wait": "1m", "z": 2, "net": "10.0.0.0/8", "month": "July", "addr": "1.2.3.4", "peer": "::1", "allow": ["10.0.0.0/8"], "ip": "1.1.1.1", "level": "debug"}`,
+		cfgYAML:        "wait: 1m\nz: 2\nnet: 10.0.0.0/8\nmonth: July\naddr: 1.2.3.4\npeer: '::1'\nallow: [10.0.0.0/8]\nip: 1.1.1.1\nlevel: debug\n",
 		"mapping.yaml": "peer:\n  ip: 1.2.3.4\n",
 	}
-	const want = "1m0s 5s (2+0i) 10.0.0.0/8 July 1.2.3.4 ::1 [10.0.0.0/8] true"
+	const want = "1m0s 5s (2+0i) 10.0.0.0/8 July 1.2.3.4 ::1 [10.0.0.0/8] 1.1.1.1 -4 true"
 	cases := []struct {
 		name string
 		env  []string
@@ -89,8 +103,8 @@ func TestOptionalSlotsAndOpaque(t *testing.T) {
 	}{
 		{"json-file", []string{cfgFileJSON}, nil, want},
 		{"yaml-file", []string{"CFG_FILE=cfg.yaml"}, nil, want},
-		{"env-vars", []string{"FX_WAIT=1m", "FX_Z=2", "FX_NET=10.0.0.0/8", "FX_MONTH=7", "FX_ADDR=1.2.3.4", "FX_PEER=::1", "FX_ALLOW=10.0.0.0/8"}, nil, want},
-		{"flag-args", nil, []string{"--wait=1m", "--z=2", "--net=10.0.0.0/8", "--month=July", "--addr=1.2.3.4", "--peer=::1"}, "1m0s 5s (2+0i) 10.0.0.0/8 July 1.2.3.4 ::1 [] true"},
+		{"env-vars", []string{"FX_WAIT=1m", "FX_Z=2", "FX_NET=10.0.0.0/8", "FX_MONTH=7", "FX_ADDR=1.2.3.4", "FX_PEER=::1", "FX_ALLOW=10.0.0.0/8", "FX_IP=1.1.1.1", "FX_LEVEL=debug"}, nil, want},
+		{"flag-args", nil, []string{"--wait=1m", "--z=2", "--net=10.0.0.0/8", "--month=July", "--addr=1.2.3.4", "--peer=::1", "--ip=1.1.1.1", "--level=debug"}, "1m0s 5s (2+0i) 10.0.0.0/8 July 1.2.3.4 ::1 [] 1.1.1.1 -4 true"},
 		{"bad-env", []string{"FX_PEER=nope"}, nil, `error: peer: cannot parse "nope" from FX_PEER`},
 		{"yaml-mapping", []string{"CFG_FILE=mapping.yaml"}, nil, "error: decoding mapping.yaml"},
 	}
@@ -122,7 +136,7 @@ func TestOptionalSlotsAndOpaque(t *testing.T) {
 func TestOpaqueGenerateErrors(t *testing.T) {
 	t.Parallel()
 	for name, field := range map[string]string{
-		"default":       "A netip.Addr `name:\"a\" opaque:\"true\" default:\"1.2.3.4\"`",
+		"default":       "A netip.Addr `name:\"a\" default:\"1.2.3.4\"`",
 		"no-unmarshal":  "A struct{ X int } `name:\"a\" opaque:\"true\"`",
 		"named-no-text": "A Plain `name:\"a\" opaque:\"true\"`",
 	} {

@@ -47,7 +47,7 @@ func (e *emitter) applyToFields(fields []*Field, src, pathPrefix string) []Code 
 		sel := Id(src).Dot(goName(f))
 		recFile := Id("set").Call(Lit(path), Qual(pkgCfg, "LayerFile"), Id("file"))
 		switch f.Kind {
-		case KindString, KindBool, KindInt, KindUint, KindFloat, KindTextLeaf:
+		case KindString, KindBool, KindInt, KindUint, KindFloat:
 			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
 				cfgSel("cfg", f).Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))), recFile,
 			))
@@ -198,7 +198,7 @@ func (e *emitter) elemApply(fields []*Field, src, dst *Statement, p pathExpr, de
 		fp := p.child(f.Tag)
 		rec := Id("set").Call(fp.code(), Qual(pkgCfg, "LayerFile"), Id("file"))
 		switch f.Kind {
-		case KindString, KindBool, KindInt, KindUint, KindFloat, KindTextLeaf:
+		case KindString, KindBool, KindInt, KindUint, KindFloat:
 			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
 				target.Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))), rec,
 			))
@@ -243,7 +243,7 @@ func (e *emitter) elemApply(fields []*Field, src, dst *Statement, p pathExpr, de
 func (e *emitter) pointerApply(f *Field, sel, target *Statement, p pathExpr, depth int) []Code {
 	rec := Id("set").Call(p.code(), Qual(pkgCfg, "LayerFile"), Id("file"))
 	switch f.Elem.Kind {
-	case KindString, KindBool, KindInt, KindUint, KindFloat, KindTextLeaf:
+	case KindString, KindBool, KindInt, KindUint, KindFloat:
 		return []Code{If(sel.Clone().Op("!=").Nil()).Block(
 			Id("v").Op(":=").Add(convNamed(f.Elem.Type, Op("*").Add(sel.Clone()))),
 			target.Clone().Op("=").Op("&").Id("v"),

@@ -99,8 +99,8 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
     - `net.HardwareAddr` (`aa:bb:cc:dd:ee:ff`)
     - `url.URL`
     - `os.FileMode` (`0644`)
-  - Any other type with an `UnmarshalText` method. A struct type, such as
-    `netip.Addr`, needs the `opaque:"true"` tag
+  - Any other struct, slice or map type with an `UnmarshalText` method,
+    such as `netip.Addr` or `net.IP`
 - `Report()` lists where each field's value came from: its default, the
   config file, an environment variable or a flag, naming which one
 - Fields tagged `secret:"true"` are redacted in `PrintConfig()` output and in
@@ -125,7 +125,7 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
 | `short:"p"` | Flag shorthand (pflag only). `-h` and duplicates are rejected when generating |
 | `secret:"true"` | Redact in `PrintConfig()`, error messages, generated docs and flag help |
 | `required:"true"` | `Load()` fails if nothing sets it |
-| `opaque:"true"` | Decode the type with its `UnmarshalText` method |
+| `opaque:"true"` | Decode a named scalar type with its `UnmarshalText` method instead of as a number or string |
 
 Env var names are the prefix plus each level's name, uppercased, with `-`
 turned into `_`: `http.listen-port` is `MYAPP_HTTP_LISTEN_PORT`.

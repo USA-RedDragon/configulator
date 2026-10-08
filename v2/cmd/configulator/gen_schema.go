@@ -49,7 +49,7 @@ func schemaField(f *Field) map[string]any {
 		s["description"] = f.Desc
 	}
 	switch f.Kind {
-	case KindString, KindDuration, KindStdSlot, KindTextLeaf:
+	case KindString, KindDuration, KindStdSlot:
 		s["type"] = "string"
 	case KindBool:
 		s["type"] = "boolean"
@@ -222,7 +222,7 @@ func sampleValue(f *Field) string {
 	}
 	if f.Default != "" {
 		switch f.Kind {
-		case KindString, KindDuration, KindStdSlot, KindTextLeaf:
+		case KindString, KindDuration, KindStdSlot:
 			return strconv.Quote(f.Default)
 		case KindSliceScalar:
 			parts := strings.Split(f.Default, ",")
@@ -235,7 +235,7 @@ func sampleValue(f *Field) string {
 		}
 	}
 	switch f.Kind {
-	case KindString, KindTextLeaf, KindStdSlot:
+	case KindString, KindStdSlot:
 		return `""`
 	case KindBool:
 		return "false"
@@ -381,7 +381,7 @@ func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagP
 
 func markdownType(f *Field) string {
 	switch f.Kind {
-	case KindString, KindDuration, KindStdSlot, KindTextLeaf:
+	case KindString, KindDuration, KindStdSlot:
 		return "string"
 	case KindBool:
 		return "boolean"

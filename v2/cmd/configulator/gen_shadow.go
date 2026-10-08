@@ -76,8 +76,6 @@ func (e *emitter) shadowFieldType(f *Field) *Statement {
 		return Op("*").Add(fieldGoType(f.Type.Underlying()))
 	case KindDuration, KindStdSlot:
 		return Op("*").Add(slotCode(f))
-	case KindTextLeaf:
-		return Op("*").Add(fieldGoType(f.Type))
 	case KindStruct:
 		e.ensureShadow(f)
 		return Op("*").Id(e.shadowFor(f.Type))

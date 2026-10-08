@@ -2,6 +2,7 @@ package main
 
 import (
 	"go/types"
+	"strconv"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
@@ -76,9 +77,9 @@ func (e *emitter) applyToFields(fields []*Field, src, pathPrefix string) []Code 
 				cfgSel("cfg", f).Op("=").Op("*").Add(sel.Clone()), recFile,
 			))
 		case KindSliceStruct:
-			out = append(out, e.applyToSliceStruct(f, src, path)...)
+			out = append(out, e.collApply(f, sel, cfgSel("cfg", f), pathExpr{suffix: path}, 0)...)
 		case KindMapStruct:
-			out = append(out, e.applyToMapStruct(f, src, path)...)
+			out = append(out, e.collApply(f, sel, cfgSel("cfg", f), pathExpr{suffix: path}, 0)...)
 		default:
 		}
 	}
@@ -86,8 +87,7 @@ func (e *emitter) applyToFields(fields []*Field, src, pathPrefix string) []Code 
 }
 
 // emitNestedApplyTo emits nothing: nested structs are merged inline in the
-// parent's applyTo. Slice and map element shadows set their own defaults
-// in applyToSliceStruct/applyToMapStruct.
+// parent's applyTo, and collApply sets element defaults.
 func (e *emitter) emitNestedApplyTo(*Field) {}
 
 func slotHint(slot string) string {
@@ -116,144 +116,184 @@ func castStd(f *Field) *Statement {
 }
 
 func (e *emitter) applyToPointer(f *Field, src, path string) []Code {
-	sel := Id(src).Dot(goName(f))
-	recFile := Id("set").Call(Lit(path), Qual(pkgCfg, "LayerFile"), Id("file"))
+	return e.pointerApply(f, Id(src).Dot(goName(f)), cfgSel("cfg", f), pathExpr{suffix: path}, 0)
+}
+
+// pathExpr is an origin path: a literal known at generate time, or a
+// runtime string variable followed by a literal suffix.
+type pathExpr struct {
+	v      string
+	suffix string
+}
+
+func (p pathExpr) child(tag string) pathExpr {
+	return pathExpr{v: p.v, suffix: p.suffix + "." + tag}
+}
+
+// with returns the path followed by lit as a single expression.
+func (p pathExpr) with(lit string) *Statement {
+	if p.v == "" {
+		return Lit(p.suffix + lit)
+	}
+	if p.suffix+lit == "" {
+		return Id(p.v)
+	}
+	return Id(p.v).Op("+").Lit(p.suffix + lit)
+}
+
+func (p pathExpr) code() *Statement { return p.with("") }
+
+func depthName(name string, depth int) string {
+	if depth == 0 {
+		return name
+	}
+	return name + strconv.Itoa(depth)
+}
+
+// elemDefaults sets the defaults of a newly constructed element, recursing
+// into nested structs, and records their origin.
+func (e *emitter) elemDefaults(fields []*Field, dst *Statement, p pathExpr) []Code {
+	var out []Code
+	for _, f := range fields {
+		target := dst.Clone().Dot(goName(f))
+		fp := p.child(f.Tag)
+		if f.Kind == KindStruct {
+			out = append(out, e.elemDefaults(f.Fields, target, fp)...)
+			continue
+		}
+		if f.Default == "" {
+			continue
+		}
+		var assign []Code
+		if f.Kind == KindPointer {
+			prep, val := defaultValue(f.Elem, f.Default, fp.suffix)
+			assign = append(assign, prep...)
+			assign = append(assign, Id("d").Op(":=").Add(val), target.Op("=").Op("&").Id("d"))
+		} else {
+			prep, val := defaultValue(f, f.Default, fp.suffix)
+			assign = append(assign, prep...)
+			assign = append(assign, target.Op("=").Add(val))
+		}
+		if len(assign) == 1 {
+			out = append(out, assign[0])
+		} else {
+			out = append(out, Block(assign...))
+		}
+		out = append(out, Id("set").Call(fp.code(), Qual(pkgCfg, "LayerDefault"), Lit("element default")))
+	}
+	return out
+}
+
+// elemApply copies the fields present in the shadow src onto dst.
+func (e *emitter) elemApply(fields []*Field, src, dst *Statement, p pathExpr, depth int) []Code {
+	out := make([]Code, 0, len(fields))
+	for _, f := range fields {
+		sel := src.Clone().Dot(goName(f))
+		target := dst.Clone().Dot(goName(f))
+		fp := p.child(f.Tag)
+		rec := Id("set").Call(fp.code(), Qual(pkgCfg, "LayerFile"), Id("file"))
+		switch f.Kind {
+		case KindString, KindBool, KindInt, KindUint, KindFloat, KindTextLeaf:
+			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
+				target.Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))), rec,
+			))
+		case KindDuration, KindStdSlot:
+			hint := `"30s"`
+			if f.Kind == KindStdSlot {
+				hint = slotHint(f.SlotType)
+			}
+			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
+				List(Id("v"), Id("ok")).Op(":=").Add(sel.Clone()).Dot("Value").Call(),
+				If(Op("!").Id("ok")).Block(
+					Return(Op("&").Qual(pkgCfg, "OpaqueSpellingError").Values(Dict{
+						Id("Path"): fp.code(), Id("Hint"): Lit(hint),
+					})),
+				),
+				target.Op("=").Add(castStd(f)), rec,
+			))
+		case KindSliceScalar, KindMapScalar:
+			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
+				target.Op("=").Op("*").Add(sel.Clone()), rec,
+			))
+		case KindStruct:
+			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
+				e.elemApply(f.Fields, sel, target, fp, depth)...,
+			))
+		case KindPointer:
+			out = append(out, e.pointerApply(f, sel, target, fp, depth)...)
+		case KindSliceStruct, KindMapStruct:
+			out = append(out, e.collApply(f, sel, target, fp, depth)...)
+		default:
+		}
+	}
+	return out
+}
+
+// pointerApply copies an optional field from the shadow, allocating the
+// target on first write.
+func (e *emitter) pointerApply(f *Field, sel, target *Statement, p pathExpr, depth int) []Code {
+	rec := Id("set").Call(p.code(), Qual(pkgCfg, "LayerFile"), Id("file"))
 	switch f.Elem.Kind {
 	case KindString, KindBool, KindInt, KindUint, KindFloat:
 		return []Code{If(sel.Clone().Op("!=").Nil()).Block(
 			Id("v").Op(":=").Op("*").Add(sel.Clone()),
-			cfgSel("cfg", f).Op("=").Op("&").Id("v"),
-			recFile,
+			target.Clone().Op("=").Op("&").Id("v"),
+			rec,
 		)}
 	case KindStruct:
-		elemType := fieldGoType(f.Elem.Type)
-		defaults := e.elementDefaults(f.Elem.Fields, path)
-		apply := e.applyElementFields(f.Elem.Fields, src+"."+goName(f), "e", path)
+		n := depthName("e", depth)
+		defaults := e.elemDefaults(f.Elem.Fields, Id(n), p)
+		apply := e.elemApply(f.Elem.Fields, sel, Id(n), p, depth+1)
 		inner := make([]Code, 0, 3+len(defaults)+len(apply))
-		inner = append(inner, Id("e").Op(":=").Add(elemType.Clone()).Values())
+		inner = append(inner, Id(n).Op(":=").Add(fieldGoType(f.Elem.Type)).Values())
 		inner = append(inner, defaults...)
-		inner = append(inner, If(cfgSel("cfg", f).Op("!=").Nil()).Block(
-			Id("e").Op("=").Op("*").Add(cfgSel("cfg", f)),
+		inner = append(inner, If(target.Clone().Op("!=").Nil()).Block(
+			Id(n).Op("=").Op("*").Add(target.Clone()),
 		))
 		inner = append(inner, apply...)
-		inner = append(inner, cfgSel("cfg", f).Op("=").Op("&").Id("e"))
+		inner = append(inner, target.Clone().Op("=").Op("&").Id(n))
 		return []Code{If(sel.Clone().Op("!=").Nil()).Block(inner...)}
 	default:
-		panic("applyToPointer: unsupported element kind at " + path)
+		panic("pointerApply: unsupported element kind at " + p.suffix)
 	}
 }
 
-// elementDefaults sets the element defaults, and records their origin, on
-// a newly constructed element.
-func (e *emitter) elementDefaults(fields []*Field, pathExpr string) []Code {
-	var out []Code
-	for _, f := range fields {
-		if f.Default == "" {
-			continue
-		}
-		switch f.Kind {
-		case KindString:
-			out = append(out, Id("e").Dot(goName(f)).Op("=").Lit(f.Default))
-		case KindUint, KindInt:
-			out = append(out, Id("e").Dot(goName(f)).Op("=").Add(castLit(f, intLit(f.Kind, f.Default))))
-		default:
-			panic("element default kind not supported yet")
-		}
-		out = append(out, Id("set").Call(
-			Lit(pathExpr+"."+f.Tag), Qual(pkgCfg, "LayerDefault"), Lit("element default"),
-		))
-	}
-	return out
-}
-
-// elementDefaultsExpr is elementDefaults for index/key paths built at runtime.
-func (e *emitter) elementDefaultsExpr(fields []*Field, pathVar string) []Code {
-	var out []Code
-	for _, f := range fields {
-		if f.Default == "" {
-			continue
-		}
-		switch f.Kind {
-		case KindString:
-			out = append(out, Id("e").Dot(goName(f)).Op("=").Lit(f.Default))
-		case KindUint, KindInt:
-			out = append(out, Id("e").Dot(goName(f)).Op("=").Add(castLit(f, intLit(f.Kind, f.Default))))
-		default:
-			panic("element default kind not supported yet")
-		}
-		out = append(out, Id("set").Call(
-			Id(pathVar).Op("+").Lit("."+f.Tag), Qual(pkgCfg, "LayerDefault"), Lit("element default"),
-		))
-	}
-	return out
-}
-
-func (e *emitter) applyElementFields(fields []*Field, src, dst, path string) []Code {
-	var out []Code
-	for _, f := range fields {
-		sel := Id(src).Dot(goName(f))
-		switch f.Kind {
-		case KindString, KindBool, KindInt, KindUint, KindFloat:
-			out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
-				Id(dst).Dot(goName(f)).Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))),
-				Id("set").Call(Lit(path+"."+f.Tag), Qual(pkgCfg, "LayerFile"), Id("file")),
-			))
-		default:
-			panic("nested element field kind not supported yet")
-		}
-	}
-	return out
-}
-
-// applyElementFieldsExpr is applyElementFields for index/key paths built at
-// runtime.
-func (e *emitter) applyElementFieldsExpr(fields []*Field, src, dst, pathVar string) []Code {
-	out := make([]Code, 0, len(fields))
-	for _, f := range fields {
-		sel := Id(src).Dot(goName(f))
-		out = append(out, If(sel.Clone().Op("!=").Nil()).Block(
-			Id(dst).Dot(goName(f)).Op("=").Add(convNamed(f.Type, Op("*").Add(sel.Clone()))),
-			Id("set").Call(Id(pathVar).Op("+").Lit("."+f.Tag), Qual(pkgCfg, "LayerFile"), Id("file")),
-		))
-	}
-	return out
-}
-
-func (e *emitter) applyToSliceStruct(f *Field, src, path string) []Code {
-	sel := Id(src).Dot(goName(f))
+// collApply rebuilds a list or map of structs from its shadow, applying
+// element defaults to each element first.
+func (e *emitter) collApply(f *Field, sel, target *Statement, p pathExpr, depth int) []Code {
 	elemType := fieldGoType(f.Elem.Type)
-	keyExpr := Id("idx").Op(":=").Lit(path+"[").Op("+").Qual("strconv", "Itoa").Call(Id("i")).Op("+").Lit("]")
-	defaults := e.elementDefaultsExpr(f.Elem.Fields, "idx")
-	apply := e.applyElementFieldsExpr(f.Elem.Fields, "esh", "e", "idx")
+	el, esh, outName := depthName("e", depth), depthName("esh", depth), depthName("out", depth)
+	var idx, keyVar string
+	var keyStmt, makeOut Code
+	var rangeVars *Statement
+	if f.Kind == KindSliceStruct {
+		i := depthName("i", depth)
+		idx = depthName("idx", depth)
+		keyStmt = Id(idx).Op(":=").Add(p.with("[")).Op("+").Qual("strconv", "Itoa").Call(Id(i)).Op("+").Lit("]")
+		makeOut = Id(outName).Op(":=").Make(Index().Add(elemType.Clone()), Len(Op("*").Add(sel.Clone())))
+		rangeVars = List(Id(i), Id(esh))
+		keyVar = i
+	} else {
+		k := depthName("k", depth)
+		idx = depthName("key", depth)
+		keyStmt = Id(idx).Op(":=").Add(p.with(".")).Op("+").Id(e.quoteKeyName()).Call(Id(k))
+		makeOut = Id(outName).Op(":=").Make(Map(String()).Add(elemType.Clone()), Len(Op("*").Add(sel.Clone())))
+		rangeVars = List(Id(k), Id(esh))
+		keyVar = k
+	}
+	ep := pathExpr{v: idx}
+	defaults := e.elemDefaults(f.Elem.Fields, Id(el), ep)
+	apply := e.elemApply(f.Elem.Fields, Id(esh), Id(el), ep, depth+1)
 	loop := make([]Code, 0, 3+len(defaults)+len(apply))
-	loop = append(loop, Var().Id("e").Add(elemType.Clone()), keyExpr)
+	loop = append(loop, Var().Id(el).Add(elemType.Clone()), keyStmt)
 	loop = append(loop, defaults...)
 	loop = append(loop, apply...)
-	loop = append(loop, Id("out").Index(Id("i")).Op("=").Id("e"))
+	loop = append(loop, Id(outName).Index(Id(keyVar)).Op("=").Id(el))
 	return []Code{If(sel.Clone().Op("!=").Nil()).Block(
-		Id("out").Op(":=").Make(Index().Add(elemType.Clone()), Len(Op("*").Add(sel.Clone()))),
-		For(List(Id("i"), Id("esh")).Op(":=").Range().Op("*").Add(sel.Clone())).Block(loop...),
-		cfgSel("cfg", f).Op("=").Id("out"),
-		Id("set").Call(Lit(path), Qual(pkgCfg, "LayerFile"), Id("file")),
-	)}
-}
-
-func (e *emitter) applyToMapStruct(f *Field, src, path string) []Code {
-	sel := Id(src).Dot(goName(f))
-	elemType := fieldGoType(f.Elem.Type)
-	keyExpr := Id("key").Op(":=").Lit(path + ".").Op("+").Id(e.quoteKeyName()).Call(Id("k"))
-	defaults := e.elementDefaultsExpr(f.Elem.Fields, "key")
-	apply := e.applyElementFieldsExpr(f.Elem.Fields, "esh", "e", "key")
-	loop := make([]Code, 0, 3+len(defaults)+len(apply))
-	loop = append(loop, Var().Id("e").Add(elemType.Clone()), keyExpr)
-	loop = append(loop, defaults...)
-	loop = append(loop, apply...)
-	loop = append(loop, Id("out").Index(Id("k")).Op("=").Id("e"))
-	return []Code{If(sel.Clone().Op("!=").Nil()).Block(
-		Id("out").Op(":=").Make(Map(String()).Add(elemType.Clone()), Len(Op("*").Add(sel.Clone()))),
-		For(List(Id("k"), Id("esh")).Op(":=").Range().Op("*").Add(sel.Clone())).Block(loop...),
-		cfgSel("cfg", f).Op("=").Id("out"),
-		Id("set").Call(Lit(path), Qual(pkgCfg, "LayerFile"), Id("file")),
+		makeOut,
+		For(rangeVars.Op(":=").Range().Op("*").Add(sel.Clone())).Block(loop...),
+		target.Clone().Op("=").Id(outName),
+		Id("set").Call(p.code(), Qual(pkgCfg, "LayerFile"), Id("file")),
 	)}
 }
 

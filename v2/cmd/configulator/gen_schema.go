@@ -193,7 +193,7 @@ func sampleValue(f *Field) string {
 // file-only, so their env and flag cells are em-dash characters.
 func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byte {
 	var rows [][6]string
-	markdownFields(&rows, m.Fields, "", envPrefix, envSep, "", flagSep, true)
+	markdownFields(&rows, m.Fields, "", envPrefix, envSep, "", flagSep, true, true)
 
 	header := [6]string{"Key", "Type", "Default", "Environment", "Flag", "Description"}
 	var widths [6]int
@@ -233,7 +233,7 @@ func emitMarkdown(m *Model, flagSep, envPrefix, envSep string, title bool) []byt
 
 func runeLen(s string) int { return len([]rune(s)) }
 
-func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagPath, flagSep string, reachable bool) {
+func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagPath, flagSep string, envOK, flagOK bool) {
 	for _, f := range fields {
 		key := f.Tag
 		if path != "" {
@@ -245,10 +245,10 @@ func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagP
 			fFlag = flagPath + flagSep + f.flagSeg()
 		}
 		envCell, flagCell := "\u2014", "\u2014"
-		if reachable && !f.EnvSkip {
+		if envOK && !f.EnvSkip {
 			envCell = "`" + fEnv + "`"
 		}
-		if reachable && !f.FlagSkip {
+		if flagOK && !f.FlagSkip {
 			flagCell = "`--" + fFlag + "`"
 		}
 		desc := f.Desc
@@ -272,13 +272,13 @@ func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagP
 		}
 		switch f.Kind {
 		case KindStruct:
-			markdownFields(rows, f.Fields, key, fEnv+envSep, envSep, fFlag, flagSep, reachable)
+			markdownFields(rows, f.Fields, key, fEnv+envSep, envSep, fFlag, flagSep, envOK && !f.EnvSkip, flagOK && !f.FlagSkip)
 		case KindSliceStruct:
 			*rows = append(*rows, [6]string{"`" + key + "`", "list of objects", "", "\u2014", "\u2014", desc})
-			markdownFields(rows, f.Elem.Fields, key+"[]", "", envSep, "", flagSep, false)
+			markdownFields(rows, f.Elem.Fields, key+"[]", "", envSep, "", flagSep, false, false)
 		case KindMapStruct:
 			*rows = append(*rows, [6]string{"`" + key + "`", "map of objects", "", "\u2014", "\u2014", desc})
-			markdownFields(rows, f.Elem.Fields, key+".<key>", "", envSep, "", flagSep, false)
+			markdownFields(rows, f.Elem.Fields, key+".<key>", "", envSep, "", flagSep, false, false)
 		case KindMapScalar:
 			*rows = append(*rows, [6]string{"`" + key + "`", "map of " + markdownType(f.Elem), "", "\u2014", "\u2014", desc})
 		case KindSliceScalar:
@@ -286,7 +286,7 @@ func markdownFields(rows *[][6]string, fields []*Field, path, env, envSep, flagP
 		case KindPointer:
 			inner := *f.Elem
 			if inner.Kind == KindStruct {
-				markdownFields(rows, inner.Fields, key, fEnv+envSep, envSep, fFlag, flagSep, reachable)
+				markdownFields(rows, inner.Fields, key, fEnv+envSep, envSep, fFlag, flagSep, envOK && !f.EnvSkip, flagOK && !f.FlagSkip)
 				continue
 			}
 			*rows = append(*rows, [6]string{"`" + key + "`", markdownType(&inner), def, envCell, flagCell, desc})

@@ -14,3 +14,10 @@
   language: system
   pass_filenames: false
   files: '\.go$'
+- id: configulator-sample
+  name: configulator sample
+  description: Write a sample config file, such as config.example.yaml.
+  entry: go tool configulator -sample
+  language: system
+  pass_filenames: false
+  files: '\.(go|ya?ml)$'

@@ -48,7 +48,7 @@ func TestUpdateMarkdownFileCheck(t *testing.T) {
 	}
 
 	changed, err := updateMarkdownFile(path, []byte("| t |"), true)
-	if !changed || !errors.Is(err, errMarkdownStale) {
+	if !changed || !errors.Is(err, errStale) {
 		t.Fatalf("check on a stale file: changed=%v err=%v", changed, err)
 	}
 	if b, _ := os.ReadFile(path); strings.Contains(string(b), "| t |") {
@@ -61,5 +61,38 @@ func TestUpdateMarkdownFileCheck(t *testing.T) {
 	changed, err = updateMarkdownFile(path, []byte("| t |"), true)
 	if changed || err != nil {
 		t.Fatalf("check on an up-to-date file: changed=%v err=%v", changed, err)
+	}
+}
+
+func TestUpdateSampleFile(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "config.example.yaml")
+
+	changed, err := updateSampleFile(path, []byte("a: 1\n"), true)
+	if !changed || !errors.Is(err, errStale) {
+		t.Fatalf("check on a missing file: changed=%v err=%v", changed, err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("check mode created the file")
+	}
+
+	if changed, err = updateSampleFile(path, []byte("a: 1\n"), false); !changed || err != nil {
+		t.Fatalf("create: changed=%v err=%v", changed, err)
+	}
+	if err := os.Chmod(path, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err = updateSampleFile(path, []byte("a: 1\n"), true); changed || err != nil {
+		t.Fatalf("check on an up-to-date file: changed=%v err=%v", changed, err)
+	}
+	if changed, err = updateSampleFile(path, []byte("a: 2\n"), false); !changed || err != nil {
+		t.Fatalf("update: changed=%v err=%v", changed, err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "a: 2\n" || info.Mode().Perm() != 0o640 {
+		t.Fatalf("got %q mode %v", b, info.Mode().Perm())
 	}
 }

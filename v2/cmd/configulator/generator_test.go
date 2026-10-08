@@ -515,3 +515,105 @@ func TestStdlibTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestNestedCollections(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		fixtureFile: "package fixture\n\n" +
+			"type Rule struct {\n" +
+			"\tFrom  int  `name:\"from\"`\n" +
+			"\tRange int  `name:\"range\" default:\"1\"`\n" +
+			"\tOn    bool `name:\"on\" default:\"true\"`\n" +
+			"}\n\n" +
+			"type Level struct {\n\tLevel int `name:\"level\" default:\"7\"`\n}\n\n" +
+			"type Peer struct {\n" +
+			"\tName  string          `name:\"name\"`\n" +
+			"\tSlots int             `name:\"slots\" default:\"3\"`\n" +
+			"\tRules []Rule          `name:\"rules\"`\n" +
+			"\tTags  map[string]Rule `name:\"tags\"`\n" +
+			"\tInner Level           `name:\"inner\"`\n" +
+			"\tOpt   *Level          `name:\"opt\"`\n" +
+			"}\n\n" +
+			"type Cfg struct {\n" +
+			"\tPeers  []Peer          `name:\"peers\"`\n" +
+			"\tByName map[string]Peer `name:\"by-name\"`\n" +
+			"}\n" + validateStub,
+	}
+	dir := writeModule(t, files)
+	named, outPkg, err := loadPackage(dir, "Cfg", hermeticEnv(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := buildModel(named, outPkg, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := emit(m, flagsNone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "cfg_configulator.go"), out, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	main := "package main\n\nimport (\n\t\"fmt\"\n\n\tconfigulator \"github.com/USA-RedDragon/configulator/v2\"\n\tfixture \"fixture\"\n)\n\n" +
+		"func main() {\n\tc := configulator.New(fixture.CfgSchema()).WithFile(&configulator.FileOptions{Search: []string{\"cfg.json\"}})\n" +
+		"\tcfg, err := c.Load()\n\tif err != nil {\n\t\tpanic(err)\n\t}\n" +
+		"\tp := cfg.Peers[0]\n" +
+		"\tfmt.Println(p.Name, p.Slots, p.Rules, p.Tags[\"x\"], p.Inner.Level, p.Opt.Level, cfg.ByName[\"b\"].Slots, cfg.ByName[\"b\"].Rules)\n" +
+		"\tfor _, path := range []string{\"peers[0].rules[0].range\", \"peers[0].rules[1].range\", \"by-name.b.rules[0].on\", \"peers[0].opt.level\"} {\n" +
+		"\t\to, _ := c.Report().Origin(path)\n\t\tfmt.Println(path, o.Layer)\n\t}\n}\n"
+	if err := os.MkdirAll(filepath.Join(dir, "cmd", "run"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "cmd", "run", "main.go"), []byte(main), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	doc := `{"peers": [{"name": "a", "rules": [{"from": 1}, {"from": 2, "range": 5, "on": false}], "tags": {"x": {"from": 9}}, "opt": {}}],` +
+		` "by-name": {"b": {"name": "b", "rules": [{"from": 4}]}}}`
+	if err := os.WriteFile(filepath.Join(dir, "cfg.json"), []byte(doc), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.CommandContext(t.Context(), "go", "run", "./cmd/run")
+	cmd.Dir = dir
+	cmd.Env = hermeticEnv(t)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	o, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("nested collections do not build/run: %v\n%s", err, stderr.String())
+	}
+	want := "a 3 [{1 1 true} {2 5 false}] {9 1 true} 7 7 3 [{4 1 true}]\n" +
+		"peers[0].rules[0].range default\n" +
+		"peers[0].rules[1].range file\n" +
+		"by-name.b.rules[0].on default\n" +
+		"peers[0].opt.level default\n"
+	if got := string(o); got != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestMarkdownSkippedSubtree(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, "package fixture\n\n"+
+		"type Store struct {\n\tURL string `name:\"url\"`\n}\n\n"+
+		"type Cfg struct {\n"+
+		"\tDB    Store  `name:\"db\" env:\"-\"`\n"+
+		"\tCache *Store `name:\"cache\" flag:\"-\"`\n"+
+		"}\n"+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var squeezed []string
+	for line := range strings.SplitSeq(string(emitMarkdown(m, ".", "APP_", "_", false)), "\n") {
+		squeezed = append(squeezed, strings.Join(strings.Fields(line), " "))
+	}
+	md := strings.Join(squeezed, "\n")
+	for _, want := range []string{
+		"| `db.url` | string | | \u2014 | `--db.url` | |",
+		"| `cache.url` | string | | `APP_CACHE_URL` | \u2014 | |",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown missing %q:\n%s", want, md)
+		}
+	}
+}

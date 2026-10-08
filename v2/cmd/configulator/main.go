@@ -27,7 +27,8 @@ func main() {
 	envSep := flag.String("env-separator", "_", "env var separator shown in -markdown output")
 	flagSep := flag.String("flag-separator", ".", "flag separator shown in -markdown output")
 	markdownFile := flag.String("markdown-file", "", "with -markdown, write the table between the "+markdownBegin+" and "+markdownEnd+" markers in this file instead of stdout")
-	check := flag.Bool("check", false, "with -markdown-file, change nothing and exit 1 if the file is out of date")
+	sampleFile := flag.String("sample-file", "", "with -sample, write the sample to this file instead of stdout")
+	check := flag.Bool("check", false, "with -markdown-file or -sample-file, change nothing and exit 1 if the file is out of date")
 	pkgDir := flag.String("dir", ".", "directory of the package that declares -type")
 	flag.Parse()
 
@@ -46,8 +47,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "configulator: -markdown-file needs -markdown")
 		os.Exit(2)
 	}
-	if *check && *markdownFile == "" {
-		fmt.Fprintln(os.Stderr, "configulator: -check needs -markdown-file")
+	if *sampleFile != "" && !*sample {
+		fmt.Fprintln(os.Stderr, "configulator: -sample-file needs -sample")
+		os.Exit(2)
+	}
+	if *check && *markdownFile == "" && *sampleFile == "" {
+		fmt.Fprintln(os.Stderr, "configulator: -check needs -markdown-file or -sample-file")
 		os.Exit(2)
 	}
 
@@ -92,20 +97,14 @@ func main() {
 			}
 			os.Stdout.Write(b)
 		case *sample:
-			writeSample(model, *format)
-		case *markdown:
-			table := emitMarkdown(model, *flagSep, *envPrefix, *envSep, *markdownFile == "")
-			if *markdownFile == "" {
-				os.Stdout.Write(table)
-				return
-			}
-			changed, err := updateMarkdownFile(*markdownFile, table, *check)
+			b, err := sampleBytes(model, *format)
 			if err != nil {
 				fatal(err)
 			}
-			if changed {
-				fmt.Fprintf(os.Stderr, "configulator: updated %s\n", *markdownFile)
-			}
+			writeOutput(*sampleFile, b, *check, updateSampleFile)
+		case *markdown:
+			table := emitMarkdown(model, *flagSep, *envPrefix, *envSep, *markdownFile == "")
+			writeOutput(*markdownFile, table, *check, updateMarkdownFile)
 		}
 		return
 	}
@@ -128,22 +127,32 @@ func main() {
 	fmt.Fprintf(os.Stderr, "configulator: wrote %s\n", out)
 }
 
-// writeSample prints a sample config in format to stdout.
-func writeSample(model *Model, format string) {
+// writeOutput prints b, or with a path, updates that file using update.
+func writeOutput(path string, b []byte, check bool, update func(string, []byte, bool) (bool, error)) {
+	if path == "" {
+		os.Stdout.Write(b)
+		return
+	}
+	changed, err := update(path, b, check)
+	if err != nil {
+		fatal(err)
+	}
+	if changed {
+		fmt.Fprintf(os.Stderr, "configulator: updated %s\n", path)
+	}
+}
+
+// sampleBytes renders a sample config in format.
+func sampleBytes(model *Model, format string) ([]byte, error) {
 	switch format {
 	case "yaml":
-		os.Stdout.Write(emitSample(model))
+		return emitSample(model), nil
 	case "json":
-		b, err := emitSampleJSON(model)
-		if err != nil {
-			fatal(err)
-		}
-		os.Stdout.Write(b)
+		return emitSampleJSON(model)
 	case "toml":
-		os.Stdout.Write(emitSampleTOML(model))
+		return emitSampleTOML(model), nil
 	default:
-		fmt.Fprintf(os.Stderr, "configulator: unknown -format %q: expected yaml, json, or toml\n", format)
-		os.Exit(2)
+		return nil, fmt.Errorf("unknown -format %q: expected yaml, json, or toml", format)
 	}
 }
 

@@ -136,11 +136,13 @@ turned into `_`: `http.listen-port` is `MYAPP_HTTP_LISTEN_PORT`.
 | `-sample` | Print a sample config instead of generating code. `-format` picks `yaml` (default), `json` or `toml` |
 | `-markdown` | Print a Markdown table of every option instead of generating code. `-env-prefix`, `-env-separator` and `-flag-separator` set how names are shown |
 | `-markdown-file` | With `-markdown`, write the table into a file between the configulator markers |
-| `-check` | With `-markdown-file`, exit 1 if the file is out of date instead of writing it |
+| `-sample-file` | With `-sample`, write the sample to a file, such as `config.example.yaml` |
+| `-check` | With `-markdown-file` or `-sample-file`, exit 1 if the file is out of date instead of writing it |
 
-## Config docs in your README
+## Config docs and example config
 
-Put the markers where the table should go:
+`-sample -sample-file config.example.yaml` writes a commented example config.
+For the README, put the markers where the table should go:
 
 ```markdown
 ## Configuration
@@ -153,23 +155,26 @@ Then fill it in from `go generate`, pre-commit, or CI:
 
 ```go
 //go:generate go tool configulator -type Config -markdown -markdown-file ../../README.md -env-prefix MYAPP_
+//go:generate go tool configulator -type Config -sample -sample-file ../../config.example.yaml
 ```
 
 ```yaml
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/USA-RedDragon/configulator
-    rev: v2.1.0
+    rev: v2.2.0
     hooks:
-      - id: configulator-markdown
-        args: [-dir, internal/config, -type, Config, -markdown-file, README.md, -env-prefix, MYAPP_]
       - id: configulator-generate
         args: [-dir, internal/config, -type, Config]
+      - id: configulator-markdown
+        args: [-dir, internal/config, -type, Config, -markdown-file, README.md, -env-prefix, MYAPP_]
+      - id: configulator-sample
+        args: [-dir, internal/config, -type, Config, -sample-file, config.example.yaml]
 ```
 
 ```yaml
-# GitHub Actions: fails pull requests with a stale README and commits the
-# update on pushes to the default branch. Needs contents: write.
+# GitHub Actions: fails pull requests with a stale README or example config,
+# and commits the update on pushes to the default branch.
 - uses: USA-RedDragon/reusable-actions/configulator-docs@v2
   with:
     dir: internal/config

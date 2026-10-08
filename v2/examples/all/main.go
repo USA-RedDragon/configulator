@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	configulator "github.com/USA-RedDragon/configulator/v2"
@@ -26,10 +27,10 @@ type HTTPConfig struct {
 
 func (c Config) Validate() error {
 	if c.HTTP.Port < 0 || c.HTTP.Port > 65535 {
-		return fmt.Errorf("invalid port")
+		return errors.New("invalid port")
 	}
 	if c.HTTP.Host == "" {
-		return fmt.Errorf("invalid host")
+		return errors.New("invalid host")
 	}
 	return nil
 }

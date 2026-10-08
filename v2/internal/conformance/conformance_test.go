@@ -6,6 +6,7 @@ import (
 	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,14 +69,14 @@ func loadCase(t *testing.T, dir string) caseInput {
 	tc := caseInput{dir: dir, opts: caseOptions{
 		Prefix: "APP_", EnvSeparator: "_", FlagSeparator: ".", ArraySep: ",",
 	}}
-	shape, err := os.ReadFile(filepath.Join(dir, "shape"))
+	shape, err := fs.ReadFile(os.DirFS(dir), "shape")
 	if err != nil {
 		t.Fatalf("case %s: no shape file: %v", dir, err)
 	}
 	tc.shape = strings.TrimSpace(string(shape))
 
 	readJSON := func(name string, into any) bool {
-		b, err := os.ReadFile(filepath.Join(dir, name))
+		b, err := fs.ReadFile(os.DirFS(dir), name)
 		if err != nil {
 			return false
 		}
@@ -316,8 +317,8 @@ func TestCorpus(t *testing.T) {
 	}
 
 	skip := map[string]bool{}
-	if b, err := os.ReadFile(filepath.Join(spec, "skip-go.txt")); err == nil {
-		for _, line := range strings.Split(string(b), "\n") {
+	if b, err := fs.ReadFile(os.DirFS(spec), "skip-go.txt"); err == nil {
+		for line := range strings.SplitSeq(string(b), "\n") {
 			if line = strings.TrimSpace(line); line != "" {
 				skip[line] = true
 				t.Logf("SKIP-LIST: %s (must be empty for a release)", line)

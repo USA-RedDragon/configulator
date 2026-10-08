@@ -935,6 +935,16 @@ func GetStructFieldByName(typ reflect.Type, field, arraySeparator string) (refle
 		}
 	}
 
+	// Environment variables name a nested struct by its Go field name
+	// (PublicFrames -> PUBLICFRAMES_ENABLED), since a dashed tag such as
+	// "public-frames" can't survive splitting on the separator.
+	for i := range typ.NumField() {
+		f := typ.Field(i)
+		if f.Type.Kind() == reflect.Struct && f.Tag.Get("name") != "" && strings.EqualFold(f.Name, field) {
+			return f, nil
+		}
+	}
+
 	return reflect.StructField{}, fmt.Errorf("field %s not found in struct", field)
 }
 

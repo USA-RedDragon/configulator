@@ -1,6 +1,6 @@
 module github.com/USA-RedDragon/configulator/v2
 
-go 1.27
+go 1.27.2
 
 require (
 	github.com/dave/jennifer v1.7.1

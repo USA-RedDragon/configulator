@@ -14,6 +14,13 @@
         "golang"
       ],
       "enabled": false
+    },
+    {
+      "description": "Do not update a Go module to a version whose go directive is newer than the go directive of the module that requires it.",
+      "matchManagers": [
+        "gomod"
+      ],
+      "constraintsFiltering": "strict"
     }
   ]
 }

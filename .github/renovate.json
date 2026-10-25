@@ -2,5 +2,18 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "local>USA-RedDragon/renovate-configs"
+  ],
+  "packageRules": [
+    {
+      "description": "The library modules declare their minimum Go version, not the Go version of CI.",
+      "matchFileNames": [
+        "go.mod",
+        "v2/go.mod"
+      ],
+      "matchDepTypes": [
+        "golang"
+      ],
+      "enabled": false
+    }
   ]
 }

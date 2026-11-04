@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   benchmark-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout repository
@@ -24,7 +24,7 @@ jobs:
       - run: CGO_ENABLED=0 go test -run ^$ -benchmem -bench=. ./...
 
   race-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout repository

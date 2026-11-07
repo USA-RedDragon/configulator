@@ -4,7 +4,7 @@ go 1.27
 
 require (
 	github.com/dave/jennifer v1.7.1
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	golang.org/x/tools v0.52.0
 )
 

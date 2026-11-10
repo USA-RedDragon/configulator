@@ -175,7 +175,7 @@ Then fill it in from `go generate`, pre-commit, or CI:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/USA-RedDragon/configulator
-    rev: v2.5.0
+    rev: v2.6.0
     hooks:
       - id: configulator-generate
         args: [-dir, internal/config, -type, Config]

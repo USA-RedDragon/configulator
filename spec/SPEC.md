@@ -129,6 +129,13 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
   default is not "explicit". If no file support is configured, no `--config`
   flag is registered and passing one is an unknown-flag error.
 - Symlinks/relative paths: OS semantics, not normalized.
+- Config file flag collisions: a flag shorthand equal to the config file
+  flag's shorthand (default `c`) is rejected before run time where the
+  language can check it (Go: `go generate`, with `-config-shorthand`; Rust:
+  the derive, with `config_shorthand`). Go also rejects a top-level flag
+  named like the config file flag (`-config-flag`); Rust can't tell a
+  top-level struct from a nested one in the derive. Any collision not
+  caught before run time is a FlagConflict error at load.
 - Complex numbers: a leaf decoded from text like `1+2i`, `(1+2i)`, `2i` or
   `3`, as Go's `strconv.ParseComplex` reads it. A file may also hold a plain
   number. `j` in place of `i` is a parse error. Go: `complex64` and

@@ -124,7 +124,7 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
 | `description:"text"` | Flag help text, and the description in generated docs |
 | `env:"NAME"` | Use `NAME` for this field's part of the env var name. `env:"-"` skips env |
 | `flag:"name"` | Use `name` for this field's part of the flag name. `flag:"-"` skips flags |
-| `short:"p"` | Flag shorthand (pflag only). `-h` and duplicates are rejected when generating |
+| `short:"p"` | Flag shorthand (pflag only). `-h`, `-c` (the config file flag) and duplicates are rejected when generating |
 | `secret:"true"` | Redact in `PrintConfig()`, error messages, generated docs and flag help |
 | `required:"true"` | `Load()` fails if nothing sets it |
 | `opaque:"true"` | Decode a named scalar type with its `UnmarshalText` method instead of as a number or string |
@@ -143,6 +143,8 @@ defaulted to `__`, so set `Separator: "__"` to keep those names.
 | `-output` | Output file, default `<type>_configulator.go` (lowercased) |
 | `-flags` | `pflag` (default), `std` or `none` |
 | `-no-validate` | Don't require a `Validate() error` method |
+| `-config-flag` | The config file flag name, default `config`. If you set `FileOptions.FlagName`, pass the same name here so a field can't take it. Empty means no config file flag |
+| `-config-shorthand` | The config file flag shorthand, default `c`. If you set `FileOptions.Shorthand`, pass the same letter here so a `short:` tag can't take it. Empty means no shorthand |
 | `-schema` | Print a JSON Schema instead of generating code. It rejects unknown keys like `StrictJSON` does; for YAML or TOML, use the decoder's strict mode to match |
 | `-sample` | Print a sample config instead of generating code. `-format` picks `yaml` (default), `json` or `toml` |
 | `-markdown` | Print a Markdown table of every option instead of generating code. `-env-prefix`, `-env-separator` and `-flag-separator` set how names are shown |

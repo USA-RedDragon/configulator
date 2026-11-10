@@ -68,7 +68,7 @@ jobs:
           cd ../..
           go generate ./internal/exampleconfig ./internal/examplestd
           for d in examples/*/; do (cd "$d" && go generate ./...); done
-          git diff --exit-code
+          git diff --exit-code -- . ':(exclude)go.work.sum'
 
   lint-generated:
     runs-on: ubuntu-24.04

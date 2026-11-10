@@ -32,6 +32,8 @@ func main() {
 	sampleFile := flag.String("sample-file", "", "with -sample, write the sample to this file instead of stdout")
 	check := flag.Bool("check", false, "with -markdown-file or -sample-file, change nothing and exit 1 if the file is out of date")
 	pkgDir := flag.String("dir", ".", "directory of the package that declares -type")
+	configFlagName := flag.String("config-flag", defaultConfigFlag().Name, "the app's config file flag name (FileOptions.FlagName), so fields can't collide with it; empty if it has none")
+	configShort := flag.String("config-shorthand", defaultConfigFlag().Short, "the app's config file flag shorthand (FileOptions.Shorthand), so short: tags can't collide with it; empty if it has none")
 	flag.Parse()
 
 	u := usage{
@@ -88,7 +90,7 @@ func main() {
 	if out == "" {
 		out = strings.ToLower(*typeName) + "_configulator.go"
 	}
-	src, err := emit(model, *flagsMode)
+	src, err := emitWith(model, *flagsMode, configFlag{Name: *configFlagName, Short: *configShort})
 	if err != nil {
 		fatal(err)
 	}

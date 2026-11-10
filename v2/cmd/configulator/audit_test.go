@@ -16,7 +16,7 @@ func bt(s string) string { return strings.ReplaceAll(s, "'", "`") }
 // buildFixture lays out a module with files and main as ./cmd/run,
 // generates flagsMode output for type Cfg, builds the program and returns
 // the module dir and the binary path.
-func buildFixture(t *testing.T, files map[string]string, flagsMode, main string) (dir, bin string) {
+func buildFixture(t *testing.T, files map[string]string, flagsMode, main string, cf ...configFlag) (dir, bin string) {
 	t.Helper()
 	all := map[string]string{"cmd/run/main.go": main}
 	for k, v := range files {
@@ -31,7 +31,11 @@ func buildFixture(t *testing.T, files map[string]string, flagsMode, main string)
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := emit(m, flagsMode)
+	gen := defaultConfigFlag()
+	if len(cf) > 0 {
+		gen = cf[0]
+	}
+	out, err := emitWith(m, flagsMode, gen)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,6 +345,8 @@ func main() {
 	}
 }
 
+const configNameTaken = "--config is the config file flag"
+
 func TestFlagConflictsAtGenerate(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -351,6 +357,9 @@ func TestFlagConflictsAtGenerate(t *testing.T) {
 		{"help-name", "\tHelp bool 'name:\"help\"'\n", `--help is reserved for help`},
 		{"help-flag-override", "\tA bool 'name:\"a\" flag:\"help\"'\n", `--help is reserved for help`},
 		{"long-short", "\tA string 'name:\"a\" short:\"ab\"'\n", "must be a single ASCII character"},
+		{"config-short", "\tA string 'name:\"a\" short:\"c\"'\n", `short:"c" is the config file flag's shorthand`},
+		{"config-name", "\tConfig string 'name:\"config\"'\n", configNameTaken},
+		{"config-flag-override", "\tA string 'name:\"a\" flag:\"config\"'\n", configNameTaken},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -374,6 +383,40 @@ func TestFlagConflictsAtGenerate(t *testing.T) {
 	}
 	if _, err := emit(m, flagsNone); err != nil {
 		t.Fatalf("-flags=none should not check flag names: %v", err)
+	}
+}
+
+func TestConfigFlagOptionsAtGenerate(t *testing.T) {
+	t.Parallel()
+	m, err := buildFixtureModel(t, bt("package fixture\n\ntype Cfg struct {\n\tA string 'name:\"a\" short:\"c\"'\n\tConfig string 'name:\"config\"'\n}\n")+validateStub, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name     string
+		mode     string
+		cf       configFlag
+		contains string
+	}{
+		{"moved-config-flag", flagsPFlag, configFlag{Name: "cfg", Short: "f"}, ""},
+		{"no-config-flag", flagsPFlag, configFlag{}, ""},
+		{"same-shorthand-elsewhere", flagsPFlag, configFlag{Name: "cfg", Short: "c"}, `short:"c" is the config file flag's shorthand (-c, --cfg)`},
+		{"std-checks-name-only", flagsStd, configFlag{Name: "config", Short: "c"}, configNameTaken},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := emitWith(m, tc.mode, tc.cf)
+			if tc.contains == "" {
+				if err != nil {
+					t.Fatalf("want no error, got %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.contains) {
+				t.Fatalf("want error containing %q, got %v", tc.contains, err)
+			}
+		})
 	}
 }
 
@@ -488,6 +531,10 @@ func (Cfg) Validate() error { return nil }
 	fixtures := []struct {
 		name, mode, src, main string
 		scenarios             []scenario
+		// gen is the config flag the generator was told about. The
+		// pflag-short fixture claims none, so its short:"c" reaches Bind and
+		// the runtime check is what catches a FileOptions mismatch.
+		gen configFlag
 	}{
 		{"pflag-short", flagsPFlag, shortSrc, conflictMainPFlag, []scenario{
 			{"plain -p 9 -c", "{Port:9 Verbose:true}"},
@@ -495,21 +542,21 @@ func (Cfg) Validate() error { return nil }
 			{"user-name", conflict + `flag "port" is already defined`},
 			{"user-short", conflict + `flag "port": shorthand "p" is already used by flag "zz"`},
 			{"config-short-taken", conflict + `flag "config": shorthand "c" is already used by flag "zz"`},
-		}},
+		}, configFlag{}},
 		{"pflag-dup", flagsPFlag, bt(dupFixture), conflictMainPFlag, []scenario{
 			{"plain", conflict + `flag "a.b" is already defined`},
 			{"dash --a-b=x --a.b=y", "{Port:0 A:{B:x} AB:y}"},
-		}},
+		}, defaultConfigFlag()},
 		{"std-dup", flagsStd, bt(dupFixture), conflictMainStd, []scenario{
 			{"plain", conflict + `flag "a.b" is already defined`},
 			{"dash -a-b=x -a.b=y", "{Port:0 A:{B:x} AB:y}"},
 			{"user-name", conflict + `flag "port" is already defined`},
-		}},
+		}, defaultConfigFlag()},
 	}
 	for _, fx := range fixtures {
 		t.Run(fx.name, func(t *testing.T) {
 			t.Parallel()
-			dir, bin := buildFixture(t, map[string]string{fixtureFile: fx.src}, fx.mode, fx.main)
+			dir, bin := buildFixture(t, map[string]string{fixtureFile: fx.src}, fx.mode, fx.main, fx.gen)
 			for _, sc := range fx.scenarios {
 				res := runBin(t, dir, bin, hermeticEnv(t), strings.Fields(sc.args)...)
 				if got := strings.TrimSpace(res.stdout); res.code != 0 || !strings.HasPrefix(got, sc.want) {

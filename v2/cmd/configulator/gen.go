@@ -52,13 +52,20 @@ func (e *emitter) quoteKeyName() string {
 }
 
 func emit(m *Model, flagsMode string) ([]byte, error) {
+	return emitWith(m, flagsMode, defaultConfigFlag())
+}
+
+// emitWith is emit for an app whose config file flag isn't the default
+// --config/-c, so the flag tag checks look for the right collisions.
+func emitWith(m *Model, flagsMode string, cf configFlag) ([]byte, error) {
 	switch flagsMode {
 	case flagsPFlag:
-		if err := checkFlagTags(flagFields(m.Fields, pflagOK)); err != nil {
+		if err := checkFlagTags(flagFields(m.Fields, pflagOK), cf); err != nil {
 			return nil, err
 		}
 	case flagsStd:
-		if err := checkFlagTags(flagFields(m.Fields, stdOK)); err != nil {
+		cf.Short = ""
+		if err := checkFlagTags(flagFields(m.Fields, stdOK), cf); err != nil {
 			return nil, err
 		}
 	}

@@ -118,14 +118,30 @@ func stdOK(f *Field) bool {
 	return ok
 }
 
+// configFlag is the config file flag the flag adapter's Bind adds:
+// FileOptions.FlagName and FileOptions.Shorthand. Empty values mean the app
+// has no such flag, so nothing can collide with it.
+type configFlag struct {
+	Name  string
+	Short string
+}
+
+// defaultConfigFlag is --config/-c, what Bind adds when FileOptions leaves
+// FlagName and Shorthand empty.
+func defaultConfigFlag() configFlag { return configFlag{Name: "config", Short: "c"} }
+
 // checkFlagTags rejects flag tags that pflag would panic on or that would
-// take over help: a shorthand that isn't one ASCII character, a shorthand
-// used twice, short:"h", and a top-level flag named help.
-func checkFlagTags(flags []leaf) error {
+// take over help or the config file flag: a shorthand that isn't one ASCII
+// character, a shorthand used twice, short:"h", the config flag's
+// shorthand, and a top-level flag named help or named like the config flag.
+func checkFlagTags(flags []leaf, cf configFlag) error {
 	shorts := map[string]string{}
 	for _, ff := range flags {
 		if len(ff.segs) == 1 && ff.segs[0] == "help" {
 			return fmt.Errorf("%s: flag --help is reserved for help; rename it with flag:\"name\" or skip it with flag:\"-\"", ff.path)
+		}
+		if len(ff.segs) == 1 && cf.Name != "" && ff.segs[0] == cf.Name {
+			return fmt.Errorf("%s: flag --%s is the config file flag; rename it with flag:\"name\", or set FileOptions.FlagName and pass the same name with -config-flag", ff.path, cf.Name)
 		}
 		s := ff.f.Short
 		switch {
@@ -135,6 +151,8 @@ func checkFlagTags(flags []leaf) error {
 			return fmt.Errorf("%s: short:%q must be a single ASCII character", ff.path, s)
 		case s == "h":
 			return fmt.Errorf(`%s: short:"h" is reserved for help`, ff.path)
+		case cf.Short != "" && s == cf.Short:
+			return fmt.Errorf(`%s: short:%q is the config file flag's shorthand (-%s, --%s); pick another letter, or set FileOptions.Shorthand and pass the same letter with -config-shorthand`, ff.path, s, s, cf.Name)
 		}
 		if prev, ok := shorts[s]; ok {
 			return fmt.Errorf("%s: short:%q is also used by %s", ff.path, s, prev)

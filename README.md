@@ -103,6 +103,9 @@ origin report), [minimal](v2/examples/minimal), [jsonv2](v2/examples/jsonv2)
     such as `netip.Addr` or `net.IP`
 - Shell completion works with cobra: it completes the config flags, and
   `--config` completes files with the extensions you registered decoders for
+- Subcommands work with cobra: bind the root command's `PersistentFlags()`
+  and the config flags are accepted before or after any subcommand, while
+  the subcommand keeps its own flags and arguments
 - `Report()` lists where each field's value came from: its default, the
   config file, an environment variable or a flag, naming which one
 - Fields tagged `secret:"true"` are redacted in `PrintConfig()` output and in

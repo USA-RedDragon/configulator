@@ -1,6 +1,6 @@
 # configulator behavioral specification
 
-Version: 0.3.0 (see `SPEC_VERSION`)
+Version: 0.4.0 (see `SPEC_VERSION`)
 
 This document governs two implementations:
 
@@ -136,6 +136,12 @@ v2.2.4+, clap 4, serde_yaml_ng 0.10, toml 1.1.
   named like the config file flag (`-config-flag`); Rust can't tell a
   top-level struct from a nested one in the derive. Any collision not
   caught before run time is a FlagConflict error at load.
+- Subcommands: config flags and the config file flag are accepted before
+  or after a subcommand and are listed in the subcommand's help. Only values
+  given on the command line count as set. The app keeps its subcommand and
+  positional arguments (Go: bind the root command's `PersistentFlags()`, and
+  the app reads cobra's arguments; Rust: flags are global, and
+  `load_with_matches` or `with_matches` returns or takes the parsed matches).
 - Complex numbers: a leaf decoded from text like `1+2i`, `(1+2i)`, `2i` or
   `3`, as Go's `strconv.ParseComplex` reads it. A file may also hold a plain
   number. `j` in place of `i` is a parse error. Go: `complex64` and

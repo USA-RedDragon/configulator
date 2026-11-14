@@ -1,6 +1,6 @@
 # configulator behavioral specification
 
-Version: 0.4.0 (see `SPEC_VERSION`)
+Version: 0.4.1 (see `SPEC_VERSION`)
 
 This document governs two implementations:
 
@@ -106,7 +106,7 @@ independent YAML parsers, not configulator.
 | Repeated-flag accumulation | arg parser | `--x a --x b` → `[a,b]`; `--x a,b` also splits (CSV) | `--x a --x b` → `[a,b]`; `--x a,b` is one element |
 | List separator on CLI | arg parser | comma, fixed | none (repeat the flag) |
 | List separator on env/defaults | configulator | configurable | configurable |
-| Bool flag value | arg parser | `--x` or `--x=false`; in `--x false`, `false` is a positional argument | `--x`, `--x=false` and `--x false` |
+| Bool flag value | arg parser | `--x`, `-x`, `--x=false`, `-x=false`; in `--x false`, `false` is the next argument | same as Go (clap `require_equals`, configulator-rs 0.5.0+) |
 | File-key case sensitivity | decoder | json/v2: sensitive; goccy: sensitive; go-toml: **insensitive** | serde_json: sensitive; serde_yaml_ng: sensitive; toml: sensitive |
 | Unknown-key rejection | decoder | json/v2: available (`RejectUnknownMembers`); goccy: opt-in; go-toml: decoder-level | `deny_unknown_fields`, derive-time, file layer only |
 | Duplicate keys in one file | decoder | json/v2 rejects; goccy last-wins; go-toml errors | serde_json last-wins; yaml/toml per parser |

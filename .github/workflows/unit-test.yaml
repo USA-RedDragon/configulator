@@ -53,7 +53,7 @@ jobs:
         run: |
           env CGO_ENABLED=0 go test -v ./... -coverprofile coverage.out -coverpkg=./... -covermode atomic
 
-      - uses: USA-RedDragon/reusable-actions/coverage@b9e60cfc319a8e91f51c16dad67e6b35cd61de71 # v2.0.36
+      - uses: USA-RedDragon/reusable-actions/coverage@1e6b74c455cbbe8892acc7974fac5a1ac228ad47 # v2.0.38
         if: always() && inputs.coverage
         with:
           file: coverage.out

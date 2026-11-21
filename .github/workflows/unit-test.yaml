@@ -24,7 +24,7 @@ jobs:
       - name: Generate GitHub App Token
         if: inputs.coverage
         id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           client-id: ${{ vars.AUTO_COMMIT_APP_ID }}
           private-key: ${{ secrets.auto_commit_app_key }}
@@ -53,7 +53,7 @@ jobs:
         run: |
           env CGO_ENABLED=0 go test -v ./... -coverprofile coverage.out -coverpkg=./... -covermode atomic
 
-      - uses: USA-RedDragon/reusable-actions/coverage@1e6b74c455cbbe8892acc7974fac5a1ac228ad47 # v2.0.38
+      - uses: USA-RedDragon/reusable-actions/coverage@ff5d8c9d1d9fda2d1ca4cb4325987a429db9a85a # v2.0.39
         if: always() && inputs.coverage
         with:
           file: coverage.out
